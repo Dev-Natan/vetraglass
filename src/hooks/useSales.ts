@@ -6,6 +6,21 @@ import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 
+interface CancelSaleResult {
+  success: boolean;
+  error?: string;
+  sale_number: number;
+}
+
+interface AvailableSaleItem {
+  id: string;
+  unit?: string | null;
+}
+
+interface AvailableSaleProduct {
+  id: string;
+}
+
 export function useSales() {
   const queryClient = useQueryClient();
   const invalidateStock = useInvalidateStock();
@@ -20,7 +35,7 @@ export function useSales() {
       });
 
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown as CancelSaleResult;
       if (!result.success) throw new Error(result.error || 'Erro ao cancelar venda');
       return result;
     },
@@ -53,8 +68,8 @@ export function useSales() {
       cashRegisterId: string;
       companyId: string;
       userId: string;
-      availableItems: any[];
-      availableProducts: any[];
+      availableItems: AvailableSaleItem[];
+      availableProducts: AvailableSaleProduct[];
     }) => {
       const { items, customerName, paymentConfig, discountPercent, discountAmount, subtotal, total, quoteId, cashRegisterId, companyId, userId, availableItems, availableProducts } = data;
 
@@ -134,17 +149,9 @@ export function useSales() {
       });
 
 
-      // 5. Stock logic (simplified but following original structure)
-      let osAlreadyConsumed = false;
-      if (quoteId) {
-        const { data: osData } = await supabase.from('ordens_servico').select('id').eq('quote_id', quoteId).in('status', ['completed']).limit(1);
-        if (osData && osData.length > 0) {
-          const { data: consumed } = await supabase.from('material_consumption').select('id').eq('ordem_servico_id', osData[0].id).eq('status', 'consumed').limit(1);
-          osAlreadyConsumed = !!(consumed && consumed.length > 0);
-        }
-      }
-      
-      const shouldDeductStock = !isPartialQuoteSale && !osAlreadyConsumed;
+      // 5. Only direct counter sales deduct here. Quote/OS materials are consumed
+      // exactly once by complete_os_production after reservation and review.
+      const shouldDeductStock = !quoteId && !isPartialQuoteSale;
       if (shouldDeductStock) {
         const stockDeductions: Map<string, number> = new Map();
         for (const item of items) {

@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { toast } from 'sonner';
 
-import { registerStockEntry } from '@/utils/stockMovements';
-
 export interface PurchaseOrder {
   id: string;
   company_id: string;
@@ -170,7 +168,7 @@ export function useUpdatePurchaseOrderStatus() {
       supplierName?: string;
       expectedDelivery?: string;
     }) => {
-      const updateData: Record<string, any> = { status };
+      const updateData: Record<string, string> = { status };
       
       if (supplierName) updateData.supplier_name = supplierName;
       if (expectedDelivery) updateData.expected_delivery = expectedDelivery;
@@ -209,126 +207,21 @@ export function useReceivePurchaseOrderItems() {
       items: Array<{ id: string; actualCost: number; receivedQuantity: number }>;
       totalActual: number;
     }) => {
-      // Buscar dados do pedido de compra para obter company_id
-      const { data: purchaseOrder } = await supabase
-        .from('purchase_orders')
-        .select('company_id')
-        .eq('id', purchaseOrderId)
-        .single();
+      const { data, error } = await supabase.rpc('receive_purchase_order_items', {
+        _purchase_order_id: purchaseOrderId,
+        _items: items.map((item) => ({
+          id: item.id,
+          actual_cost: item.actualCost,
+          received_quantity: item.receivedQuantity,
+        })),
+        _total_actual: totalActual,
+      });
 
-      if (!purchaseOrder) {
-        throw new Error('Pedido de compra não encontrado');
-      }
+      if (error) throw error;
 
-      // Buscar detalhes completos dos itens sendo recebidos
-      const { data: itemDetails } = await supabase
-        .from('purchase_order_items')
-        .select('id, item_template_id, description, quantity, unit')
-        .in('id', items.map(i => i.id));
-
-      // Update all items e registrar entrada no estoque
-      for (const item of items) {
-        // Atualizar status do item do pedido
-        await supabase
-          .from('purchase_order_items')
-          .update({
-            status: 'received',
-            actual_cost: item.actualCost,
-            received_quantity: item.receivedQuantity,
-            received_at: new Date().toISOString(),
-          })
-          .eq('id', item.id);
-
-        // Buscar detalhes do item
-        const itemDetail = itemDetails?.find(d => d.id === item.id);
-        
-        // Se o item tem item_template_id, registrar entrada no estoque
-        if (itemDetail?.item_template_id) {
-          const result = await registerStockEntry({
-            companyId: purchaseOrder.company_id,
-            itemTemplateId: itemDetail.item_template_id,
-            quantity: item.receivedQuantity,
-            category: 'compra_fornecedor',
-            description: `Recebimento PO: ${itemDetail.description}`,
-            referenceId: purchaseOrderId,
-            referenceType: 'purchase_order',
-          });
-
-          // REGRA DE OURO: Se item não está cadastrado no estoque, informar ao usuário
-          if (!result.success && result.error?.includes('não cadastrado')) {
-            throw new Error(
-              `O item "${itemDetail.description}" não está cadastrado no estoque. ` +
-              `Cadastre-o primeiro em Estoque > Adicionar Item antes de receber a compra.`
-            );
-          }
-
-          if (!result.success) {
-            throw new Error(result.error || 'Erro ao registrar entrada no estoque');
-          }
-        }
-      }
-      
-      // Check if all items are received
-      const { data: allItems } = await supabase
-        .from('purchase_order_items')
-        .select('status')
-        .eq('purchase_order_id', purchaseOrderId);
-      
-      const allReceived = allItems?.every(i => i.status === 'received');
-      const someReceived = allItems?.some(i => i.status === 'received');
-      
-      // Update purchase order status
-      await supabase
-        .from('purchase_orders')
-        .update({
-          status: allReceived ? 'received' : someReceived ? 'partial' : 'ordered',
-          total_actual: totalActual,
-          received_at: allReceived ? new Date().toISOString() : null,
-        })
-        .eq('id', purchaseOrderId);
-      
-      // Create an expense for the received materials
-      await supabase
-        .from('expenses')
-        .insert({
-          company_id: purchaseOrder.company_id,
-          category: 'materiais',
-          description: `Compra de materiais - Pedido #${purchaseOrderId.split('-')[0]}`,
-          amount: totalActual,
-          due_date: new Date().toISOString().split('T')[0],
-          status: 'pending',
-          notes: `Referente ao Pedido de Compra #${purchaseOrderId}`,
-        });
-
-      // Update glass projects procurement status
-      const receivedItemIds = items.map(i => i.id);
-      const { data: itemsWithGlass } = await supabase
-        .from('purchase_order_items')
-        .select('os_glass_project_id')
-        .in('id', receivedItemIds)
-        .not('os_glass_project_id', 'is', null);
-      
-      if (itemsWithGlass && itemsWithGlass.length > 0) {
-        const glassIds = itemsWithGlass.map(i => i.os_glass_project_id).filter(Boolean);
-        await supabase
-          .from('os_glass_projects')
-          .update({ procurement_status: 'received' })
-          .in('id', glassIds);
-      }
-
-      // Update material_consumption status if linked
-      const { data: itemsWithMaterial } = await supabase
-        .from('purchase_order_items')
-        .select('os_material_id')
-        .in('id', receivedItemIds)
-        .not('os_material_id', 'is', null);
-      
-      if (itemsWithMaterial && itemsWithMaterial.length > 0) {
-        const materialIds = itemsWithMaterial.map(i => i.os_material_id).filter(Boolean);
-        await supabase
-          .from('material_consumption')
-          .update({ status: 'available' })
-          .in('id', materialIds);
+      const result = data as { success?: boolean } | null;
+      if (!result?.success) {
+        throw new Error('O recebimento transacional não foi confirmado');
       }
     },
     onSuccess: () => {

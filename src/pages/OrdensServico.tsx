@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Clock, CheckCircle, AlertCircle, 
   User, Calendar, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench, Scissors
+  MoreHorizontal, Eye, AlertTriangle, Wrench, Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,16 +23,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
@@ -43,7 +33,6 @@ type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { RomaneioReviewDialog } from '@/components/ordens-servico/RomaneioReviewDialog';
 import { CuttingPlanCalculator } from '@/components/plano-corte/CuttingPlanCalculator';
-import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useOSCancellation } from '@/hooks/useOSCancellation';
 
@@ -115,16 +104,17 @@ export default function OrdensServico() {
   // Persist filters in URL
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    statusFilter && statusFilter !== 'in_progress' ? next.set('status', statusFilter) : next.delete('status');
-    periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
-    searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    if (statusFilter && statusFilter !== 'in_progress') next.set('status', statusFilter);
+    else next.delete('status');
+    if (periodFilter && periodFilter !== 'all') next.set('period', periodFilter);
+    else next.delete('period');
+    if (searchTerm) next.set('q', searchTerm);
+    else next.delete('q');
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, periodFilter, searchTerm]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [osToDelete, setOsToDelete] = useState<string | null>(null);
   const [romaneioOsId, setRomaneioOsId] = useState<string | null>(null);
 
   // Fetch ordens de serviço
@@ -167,40 +157,19 @@ export default function OrdensServico() {
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: OSStatus }) => {
-      const updates: Record<string, unknown> = { status };
-      
       if (status === 'in_progress') {
-        updates.actual_start = new Date().toISOString().split('T')[0];
-        updates.current_stage = 'Em produção';
-        
-        const releaseResult = await releaseMaterialsForProduction(id);
-        if (!releaseResult.success) {
-          console.warn('Aviso ao liberar materiais:', releaseResult);
-        }
-      } else if (status === 'completed') {
-        updates.actual_end = new Date().toISOString().split('T')[0];
-        updates.current_stage = 'Finalizado';
-        // A baixa de estoque agora é feita via RomaneioReviewDialog antes da chamada deste mutation.
-      } else if (status === 'cancelled') {
-        // Cancellation is now handled by the RPC which validates consumed status
-        // and cancels both material_consumption and stock_reservations
-        const { error: rpcError } = await supabase.rpc('cancel_os_materials', {
+        const { error } = await supabase.rpc('start_os_production', {
           _ordem_servico_id: id,
         });
-        
-        if (rpcError) {
-          if (rpcError.message.includes('materiais já foram consumidos')) {
-            throw new Error('Cancelamento bloqueado: materiais já foram consumidos do estoque');
-          }
-          console.warn('Aviso ao cancelar materiais:', rpcError);
-        }
+        if (error) throw error;
+      } else if (status === 'cancelled') {
+        const { error } = await supabase.rpc('cancel_os_materials', {
+          _ordem_servico_id: id,
+        });
+        if (error) throw error;
+      } else {
+        throw new Error('Transição de status não permitida por este fluxo');
       }
-      
-      const { error } = await supabase
-        .from('ordens_servico')
-        .update(updates as never)
-        .eq('id', id);
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
@@ -214,24 +183,6 @@ export default function OrdensServico() {
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro ao atualizar status: ${message}`);
-    }
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('ordens_servico')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
-      toast.success('Ordem de serviço excluída!');
-    },
-    onError: () => {
-      toast.error('Erro ao excluir ordem de serviço');
     }
   });
 
@@ -548,16 +499,6 @@ export default function OrdensServico() {
                                     Cancelar
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    setOsToDelete(os.id);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -665,33 +606,6 @@ export default function OrdensServico() {
         </Tabs>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Ordem de Serviço</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
-              Você poderá regerar a OS a partir do orçamento aprovado, se necessário.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (osToDelete) {
-                  deleteMutation.mutate(osToDelete);
-                }
-                setOsToDelete(null);
-              }}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {romaneioOsId && currentCompany?.id && (
         <RomaneioReviewDialog
           open={!!romaneioOsId}
@@ -699,9 +613,13 @@ export default function OrdensServico() {
           ordemServicoId={romaneioOsId}
           companyId={currentCompany.id}
           onConfirmed={() => {
-            const id = romaneioOsId;
             setRomaneioOsId(null);
-            if (id) updateStatusMutation.mutate({ id, status: 'completed' });
+            queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+            queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+            queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+            queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
+            queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
+            invalidateStock();
           }}
         />
       )}

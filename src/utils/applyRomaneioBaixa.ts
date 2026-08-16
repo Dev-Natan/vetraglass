@@ -25,87 +25,26 @@ export interface ApplyRomaneioParams {
  * - Atualiza material_consumption (consumed / cancelled)
  */
 export async function applyRomaneioBaixa({
-  companyId,
   ordemServicoId,
   lines,
   cancelledConsumptionIds,
 }: ApplyRomaneioParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    const { data, error } = await supabase.rpc('complete_os_production', {
+      _ordem_servico_id: ordemServicoId,
+      _lines: lines.map((line) => ({
+        consumption_id: line.consumptionId,
+        company_item_id: line.companyItemId,
+        quantity: line.quantity,
+      })),
+      _cancelled_consumption_ids: cancelledConsumptionIds,
+    });
 
-    // 1) Cancela as linhas removidas pelo usuário
-    if (cancelledConsumptionIds.length > 0) {
-      await supabase
-        .from('material_consumption')
-        .update({ status: 'cancelled' })
-        .in('id', cancelledConsumptionIds);
-    }
+    if (error) throw error;
 
-    // 2) Processa cada linha confirmada
-    for (const line of lines) {
-      if (!line.companyItemId || line.quantity <= 0) continue;
-
-      // Busca / atualiza estoque
-      const { data: stock } = await supabase
-        .from('company_stock')
-        .select('id, quantity')
-        .eq('company_item_id', line.companyItemId)
-        .maybeSingle();
-
-      if (stock) {
-        const newQty = Math.max(0, Number(stock.quantity) - line.quantity);
-        await supabase
-          .from('company_stock')
-          .update({ quantity: newQty, updated_at: new Date().toISOString() })
-          .eq('id', stock.id);
-      }
-
-      // Registra stock_movements
-      const { data: movement } = await supabase
-        .from('stock_movements')
-        .insert({
-          company_id: companyId,
-          company_item_id: line.companyItemId,
-          type: 'saida',
-          category: 'consumo_producao',
-          quantity: line.quantity,
-          unit_cost: line.unitCost || 0,
-          description: `Romaneio OS - ${line.itemName}`,
-          reference_id: ordemServicoId,
-          reference_type: 'ordem_servico',
-          created_by: userId,
-        })
-        .select('id')
-        .single();
-
-      // Atualiza material_consumption se origem da sugestão
-      if (line.consumptionId) {
-        await supabase
-          .from('material_consumption')
-          .update({
-            status: 'consumed',
-            consumed_at: new Date().toISOString(),
-            stock_movement_id: movement?.id || null,
-            company_item_id: line.companyItemId,
-            quantity_calculated: line.quantity,
-          })
-          .eq('id', line.consumptionId);
-      } else {
-        // Item extra adicionado manualmente — cria registro de consumo já consumido
-        await supabase.from('material_consumption').insert({
-          company_id: companyId,
-          ordem_servico_id: ordemServicoId,
-          company_item_id: line.companyItemId,
-          item_name: line.itemName,
-          item_type: 'extra',
-          unit: line.unit,
-          quantity_calculated: line.quantity,
-          status: 'consumed',
-          consumed_at: new Date().toISOString(),
-          stock_movement_id: movement?.id || null,
-        });
-      }
+    const result = data as { success?: boolean } | null;
+    if (!result?.success) {
+      throw new Error('A baixa transacional não foi confirmada');
     }
 
     return { success: true };

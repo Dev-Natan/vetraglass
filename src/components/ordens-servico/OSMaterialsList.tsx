@@ -15,6 +15,32 @@ interface OSMaterialsListProps {
   ordemServicoId: string;
 }
 
+interface MaterialAvailabilityItem {
+  company_item_id: string | null;
+  item_name: string;
+  unit: string;
+  required: number;
+  physical: number;
+  reserved_for_os: number;
+  missing: number;
+  sufficient: boolean;
+}
+
+interface MaterialAvailability {
+  success: boolean;
+  sufficient: boolean;
+  items: MaterialAvailabilityItem[];
+}
+
+interface ConsolidatedMaterial {
+  item_name: string;
+  item_type: string;
+  total_length: number;
+  total_quantity: number;
+  unit: string;
+  bars_needed?: number;
+}
+
 
 export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
   const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
@@ -37,6 +63,17 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     queryKey: ['os-materials-consolidated', ordemServicoId],
     queryFn: () => osService.getConsolidatedMaterials(ordemServicoId),
     enabled: viewMode === 'consolidated'
+  });
+
+  const { data: availability } = useQuery({
+    queryKey: ['os-material-availability', ordemServicoId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_os_material_availability', {
+        _ordem_servico_id: ordemServicoId,
+      });
+      if (error) throw error;
+      return data as unknown as MaterialAvailability;
+    },
   });
 
   // Dynamic fallback: derive from the effective product composition (respects
@@ -192,8 +229,58 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
 
   return (
     <div className="space-y-6">
+      {availability && (
+        <Card className={availability.sufficient ? 'border-green-500/30' : 'border-amber-500/50'}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              {availability.sufficient ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              )}
+              Disponibilidade operacional
+              <Badge variant={availability.sufficient ? 'default' : 'secondary'}>
+                {availability.sufficient ? 'Material suficiente' : 'Material faltante'}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Material</TableHead>
+                  <TableHead className="text-right">Necessário</TableHead>
+                  <TableHead className="text-right">Físico</TableHead>
+                  <TableHead className="text-right">Reservado p/ OS</TableHead>
+                  <TableHead className="text-right">Falta</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {availability.items.map((item, index) => (
+                  <TableRow key={item.company_item_id ?? `${item.item_name}-${index}`}>
+                    <TableCell className="font-medium">{item.item_name}</TableCell>
+                    <TableCell className="text-right font-mono">{Number(item.required).toFixed(3)} {item.unit}</TableCell>
+                    <TableCell className="text-right font-mono">{Number(item.physical).toFixed(3)}</TableCell>
+                    <TableCell className="text-right font-mono">{Number(item.reserved_for_os).toFixed(3)}</TableCell>
+                    <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'text-destructive font-semibold' : 'text-green-600'}`}>
+                      {Number(item.missing).toFixed(3)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-start">
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-auto">
+        <Tabs
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value === 'individual' || value === 'consolidated') setViewMode(value);
+          }}
+          className="w-auto"
+        >
           <TabsList>
             <TabsTrigger value="individual" className="gap-2">
               <List className="w-4 h-4" />
@@ -400,7 +487,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {consolidatedMaterials?.map((item: any, idx: number) => (
+                  {(consolidatedMaterials as ConsolidatedMaterial[] | undefined)?.map((item, idx) => (
                     <tr key={idx}>
                       <td className="p-3 font-medium">{item.item_name}</td>
                       <td className="p-3">

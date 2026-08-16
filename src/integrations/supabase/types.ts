@@ -5635,6 +5635,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_order_items_os_material_id_fkey"
+            columns: ["os_material_id"]
+            isOneToOne: false
+            referencedRelation: "os_materials"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
             isOneToOne: false
@@ -5706,6 +5713,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ordens_servico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_os_company_fkey"
+            columns: ["ordem_servico_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
@@ -7433,6 +7447,14 @@ export type Database = {
         Args: { _ordem_servico_id: string }
         Returns: number
       }
+      complete_os_production: {
+        Args: {
+          _cancelled_consumption_ids?: string[]
+          _lines: Json
+          _ordem_servico_id: string
+        }
+        Returns: Json
+      }
       cancel_sale: {
         Args: {
           p_company_id: string
@@ -7684,6 +7706,10 @@ export type Database = {
         Args: { _company_id: string; _operator_id: string }
         Returns: Json
       }
+      get_os_material_availability: {
+        Args: { _ordem_servico_id: string }
+        Returns: Json
+      }
       get_pending_advances_summary: {
         Args: { _company_id: string }
         Returns: Json
@@ -7869,6 +7895,14 @@ export type Database = {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
       }
+      receive_purchase_order_items: {
+        Args: {
+          _items: Json
+          _purchase_order_id: string
+          _total_actual?: number
+        }
+        Returns: Json
+      }
       record_login_attempt: {
         Args: {
           _email: string
@@ -7977,6 +8011,10 @@ export type Database = {
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      start_os_production: {
+        Args: { _ordem_servico_id: string }
+        Returns: Json
       }
       transfer_company_ownership: {
         Args: { _company_id: string; _new_admin_user_id: string }
