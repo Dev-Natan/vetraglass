@@ -10,7 +10,11 @@ export const estoqueService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map((stock) => ({
+      ...stock,
+      // Filled with the canonical aggregate by useStockData.
+      reserved_quantity: 0,
+    }));
   },
 
   async fetchCompanyItems(companyId: string) {

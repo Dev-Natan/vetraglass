@@ -55,7 +55,7 @@ export function usePermissionProfile() {
   const { user, currentCompany, companies } = useAuth();
 
   // Check if user is admin via user_companies
-  const userCompanyData = companies.find(c => c.id === currentCompany?.id);
+  const userCompanyData = companies.find(c => c.companyId === currentCompany?.id);
   const userRole = (userCompanyData as any)?.role as string | undefined;
   const isCompanyAdmin = userRole === 'admin';
 

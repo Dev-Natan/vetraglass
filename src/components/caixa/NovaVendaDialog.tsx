@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
+import { createUuid } from '@/utils/createUuid';
 import { InstallmentPaymentSheet, PaymentConfig } from './InstallmentPaymentSheet';
 import { ProductCompositionEditor } from './ProductCompositionEditor';
 import { buildCompositionFromFormula, SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
@@ -376,7 +377,7 @@ export function NovaVendaDialog({
     }
     
     return {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       itemTemplateId: selectedMaterial.id,
       name: selectedMaterial.name,
       unit: selectedMaterial.unit,
@@ -468,7 +469,7 @@ export function NovaVendaDialog({
     glass_color?: string;
     glass_thickness?: string;
   }) => {
-    const itemId = crypto.randomUUID();
+    const itemId = createUuid();
     const newItem: VendaItem = {
       id: itemId,
       companyProductId: product.company_product_id,
@@ -558,7 +559,7 @@ export function NovaVendaDialog({
       const scaledTotal = Number(((qi.total_price || 0) * scale).toFixed(2));
       const qty = qi.quantity || 1;
       return {
-        id: crypto.randomUUID(),
+        id: createUuid(),
         companyProductId: qi.company_product_id || undefined,
         productTemplateId: qi.product_template_id || undefined,
         name: qi.description,

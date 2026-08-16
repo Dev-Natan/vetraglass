@@ -4,6 +4,8 @@ export interface StockItem {
   company_item_id: string | null;
   company_id: string;
   quantity: number;
+  /** Reserva ativa derivada de stock_reservations; não é persistida em company_stock. */
+  reserved_quantity: number;
   min_quantity: number | null;
   location: string | null;
   is_active: boolean;

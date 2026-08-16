@@ -10,7 +10,7 @@ export function useClientsList(companyId: string | undefined) {
         .from('clients')
         .select('*')
         .eq('company_id', companyId)
-        .eq('client_type', 'cliente')
+        .in('client_type', ['cliente', 'ambos'])
         .eq('is_active', true)
         .order('name');
       if (error) throw error;

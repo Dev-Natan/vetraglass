@@ -216,7 +216,6 @@ export function useSupportTickets() {
               message_id: message.id,
               file_name: file.name,
               file_path: filePath,
-              file_url: filePath,
               file_type: file.type,
               file_size: file.size,
             });

@@ -227,7 +227,7 @@ export async function releaseMaterialsForProduction(ordemServicoId: string): Pro
 
 /**
  * Reserva materiais no estoque quando um orçamento vira OS.
- * Não baixa a quantidade real - apenas incrementa quantity_reserved.
+ * Não baixa o estoque físico. A reserva é persistida somente em stock_reservations.
  */
 export async function reserveMaterialsForOS(ordemServicoId: string): Promise<{ success: boolean; reserved: number; error?: string }> {
   try {

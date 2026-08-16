@@ -47,7 +47,7 @@ export function usePermissions() {
   const { user, currentCompany, companies } = useAuth();
 
   // Get user role from companies array
-  const userCompanyData = companies.find(c => c.id === currentCompany?.id);
+  const userCompanyData = companies.find(c => c.companyId === currentCompany?.id);
   const explicitRole = (userCompanyData as any)?.role as AppRole | undefined;
   
   // If no explicit role found, default to 'admin' for company owners

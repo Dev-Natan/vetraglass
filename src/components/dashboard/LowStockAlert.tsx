@@ -12,7 +12,6 @@ interface LowStockRow {
   id: string;
   quantity: number;
   min_quantity: number | null;
-  linha: string | null;
   supplier_name: string | null;
   item_template: { name: string | null; unit: string | null; type: string | null } | null;
   company_item: { name: string | null; unit: string | null; type: string | null } | null;
@@ -30,15 +29,15 @@ export function LowStockAlert() {
       const { data, error } = await supabase
         .from('company_stock')
         .select(`
-          id, quantity, min_quantity, linha, supplier_name,
+          id, quantity, min_quantity, supplier_name,
           item_template:item_templates(name, unit, type),
           company_item:company_items(name, unit, type)
-        ` as any)
+        `)
         .eq('company_id', companyId)
         .eq('is_active', true)
         .gt('min_quantity', 0);
       if (error) throw error;
-      const rows = (data as any as LowStockRow[]) || [];
+      const rows = (data as LowStockRow[]) || [];
       return rows.filter(
         (r) => Number(r.quantity ?? 0) <= Number(r.min_quantity ?? 0),
       );
@@ -51,7 +50,7 @@ export function LowStockAlert() {
     mutationFn: async ({ id, name }: { id: string; name: string | null }) => {
       const { error } = await supabase
         .from('company_stock')
-        .update({ supplier_name: name } as any)
+        .update({ supplier_name: name })
         .eq('id', id);
       if (error) throw error;
     },
@@ -60,7 +59,8 @@ export function LowStockAlert() {
       qc.invalidateQueries({ queryKey: ['company-stock'] });
       toast.success('Fornecedor atualizado');
     },
-    onError: (e: any) => toast.error(e.message || 'Erro ao salvar fornecedor'),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar fornecedor'),
   });
 
   if (isLoading || items.length === 0) return null;

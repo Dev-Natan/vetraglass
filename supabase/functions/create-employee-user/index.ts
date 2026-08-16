@@ -161,10 +161,9 @@ serve(async (req: Request): Promise<Response> => {
     if (checkError || !userCompany) {
       // Also check if they are a SaaS Admin
       const { data: saasAdmin } = await supabaseAdmin
-        .from("user_roles")
-        .select("role")
+        .from("saas_admins")
+        .select("id")
         .eq("user_id", user.id)
-        .eq("role", "saas_admin")
         .maybeSingle();
 
       if (!saasAdmin) {

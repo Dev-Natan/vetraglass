@@ -26,9 +26,9 @@ interface Company {
   stripe_customer_id: string | null;
 }
 
-interface UserCompany {
-  id: string;
-  company_id: string;
+export interface UserCompanyMembership {
+  membershipId: string;
+  companyId: string;
   role: 'admin' | 'manager' | 'employee';
   is_active: boolean;
   company: Company;
@@ -38,7 +38,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  companies: UserCompany[];
+  companies: UserCompanyMembership[];
   currentCompany: Company | null;
   setCurrentCompany: (company: Company) => void;
   loading: boolean;
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [companies, setCompanies] = useState<UserCompany[]>([]);
+  const [companies, setCompanies] = useState<UserCompanyMembership[]>([]);
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isSaasAdmin, setIsSaasAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -279,8 +279,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userCompaniesResult.data && userCompaniesResult.data.length > 0) {
         const formattedCompanies = userCompaniesResult.data.map(uc => ({
-          id: uc.id,
-          company_id: uc.company_id,
+          membershipId: uc.id,
+          companyId: uc.company_id,
           role: uc.role as 'admin' | 'manager' | 'employee',
           is_active: uc.is_active,
           company: uc.company as unknown as Company

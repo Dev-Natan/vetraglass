@@ -7,7 +7,6 @@ import {
   Plus, Search, Users, LayoutGrid, List, Truck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { clientService } from '@/services/clientService';
 import type { Client } from '@/types/clientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -127,21 +126,6 @@ export default function Clientes() {
     mutationFn: async (id: string) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
 
-      // Validação: bloqueia exclusão quando existem despesas/saídas de caixa vinculadas
-      const { count, error: linkError } = await supabase
-        .from('cash_movements')
-        .select('id', { count: 'exact', head: true })
-        .eq('company_id', currentCompany.id)
-        .eq('type', 'saida')
-        .eq('cliente_id', id);
-
-      if (linkError) throw linkError;
-      if ((count || 0) > 0) {
-        throw new Error(
-          `Não é possível remover: existem ${count} despesa(s) de caixa vinculada(s) a este cadastro.`
-        );
-      }
-
       return clientService.toggleClientStatus(id, currentCompany.id, false);
     },
 
@@ -184,14 +168,15 @@ export default function Clientes() {
 
   const filteredClients = clients.filter(client => {
     const search = searchTerm.toLowerCase();
+    const documentSearch = searchTerm.replace(/\D/g, '');
     const matchesSearch = (
       client.name.toLowerCase().includes(search) ||
-      client.document?.includes(searchTerm.replace(/\D/g, '')) ||
+      (documentSearch.length > 0 && client.document?.includes(documentSearch)) ||
       client.email?.toLowerCase().includes(search) ||
       client.phone?.includes(searchTerm) ||
       client.city?.toLowerCase().includes(search)
     );
-    const matchesTab = client.client_type === activeTab;
+    const matchesTab = client.client_type === activeTab || client.client_type === 'ambos';
     return matchesSearch && matchesTab;
   });
 
@@ -221,7 +206,7 @@ export default function Clientes() {
               {activeTab === 'cliente' ? 'Clientes' : 'Fornecedores'}
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              {clients.filter(c => c.client_type === activeTab).length} {activeTab === 'cliente' ? 'clientes' : 'fornecedores'} cadastrados
+              {clients.filter(c => c.client_type === activeTab || c.client_type === 'ambos').length} {activeTab === 'cliente' ? 'clientes' : 'fornecedores'} cadastrados
             </p>
           </div>
           

@@ -31,24 +31,16 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
     enabled: !!currentCompany?.id && !!clientId,
     queryFn: async () => {
       const companyId = currentCompany!.id;
-      const [quotesResult, osResult] = await Promise.all([
-        supabase
-          .from('quotes')
-          .select('id, status, final_amount, total_amount, created_at, updated_at')
-          .eq('company_id', companyId)
-          .eq('client_id', clientId),
-        supabase
-          .from('ordens_servico')
-          .select('id, status')
-          .eq('company_id', companyId)
-          .eq('client_id', clientId),
-      ]);
+      const quotesResult = await supabase
+        .from('quotes')
+        .select('id, status, final_amount, total_amount, created_at, updated_at')
+        .eq('company_id', companyId)
+        .eq('client_id', clientId);
 
       const quotes = quotesResult.data || [];
-      const os = osResult.data || [];
-      const quoteIds = quotes.map((q: any) => q.id);
+      const quoteIds = quotes.map((q) => q.id);
 
-      const [receivablesResult, depositsResult, movementsResult] = await Promise.all([
+      const [receivablesResult, depositsResult, osResult] = await Promise.all([
         supabase
           .from('accounts_receivable')
           .select('id, quote_id, total_amount, paid_amount, status')
@@ -57,24 +49,35 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
         quoteIds.length
           ? supabase
               .from('quote_deposits')
-          .select('id, quote_id, amount, status')
-          .in('quote_id', quoteIds)
-          : Promise.resolve({ data: [] as any[] }),
-        supabase
-          .from('cash_movements')
-          .select('amount, type, receivable_id')
-          .eq('company_id', companyId)
-          .eq('type', 'entrada')
-          .eq('cliente_id', clientId),
+              .select('id, quote_id, amount, status')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
+        quoteIds.length
+          ? supabase
+              .from('ordens_servico')
+              .select('id, status')
+              .eq('company_id', companyId)
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
       ]);
 
-      const receivables = ((receivablesResult as any).data || []).filter(
-        (r: any) => String(r.status || '') !== 'cancelled'
+      const receivables = (receivablesResult.data || []).filter(
+        (r) => String(r.status || '') !== 'cancelled'
       );
-      const deposits = ((depositsResult as any).data || []).filter((d: any) =>
+      const deposits = (depositsResult.data || []).filter((d) =>
         ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status || '').toLowerCase())
       );
-      const movements = (movementsResult as any).data || [];
+      const os = osResult.data || [];
+
+      const movementsResult = quoteIds.length
+        ? await supabase
+            .from('cash_movements')
+            .select('amount, type, receivable_id, quote_id')
+            .eq('company_id', companyId)
+            .eq('type', 'entrada')
+            .in('quote_id', quoteIds)
+        : { data: [] };
+      const movements = movementsResult.data || [];
 
       const closedQuotes = quotes.filter((q: any) =>
         CLOSED_QUOTE_STATUSES.includes(String(q.status || '').toLowerCase())

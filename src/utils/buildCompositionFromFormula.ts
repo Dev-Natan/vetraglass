@@ -7,6 +7,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { evaluateFormula } from './safeFormulaEvaluator';
+import { createUuid } from './createUuid';
 
 export interface SaleCompositionLine {
   /** Stable client-side id for editing */
@@ -146,7 +147,7 @@ export async function buildCompositionFromFormula(
         existing.quantity += calc;
       } else {
         aggregated.set(key, {
-          id: crypto.randomUUID(),
+          id: createUuid(),
           companyItemId,
           itemTemplateId,
           itemName: info.name,

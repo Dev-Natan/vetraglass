@@ -17,6 +17,7 @@ import { Trash2, Plus, ArrowLeftRight, Search, Package, AlertTriangle } from 'lu
 import { SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createUuid } from '@/utils/createUuid';
 
 interface StockOption {
   company_item_id: string;
@@ -138,7 +139,7 @@ export function ProductCompositionEditor({
     setLines((p) => [
       ...p,
       {
-        id: crypto.randomUUID(),
+        id: createUuid(),
         companyItemId: option.company_item_id,
         itemTemplateId: option.item_template_id,
         itemName: option.name,

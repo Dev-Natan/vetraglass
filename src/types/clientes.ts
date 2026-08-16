@@ -2,7 +2,7 @@ export interface Client {
   id: string;
   company_id: string;
   name: string;
-  client_type: 'cliente' | 'fornecedor';
+  client_type: 'cliente' | 'fornecedor' | 'ambos';
   document: string | null;
   document_type: 'CPF' | 'CNPJ' | null;
   email: string | null;

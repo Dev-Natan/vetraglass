@@ -70,7 +70,7 @@ interface CuttingPlan {
 export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   const queryClient = useQueryClient();
   const { companies, currentCompany } = useAuth();
-  const currentCompanyUser = companies.find(c => c.company_id === currentCompany?.id);
+  const currentCompanyUser = companies.find(c => c.companyId === currentCompany?.id);
   const isAdmin = currentCompanyUser?.role === 'admin';
 
   const { data: plans, isLoading } = useQuery({

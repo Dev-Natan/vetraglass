@@ -16,6 +16,7 @@ import { useProductCategories } from '@/hooks/useProductCategories';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { useProductLinhaLabels } from '@/hooks/useProductLinhas';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
+import { createUuid } from '@/utils/createUuid';
 
 interface CreateCustomProductDialogProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const [basePrice, setBasePrice] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [tempProductId] = useState(() => crypto.randomUUID());
+  const [tempProductId] = useState(createUuid);
 
   // No longer fetching existing linhas as we want to use the pre-defined ones
   const { labels: productLinhaLabels } = useProductLinhaLabels();

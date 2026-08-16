@@ -178,7 +178,7 @@ export function ContasPagarTab() {
         .from('clients')
         .select('id, name, phone, email, document')
         .eq('company_id', currentCompany.id)
-        .eq('client_type', 'fornecedor')
+        .in('client_type', ['fornecedor', 'ambos'])
         .order('name');
       if (error) throw error;
       return data || [];

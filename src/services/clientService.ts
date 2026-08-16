@@ -7,6 +7,7 @@ export const clientService = {
       .from('clients')
       .select('id, company_id, name, client_type, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
       .eq('company_id', companyId)
+      .eq('is_active', true)
       .order('name', { ascending: true });
 
     if (error) throw error;

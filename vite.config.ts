@@ -21,7 +21,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mcpPlugin(),
+    // The generated MCP bundle is checked in. Only regenerate it explicitly;
+    // automatic runs are slow and emit invalid absolute paths on Windows.
+    process.env.VETRA_BUNDLE_MCP === "true" && mcpPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {

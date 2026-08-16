@@ -118,7 +118,7 @@ export function MovimentacaoCaixaDialog({
         .from('clients')
         .select('id, name')
         .eq('company_id', currentCompany!.id)
-        .eq('client_type', 'fornecedor')
+        .in('client_type', ['fornecedor', 'ambos'])
         .order('name', { ascending: true });
       if (error) throw error;
       return (data || []) as { id: string; name: string }[];

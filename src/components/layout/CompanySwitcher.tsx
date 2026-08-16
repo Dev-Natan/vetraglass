@@ -72,7 +72,7 @@ export function CompanySwitcher({ className }: { className?: string }) {
           const isCurrent = c.company.id === currentCompany.id;
           return (
             <DropdownMenuItem
-              key={c.id}
+              key={c.membershipId}
               onClick={() => !isCurrent && setCurrentCompany(c.company)}
               className="gap-2 py-2"
             >

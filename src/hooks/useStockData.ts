@@ -92,6 +92,22 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     staleTime: 30000,
   });
 
+  const reservationsQuery = useQuery({
+    queryKey: ['active-stock-reservations', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from('stock_reservations')
+        .select('company_item_id, quantity_reserved')
+        .eq('company_id', companyId)
+        .eq('status', 'reserved');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+    staleTime: 30000,
+  });
+
   // Combine and memoize stock items with templates, company items, and prices
   const stockItems = useMemo<StockItem[]>(() => {
     if (!templatesQuery.data) return [];
@@ -99,10 +115,19 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     const templatesMap = new Map(templatesQuery.data.map(t => [t.id, t]));
     const companyItemsMap = new Map(companyItemsQuery.data?.map(ci => [ci.id, ci]) || []);
     const pricesMap = new Map(pricesQuery.data?.map(p => [p.item_template_id, p]) || []);
+    const reservedByCompanyItem = new Map<string, number>();
+    (reservationsQuery.data || []).forEach((reservation) => {
+      if (!reservation.company_item_id) return;
+      reservedByCompanyItem.set(
+        reservation.company_item_id,
+        (reservedByCompanyItem.get(reservation.company_item_id) || 0) + Number(reservation.quantity_reserved || 0),
+      );
+    });
     
     // Map existing stock items
     const existingStockItems = (stockQuery.data || []).map((stock) => ({
       ...stock,
+      reserved_quantity: stock.company_item_id ? reservedByCompanyItem.get(stock.company_item_id) || 0 : 0,
       item_template: stock.item_template_id ? templatesMap.get(stock.item_template_id) || null : null,
       company_item: stock.company_item_id ? companyItemsMap.get(stock.company_item_id) || null : null,
       priceInfo: stock.item_template_id ? pricesMap.get(stock.item_template_id) || null : null,
@@ -119,6 +144,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
         company_item_id: null,
         company_id: companyId || '',
         quantity: 0,
+        reserved_quantity: 0,
         min_quantity: 0,
         location: null,
         is_active: true,
@@ -130,7 +156,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       } as StockItem));
 
     return [...existingStockItems, ...virtualItems];
-  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data, companyId]);
+  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data, reservationsQuery.data, companyId]);
 
   // Memoized filtered lists
   const activeItems = useMemo(
@@ -172,8 +198,8 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     };
   }, [activeItems, lowStockItems]);
 
-  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading || companyItemsQuery.isLoading;
-  const error = stockQuery.error || templatesQuery.error || pricesQuery.error || companyItemsQuery.error;
+  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading || companyItemsQuery.isLoading || reservationsQuery.isLoading;
+  const error = stockQuery.error || templatesQuery.error || pricesQuery.error || companyItemsQuery.error || reservationsQuery.error;
 
   return {
     stockItems,

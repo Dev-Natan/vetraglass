@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+import { createUuid } from '@/utils/createUuid';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
@@ -61,7 +62,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   const [salePrice, setSalePrice] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [tempItemId] = useState(() => crypto.randomUUID());
+  const [tempItemId] = useState(createUuid);
   const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [fiscalExpanded, setFiscalExpanded] = useState(false);
   const [fiscalData, setFiscalData] = useState<FiscalFieldsData>({

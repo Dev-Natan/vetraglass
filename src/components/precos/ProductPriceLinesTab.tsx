@@ -14,7 +14,7 @@ const sb = supabase as any;
 
 interface CompanyProductRow {
   id: string;
-  name: string;
+  commercial_name: string;
   linha: string | null;
   category: string | null;
 }
@@ -32,9 +32,9 @@ export function ProductPriceLinesTab({ companyId }: ProductPriceLinesTabProps) {
     queryFn: async () => {
       const { data, error } = await sb
         .from('company_products')
-        .select('id, name, linha, category')
+        .select('id, commercial_name, linha, category')
         .eq('company_id', companyId)
-        .order('name');
+        .order('commercial_name');
       if (error) throw error;
       return (data ?? []) as CompanyProductRow[];
     },
@@ -48,7 +48,7 @@ export function ProductPriceLinesTab({ companyId }: ProductPriceLinesTabProps) {
     const q = search.trim().toLowerCase();
     if (!q) return products;
     return products.filter(p =>
-      [p.name, p.linha, p.category].filter(Boolean).some(v => String(v).toLowerCase().includes(q)),
+      [p.commercial_name, p.linha, p.category].filter(Boolean).some(v => String(v).toLowerCase().includes(q)),
     );
   }, [products, search]);
 
@@ -88,7 +88,7 @@ export function ProductPriceLinesTab({ companyId }: ProductPriceLinesTabProps) {
                     <div className="flex items-center gap-3 text-left">
                       <Package className="w-4 h-4 text-primary shrink-0" />
                       <div>
-                        <div className="font-medium">{p.name}</div>
+                        <div className="font-medium">{p.commercial_name}</div>
                         <div className="text-xs text-muted-foreground">
                           {[p.linha, p.category].filter(Boolean).join(' · ') || 'Sem linha'}
                         </div>

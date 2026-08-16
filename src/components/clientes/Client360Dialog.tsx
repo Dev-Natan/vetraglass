@@ -16,7 +16,7 @@ import { ClientQuickActions } from './ClientQuickActions';
 interface Client {
   id?: string;
   name: string;
-  client_type: 'cliente' | 'fornecedor';
+  client_type: 'cliente' | 'fornecedor' | 'ambos';
   document: string;
   document_type: 'CPF' | 'CNPJ' | null;
   email: string;
@@ -140,7 +140,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
         <Label htmlFor="client_type">Tipo de Cadastro *</Label>
         <Select
           value={form.client_type}
-          onValueChange={value => setForm(prev => ({ ...prev, client_type: value as 'cliente' | 'fornecedor' }))}
+          onValueChange={value => setForm(prev => ({ ...prev, client_type: value as Client['client_type'] }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o tipo" />
@@ -148,6 +148,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
           <SelectContent>
             <SelectItem value="cliente">Cliente</SelectItem>
             <SelectItem value="fornecedor">Fornecedor</SelectItem>
+            <SelectItem value="ambos">Cliente e fornecedor</SelectItem>
           </SelectContent>
         </Select>
       </div>

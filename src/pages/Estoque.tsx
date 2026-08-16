@@ -64,7 +64,7 @@ export default function Estoque() {
       const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
       const unit = (it.company_item?.unit ?? it.item_template?.unit ?? '').toLowerCase();
       if (type === 'glass' || type === 'vidro' || unit === 'm2') {
-        const reservedQty = Number((it as any).quantity_reserved ?? 0);
+        const reservedQty = Number(it.reserved_quantity || 0);
         available += Math.max(0, (it.quantity || 0) - reservedQty);
         reserved += reservedQty;
       }
