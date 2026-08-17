@@ -517,16 +517,24 @@ export type Database = {
       cash_movements: {
         Row: {
           amount: number
-          cash_register_id: string
+          bank_account_id: string | null
+          cash_register_id: string | null
           category: string
+          cliente_id: string | null
           company_id: string
           created_at: string
           created_by: string | null
           description: string
           expense_id: string | null
+          fornecedor_id: string | null
+          funcionario_id: string | null
           id: string
+          operation_key: string | null
           ordem_servico_id: string | null
           origem: string | null
+          party_id: string | null
+          party_name: string | null
+          party_type: string | null
           payment_method: string | null
           quote_id: string | null
           receivable_id: string | null
@@ -535,16 +543,24 @@ export type Database = {
         }
         Insert: {
           amount: number
-          cash_register_id: string
+          bank_account_id?: string | null
+          cash_register_id?: string | null
           category: string
+          cliente_id?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
           description: string
           expense_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id?: string | null
           id?: string
+          operation_key?: string | null
           ordem_servico_id?: string | null
           origem?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
           payment_method?: string | null
           quote_id?: string | null
           receivable_id?: string | null
@@ -553,16 +569,24 @@ export type Database = {
         }
         Update: {
           amount?: number
-          cash_register_id?: string
+          bank_account_id?: string | null
+          cash_register_id?: string | null
           category?: string
+          cliente_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string
           expense_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id?: string | null
           id?: string
+          operation_key?: string | null
           ordem_servico_id?: string | null
           origem?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
           payment_method?: string | null
           quote_id?: string | null
           receivable_id?: string | null
@@ -571,10 +595,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cash_movements_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_movements_cash_register_id_fkey"
             columns: ["cash_register_id"]
             isOneToOne: false
             referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -3080,6 +3125,47 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_operation_keys: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          operation_key: string
+          operation_type: string
+          reference_id: string | null
+          result: Json | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          operation_key: string
+          operation_type: string
+          reference_id?: string | null
+          result?: Json | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          operation_key?: string
+          operation_type?: string
+          reference_id?: string | null
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_operation_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -7414,6 +7500,72 @@ export type Database = {
           p_priority?: string
           p_quote_id: string
           p_total_amount: number
+        }
+        Returns: Json
+      }
+      pay_employee_commissions_transactional: {
+        Args: {
+          _cash_register_id: string
+          _commission_ids: string[]
+          _notes?: string
+          _operation_key: string
+        }
+        Returns: Json
+      }
+      pay_expense_transactional: {
+        Args: {
+          _amount: number
+          _bank_account_id: string | null
+          _cash_register_id: string | null
+          _expense_id: string
+          _operation_key: string
+          _paid_date?: string
+          _payment_method: string
+        }
+        Returns: Json
+      }
+      receive_quote_deposit_transactional: {
+        Args: {
+          _cash_register_id: string
+          _deposit_id: string
+          _operation_key: string
+          _payment_method: string
+        }
+        Returns: Json
+      }
+      receive_receivable_payment: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _operation_key: string
+          _payment_method: string
+          _receivable_id: string
+        }
+        Returns: Json
+      }
+      receive_sale_payment_transactional: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _operation_key: string
+          _payment_method: string
+          _sale_id: string
+        }
+        Returns: Json
+      }
+      register_cash_movement_transactional: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _category: string
+          _cliente_id?: string
+          _description: string
+          _fornecedor_id?: string
+          _funcionario_id?: string
+          _operation_key: string
+          _payment_method: string
+          _quote_id?: string
+          _type: string
         }
         Returns: Json
       }
