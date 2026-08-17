@@ -114,7 +114,7 @@ export function MovimentacaoCaixaDialog({
   const { data: fornecedores = [] } = useQuery({
     queryKey: ['movement-fornecedores', currentCompany?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('clients')
         .select('id, name')
         .eq('company_id', currentCompany!.id)
@@ -150,7 +150,7 @@ export function MovimentacaoCaixaDialog({
       // Buscamos o status financeiro para filtrar por saldo pendente real
       // A view quote_financial_status NÃO tem client_id, então primeiro pegamos todos com saldo
       // e depois filtramos pelos orçamentos do cliente.
-      const { data: financialStatus, error: financialError } = await (supabase as any)
+      const { data: financialStatus, error: financialError } = await supabase
         .from('quote_financial_status')
         .select('quote_id, pending_amount')
         .gt('pending_amount', 0.01);
@@ -195,7 +195,7 @@ export function MovimentacaoCaixaDialog({
       // Filtrar apenas os que têm saldo pendente na view e mesclar
       const finalResult = quotesData
         .map(q => {
-          const financial = financialStatus.find((f: any) => f.quote_id === q.id);
+          const financial = financialStatus.find((f) => f.quote_id === q.id);
           return {
             ...q,
             pending_amount: financial?.pending_amount || 0
@@ -267,12 +267,13 @@ export function MovimentacaoCaixaDialog({
         .eq('cash_register_id', cashRegisterId);
       if (movErr) throw movErr;
 
-      const isOpening = (m: any) => m.category === 'abertura' || m.category === 'abertura_caixa';
-      const isCash = (m: any) => (m.payment_method || 'dinheiro').toLowerCase() === 'dinheiro';
+      type CashBalanceMovement = NonNullable<typeof movs>[number];
+      const isOpening = (m: CashBalanceMovement) => m.category === 'abertura' || m.category === 'abertura_caixa';
+      const isCash = (m: CashBalanceMovement) => (m.payment_method || 'dinheiro').toLowerCase() === 'dinheiro';
 
       return (movs || [])
-        .filter((m: any) => !isOpening(m) && isCash(m))
-        .reduce((sum: number, m: any) => {
+        .filter((m) => !isOpening(m) && isCash(m))
+        .reduce((sum: number, m) => {
           const value = Number(m.amount) || 0;
           return m.type === 'entrada' ? sum + value : sum - value;
         }, Number(reg?.opening_amount) || 0);
@@ -318,10 +319,6 @@ export function MovimentacaoCaixaDialog({
     setQuoteId('none');
   };
 
-  const clienteSelected = clientes.find((c) => c.id === clienteId);
-  const fornecedorSelected = fornecedores.find((f: any) => f.id === fornecedorId);
-  const funcionarioSelected = funcionarios.find((e) => e.id === funcionarioId);
-
   // Mutation com suporte a reforço automático
   const mutation = useMutation({
     mutationFn: async () => {
@@ -349,72 +346,40 @@ export function MovimentacaoCaixaDialog({
         quote_id: quoteId !== 'none' ? quoteId : null,
       };
 
-      // Manter compat com colunas legadas party_* usando o primeiro vínculo (prioridade fornecedor > cliente > funcionário)
-      const legacyParty = fornecedorSelected
-        ? { party_type: 'fornecedor', party_id: fornecedorSelected.id, party_name: (fornecedorSelected as any).name }
-        : clienteSelected
-        ? { party_type: 'cliente', party_id: clienteSelected.id, party_name: clienteSelected.name }
-        : funcionarioSelected
-        ? { party_type: 'funcionario', party_id: funcionarioSelected.id, party_name: funcionarioSelected.name }
-        : { party_type: null as string | null, party_id: null as string | null, party_name: null as string | null };
+      const canonicalCategory: Record<string, string> = {
+        ajuste_positivo: 'suprimento',
+        outros_entrada: 'outros',
+        pagamento_despesa: 'despesa',
+        compra_material: 'pagamento_fornecedor',
+        retirada_socio: 'outros',
+        vale_funcionario: 'outros',
+        ajuste_negativo: 'outros',
+        outros_saida: 'outros',
+      };
 
-      const partyFields = { ...linkFields, ...legacyParty };
-      const hasAnyLink = !!(linkFields.cliente_id || linkFields.fornecedor_id || linkFields.funcionario_id);
-
-      // Se é saída e precisa de reforço, usar a função com reforço automático
-      if (type === 'saida') {
-        const { data, error } = await supabase.rpc('register_cash_exit_with_reinforcement', {
-          _cash_register_id: cashRegisterId,
-          _amount: amountValue,
-          _category: category,
-          _description: description.trim(),
-          _payment_method: paymentMethod,
-        });
-
-        if (error) throw error;
-
-        const result = data as {
-          success: boolean;
-          error?: string;
-          movement_id?: string;
-          reinforcement?: {
-            reinforcement_needed: boolean;
-            reinforcement_amount?: number;
-          };
-          message?: string;
-        };
-
-        if (!result.success) {
-          throw new Error(result.error || 'Erro ao registrar saída');
-        }
-
-        if (result.movement_id && hasAnyLink) {
-          await (supabase.from('cash_movements') as any)
-            .update(partyFields)
-            .eq('id', result.movement_id);
-        }
-
-        return result;
-      }
-
-      // Entrada normal
-      const { data, error } = await (supabase.from('cash_movements') as any)
-        .insert({
-          company_id: currentCompany.id,
-          cash_register_id: cashRegisterId,
-          type,
-          category,
-          amount: amountValue,
-          description: description.trim(),
-          payment_method: paymentMethod,
-          created_by: user.id,
-          ...partyFields,
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.rpc('register_cash_movement_transactional', {
+        _cash_register_id: cashRegisterId,
+        _type: type,
+        _category: canonicalCategory[category] ?? category,
+        _amount: amountValue,
+        _description: description.trim(),
+        _payment_method: paymentMethod,
+        _operation_key: crypto.randomUUID(),
+        _cliente_id: linkFields.cliente_id,
+        _fornecedor_id: linkFields.fornecedor_id,
+        _funcionario_id: linkFields.funcionario_id,
+        _quote_id: linkFields.quote_id,
+      });
       if (error) throw error;
-      return { success: true, data };
+      const result = data as {
+        success?: boolean;
+        reinforcement?: {
+          reinforcement_needed: boolean;
+          reinforcement_amount?: number;
+        } | null;
+      } | null;
+      if (!result?.success) throw new Error('A movimentação transacional não foi confirmada');
+      return result;
     },
     onSuccess: async (result) => {
       const hasReinforcement = result && 'reinforcement' in result && result.reinforcement?.reinforcement_needed;
