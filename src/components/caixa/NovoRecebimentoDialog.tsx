@@ -22,7 +22,6 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
-import { calculateFinancialStatus } from '@/hooks/useSalesFinancial';
 import { ExtratoRecebimentos } from './ExtratoRecebimentos';
 import { elementToPdfBlob } from '@/utils/printableToPdf';
 
@@ -62,19 +61,20 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
   const [paymentAmount, setPaymentAmount] = useState('');
 
   const { data: openCashRegister, isLoading: loadingCash } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id],
+    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       const { data, error } = await supabase
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
+        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && open,
+    enabled: !!currentCompany?.id && !!user?.id && open,
   });
 
   // Histórico de recebimentos vinculados a esta venda
@@ -125,112 +125,17 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       if (amountToReceive <= 0) throw new Error('Informe um valor maior que zero');
       if (amountToReceive > remaining + 0.001) throw new Error('Valor maior que o saldo restante');
 
-      // 1) Cria movimento de caixa (uma linha independente por recebimento)
-      const nRef = sale.sale_number ?? sale.os_number ?? 0;
-      const label = sale.sale_number
-        ? `Entrada Parcial - Venda #${String(sale.sale_number).padStart(4, '0')}`
-        : `Entrada Parcial - OS #${String(nRef).padStart(4, '0')}`;
-      const description = `${label}${sale.customer_name ? ` - ${sale.customer_name}` : ''}`;
-
-      console.log('Dados para novo pagamento:', {
-        cash_register_id: openCashRegister.id,
-        amount: amountToReceive,
-        sale_id: sale.id,
-        quote_id: sale.quote_id,
-        client_id: sale.client_id
+      const { data, error } = await supabase.rpc('receive_sale_payment_transactional', {
+        _sale_id: sale.id,
+        _amount: amountToReceive,
+        _payment_method: paymentMethod,
+        _cash_register_id: openCashRegister.id,
+        _operation_key: crypto.randomUUID(),
       });
-
-      const { data: movement, error: movErr } = await supabase
-        .from('cash_movements')
-        .insert({
-          cash_register_id: openCashRegister.id,
-          company_id: currentCompany.id,
-          type: 'entrada',
-          category: 'recebimento_parcial',
-          amount: amountToReceive,
-          description,
-          payment_method: paymentMethod,
-          sale_id: sale.id,
-          quote_id: sale.quote_id || null,
-          cliente_id: sale.client_id || null,
-          created_by: user.id,
-          origem: 'venda',
-        })
-        .select('*')
-        .single();
-
-      if (movErr) {
-        console.error('Erro ao inserir movimento:', movErr);
-        throw movErr;
-      }
-
-      console.log('Novo Pagamento Criado:', movement);
-
-      // 2) Atualiza a venda somando ao paid_amount
-      const currentPaid = Number(sale.paid_amount) || 0;
-      const totalAmt = Number(sale.total_amount);
-      const newPaid = Number((currentPaid + amountToReceive).toFixed(2));
-      const newPending = Math.max(0, Number((totalAmt - newPaid).toFixed(2)));
-      const finStatus = calculateFinancialStatus(newPaid, totalAmt);
-      const payment_status =
-        newPending <= 0.01 ? 'paid' : 'partial';
-
-      const { error: saleErr } = await supabase
-        .from('sales')
-        .update({
-          paid_amount: newPaid,
-          pending_amount: newPending,
-          payment_status,
-          sale_type: newPending <= 0 ? 'full' : 'partial',
-        })
-        .eq('id', sale.id);
-      if (saleErr) throw saleErr;
-
-      // 3) Atualiza OS vinculada
-      if (sale.ordem_servico_id) {
-        const { data: os } = await supabase
-          .from('ordens_servico')
-          .select('paid_amount, pending_amount, total_amount')
-          .eq('id', sale.ordem_servico_id)
-          .single();
-        if (os) {
-          const osPaid = Number(((os.paid_amount || 0) + amountToReceive).toFixed(2));
-          const osPending = Math.max(0, Number(((os.pending_amount ?? os.total_amount) - amountToReceive).toFixed(2)));
-          await supabase
-            .from('ordens_servico')
-            .update({ paid_amount: osPaid, pending_amount: osPending })
-            .eq('id', sale.ordem_servico_id);
-        }
-      }
-
-      // 4) Se quitou, marca contas a receber vinculadas como pagas e atualiza status do orçamento
-      if (newPending <= 0) {
-        await supabase
-          .from('accounts_receivable')
-          .update({
-            status: 'paid',
-            client_id: sale.client_id || null,
-            paid_date: format(new Date(), 'yyyy-MM-dd'),
-            payment_method: paymentMethod,
-          })
-          .eq('sale_id', sale.id)
-          .neq('status', 'paid');
-
-        if (sale.quote_id) {
-          await supabase
-            .from('quotes')
-            .update({ status: 'converted', deposit_status: 'billed' })
-            .eq('id', sale.quote_id);
-        }
-      } else if (sale.quote_id) {
-        // Se ainda há saldo, garante que o orçamento esteja como 'approved' (que mapeia para 'Parcial' na UI se houver venda)
-        await supabase
-          .from('quotes')
-          .update({ status: 'approved' })
-          .eq('id', sale.quote_id);
-      }
-
-      return { amount: amountToReceive, fullyPaid: newPending <= 0 };
+      if (error) throw error;
+      const result = data as { success?: boolean; status?: string } | null;
+      if (!result?.success) throw new Error('O recebimento transacional não foi confirmado');
+      return { amount: amountToReceive, fullyPaid: result.status === 'paid' };
     },
     onSuccess: (res) => {
       toast.success(res.fullyPaid ? 'Venda quitada!' : 'Recebimento parcial registrado', {
@@ -388,7 +293,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
               </div>
               <ScrollArea className="max-h-32 rounded-lg border">
                 <div className="divide-y">
-                  {history.map((m: any) => (
+                  {history.map((m) => (
                     <div key={m.id} className="flex items-center justify-between px-3 py-2 text-xs">
                       <div className="min-w-0">
                         <p className="font-medium truncate">
