@@ -49,7 +49,7 @@ export function FaturarSaldoDialog({
 
   // Buscar caixa aberto
   const { data: openCashRegister } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id],
+    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       
@@ -57,13 +57,14 @@ export function FaturarSaldoDialog({
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
+        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && open,
+    enabled: !!currentCompany?.id && !!user?.id && open,
   });
 
   // FLUXO CORRIGIDO: Buscar TODAS as entradas já pagas do orçamento
@@ -81,12 +82,15 @@ export function FaturarSaldoDialog({
       
       if (depositsError) throw depositsError;
 
-      // Também buscar vendas parciais já vinculadas
-      const { data: partialSales, error: salesError } = await supabase
+      // A aprovação já cria a venda canônica; o faturamento apenas quita seu saldo.
+      const { data: canonicalSale, error: salesError } = await supabase
         .from('sales')
-        .select('id, total_amount, paid_amount')
+        .select('id, total_amount, paid_amount, pending_amount, payment_status')
         .eq('ordem_servico_id', ordemServico.id)
-        .eq('sale_type', 'partial');
+        .neq('payment_status', 'cancelled')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (salesError) console.warn('Erro ao buscar vendas parciais:', salesError);
 
@@ -101,7 +105,7 @@ export function FaturarSaldoDialog({
       
       return {
         deposits: deposits || [],
-        partialSales: partialSales || [],
+        canonicalSale,
         totalReceived,
         depositsReceived,
       };
@@ -126,170 +130,29 @@ export function FaturarSaldoDialog({
         throw new Error('Nenhum caixa aberto. Abra o caixa para faturar.');
       }
 
-      // CORREÇÃO: Usar o valor REAL das entradas já recebidas
       const entradaJaRecebida = allDeposits?.totalReceived || 0;
       const totalOrcamento = ordemServico.total_amount;
-      const saldoRestante = Math.max(0, totalOrcamento - entradaJaRecebida);
-      
-      if (saldoRestante <= 0 && entradaJaRecebida <= 0) {
-        throw new Error('Não há saldo pendente para faturar');
+      const sale = allDeposits?.canonicalSale;
+      if (!sale?.id) {
+        throw new Error('Venda canônica da OS não encontrada. Reprocesse a aprovação do orçamento.');
       }
+      const saldoRestante = Math.max(0, Number(sale.pending_amount ?? ordemServico.pending_amount));
 
-      // Buscar venda parcial existente vinculada à OS
-      const partialSale = allDeposits?.partialSales?.[0];
-      
-      let saleId: string;
-
-      // FLUXO CORRIGIDO: Atualizar venda parcial existente OU criar nova
-      if (partialSale) {
-        // 1A. ATUALIZAR venda parcial para venda completa
-        const { error: updateSaleError } = await supabase
-          .from('sales')
-          .update({
-            total_amount: totalOrcamento,
-            subtotal: totalOrcamento,
-            paid_amount: entradaJaRecebida + saldoRestante,
-            pending_amount: 0,
-            payment_status: 'paid',
-            sale_type: 'full',
-            notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')} (atualizado de venda parcial)`,
-          })
-          .eq('id', partialSale.id);
-
-        if (updateSaleError) throw updateSaleError;
-        saleId = partialSale.id;
-      } else {
-        // 1B. Criar venda nova (caso não exista venda parcial)
-        const { data: newSale, error: saleError } = await supabase
-          .from('sales')
-          .insert({
-            company_id: currentCompany.id,
-            cash_register_id: openCashRegister.id,
-            customer_name: ordemServico.customer_name,
-            total_amount: totalOrcamento,
-            subtotal: totalOrcamento,
-            paid_amount: entradaJaRecebida + saldoRestante,
-            pending_amount: 0,
-            payment_method: paymentMethod,
-            sale_type: 'full',
-            payment_status: 'paid',
-            notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')}`,
-            sold_by: user.id,
-            ordem_servico_id: ordemServico.id,
-            quote_id: ordemServico.quote_id,
-          })
-          .select('id')
-          .single();
-
-        if (saleError) throw saleError;
-        saleId = newSale.id;
-      }
-
-      // 2. Criar movimento de caixa APENAS para o saldo restante (não duplicar entrada)
       if (saldoRestante > 0) {
-        const { error: movementError } = await supabase
-          .from('cash_movements')
-          .insert({
-            cash_register_id: openCashRegister.id,
-            company_id: currentCompany.id,
-            type: 'entrada',
-            category: 'venda',
-            amount: saldoRestante,
-            description: `Saldo final - OS #${String(ordemServico.os_number).padStart(4, '0')} - ${ordemServico.customer_name}`,
-            payment_method: paymentMethod,
-            sale_id: saleId,
-            created_by: user.id,
-            origem: 'venda',
-          });
-
-        if (movementError) throw movementError;
-      }
-
-      // 3. TRANSFERIR VÍNCULO: Atualizar movimentações de entrada para pertencerem à venda
-      const receivedDeposits = (allDeposits?.deposits || []).filter(d => d.status === 'received');
-      for (const deposit of receivedDeposits) {
-        // Buscar cash_movement vinculado ao deposit
-        const { data: depositData } = await supabase
-          .from('quote_deposits')
-          .select('cash_movement_id')
-          .eq('id', deposit.id)
-          .single();
-
-        if (depositData?.cash_movement_id) {
-          // Transferir vínculo: orcamento → venda
-          await supabase
-            .from('cash_movements')
-            .update({
-              origem: 'venda',
-              sale_id: saleId,
-            })
-            .eq('id', depositData.cash_movement_id);
-        }
-      }
-
-      // 4. Atualizar APENAS quote_deposits já recebidos para 'billed'
-      // CORREÇÃO: Não marcar depósitos 'pending' como 'billed' — eles não foram recebidos
-      if (ordemServico.quote_id) {
-        await supabase
-          .from('quote_deposits')
-          .update({ status: 'billed' })
-          .eq('quote_id', ordemServico.quote_id)
-          .eq('status', 'received');
-      }
-
-      // 5. Atualizar accounts_receivable - vincular à venda e marcar como pago
-      if (ordemServico.quote_id) {
-        // Atualizar entradas
-        await supabase
-          .from('accounts_receivable')
-          .update({
-            status: 'paid',
-            sale_id: saleId,
-            paid_date: new Date().toISOString().split('T')[0],
-          })
-          .eq('quote_id', ordemServico.quote_id)
-          .eq('receivable_type', 'entrada_orcamento');
-
-        // Atualizar parcelas
-        await supabase
-          .from('accounts_receivable')
-          .update({
-            status: 'paid',
-            paid_date: new Date().toISOString().split('T')[0],
-            paid_amount: saldoRestante,
-            payment_method: paymentMethod,
-            sale_id: saleId,
-          })
-          .eq('quote_id', ordemServico.quote_id)
-          .or('receivable_type.eq.saldo_final,receivable_type.eq.installment')
-          .eq('status', 'pending');
-      }
-
-      // 6. Atualizar ordens_servico (apenas campos financeiros - status já está 'completed')
-      const { error: osError } = await supabase
-        .from('ordens_servico')
-        .update({
-          sale_id: saleId,
-          paid_amount: totalOrcamento,
-          pending_amount: 0,
-        })
-        .eq('id', ordemServico.id);
-
-      if (osError) throw osError;
-
-      // 7. Atualizar quotes como concluído
-      if (ordemServico.quote_id) {
-        await supabase
-          .from('quotes')
-          .update({
-            status: 'completed',
-            deposit_status: 'billed',
-          })
-          .eq('id', ordemServico.quote_id);
+        const { data, error } = await supabase.rpc('receive_sale_payment_transactional', {
+          _sale_id: sale.id,
+          _amount: saldoRestante,
+          _payment_method: paymentMethod,
+          _cash_register_id: openCashRegister.id,
+          _operation_key: crypto.randomUUID(),
+        });
+        if (error) throw error;
+        const result = data as { success?: boolean } | null;
+        if (!result?.success) throw new Error('O faturamento transacional não foi confirmado');
       }
 
       return { 
-        saleId, 
+        saleId: sale.id,
         entradaJaRecebida, 
         saldoFaturado: saldoRestante,
         totalFaturado: totalOrcamento,
@@ -327,7 +190,10 @@ export function FaturarSaldoDialog({
   const isCaixaAberto = !!openCashRegister?.id;
   const entradaRecebida = allDeposits?.totalReceived || 0;
   const totalOrcamento = ordemServico.total_amount;
-  const saldoRestante = Math.max(0, totalOrcamento - entradaRecebida);
+  const saldoRestante = Math.max(
+    0,
+    Number(allDeposits?.canonicalSale?.pending_amount ?? ordemServico.pending_amount),
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
