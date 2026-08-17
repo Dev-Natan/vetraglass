@@ -82,6 +82,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         .from('cash_registers')
         .select('*')
         .eq('company_id', currentCompany.id)
+        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (error) throw error;
@@ -220,7 +221,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
       if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
 
-      const { data, error } = await (supabase.rpc as any)('close_cash_register_direct', {
+      const { data, error } = await supabase.rpc('close_cash_register_direct', {
         _cash_register_id: openCashRegister.id,
         _counts: counts,
         _notes: notes || null,
