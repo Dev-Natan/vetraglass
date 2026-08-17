@@ -41,6 +41,8 @@ import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { PayableDetailsDialog, type PayableDetails } from '@/components/financeiro/PayableDetailsDialog';
 import { TodayDuesAlert } from '@/components/financeiro/TodayDuesAlert';
+import type { TablesInsert } from '@/integrations/supabase/types';
+import type { LucideIcon } from 'lucide-react';
 
 type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
@@ -113,7 +115,7 @@ const emptyForm = (): FormState => ({
 });
 
 export function ContasPagarTab() {
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -322,7 +324,7 @@ export function ContasPagarTab() {
       if (firstInsert.error) throw firstInsert.error;
 
       if (total > 1) {
-        const rows: any[] = [];
+        const rows: TablesInsert<'expenses'>[] = [];
         for (let i = 2; i <= total; i++) {
           const due = addMonths(baseDue, i - 1);
           rows.push({
@@ -360,24 +362,32 @@ export function ContasPagarTab() {
     mutationFn: async () => {
       if (!payDialog) return;
       if (!payAmount || payAmount <= 0) throw new Error('Valor inválido');
-      const { error } = await supabase.from('expenses').update({
-        status: 'paid',
-        paid_date: payDate,
-        paid_amount: payAmount,
-        bank_account_id: payBankId || payDialog.bank_account_id,
-      }).eq('id', payDialog.id);
-      if (error) throw error;
-
       const bankId = payBankId || payDialog.bank_account_id;
-      if (bankId) {
-        const { data: bank } = await supabase
-          .from('bank_accounts').select('current_balance').eq('id', bankId).single();
-        if (bank) {
-          await supabase.from('bank_accounts').update({
-            current_balance: Number(bank.current_balance) - payAmount,
-          }).eq('id', bankId);
-        }
+      let cashRegisterId: string | null = null;
+      if (!bankId) {
+        const { data: openRegister, error: registerError } = await supabase
+          .from('cash_registers')
+          .select('id')
+          .eq('company_id', currentCompany?.id)
+          .eq('opened_by', user?.id)
+          .eq('status', 'open')
+          .maybeSingle();
+        if (registerError) throw registerError;
+        cashRegisterId = openRegister?.id ?? null;
       }
+
+      const { data, error } = await supabase.rpc('pay_expense_transactional', {
+        _expense_id: payDialog.id,
+        _amount: payAmount,
+        _payment_method: bankId ? 'transferencia' : 'dinheiro',
+        _cash_register_id: cashRegisterId,
+        _bank_account_id: bankId || null,
+        _operation_key: crypto.randomUUID(),
+        _paid_date: payDate,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean } | null;
+      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
     },
     onSuccess: () => {
       toast.success('Pagamento registrado');
@@ -760,7 +770,7 @@ export function ContasPagarTab() {
   );
 }
 
-function SumCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
+function SumCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: LucideIcon; color: string }) {
   return (
     <Card>
       <CardContent className="pt-6">
