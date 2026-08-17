@@ -65,122 +65,16 @@ export function ReceberEntradaDialog({
         throw new Error('Empresa ou usuário não encontrado');
       }
 
-      // CORREÇÃO: Verificar estado atual do depósito no banco antes de processar
-      // Previne duplicação por clique duplo ou estado desatualizado
-      const { data: currentDeposit, error: checkError } = await supabase
-        .from('quote_deposits')
-        .select('id, status')
-        .eq('id', deposit.id)
-        .single();
-
-      if (checkError) throw checkError;
-
-      if (currentDeposit.status !== 'pending') {
-        throw new Error('Esta entrada já foi processada anteriormente');
-      }
-
-      const amount = Number(deposit.amount);
-      const osNumber = deposit.ordens_servico?.os_number;
-      const quoteNumber = deposit.quotes?.quote_number;
-      const description = osNumber 
-        ? `Entrada - OS #${String(osNumber).padStart(4, '0')} - ${deposit.customer_name}`
-        : `Entrada - Orçamento #${String(quoteNumber || 0).padStart(4, '0')} - ${deposit.customer_name}`;
-
-      // 1. Criar movimento de caixa (ENTRADA vinculada ao ORÇAMENTO)
-      const { data: cashMovement, error: movementError } = await supabase
-        .from('cash_movements')
-        .insert({
-          cash_register_id: cashRegisterId,
-          company_id: currentCompany.id,
-          type: 'entrada',
-          category: 'entrada_orcamento',
-          amount: amount,
-          description: description,
-          payment_method: paymentMethod,
-          created_by: user.id,
-          cliente_id: deposit.client_id || null,
-          origem: 'orcamento',
-        })
-        .select('id')
-        .single();
-
-      if (movementError) throw movementError;
-
-      // 2. Atualizar quote_deposit para 'received'
-      const { error: depositError } = await supabase
-        .from('quote_deposits')
-        .update({
-          status: 'received',
-          received_at: new Date().toISOString(),
-          cash_register_id: cashRegisterId,
-          cash_movement_id: cashMovement.id,
-          payment_method: paymentMethod,
-        })
-        .eq('id', deposit.id);
-
-      if (depositError) throw depositError;
-
-      // 3. Atualizar accounts_receivable correspondente (se existir)
-      const { error: receivableError } = await supabase
-        .from('accounts_receivable')
-        .update({
-          status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0],
-          paid_amount: amount,
-          payment_method: paymentMethod,
-        })
-        .eq('quote_id', deposit.quote_id)
-        .eq('receivable_type', 'entrada_orcamento')
-        .eq('status', 'pending');
-
-      if (receivableError) {
-        console.warn('Conta a receber não encontrada ou já paga:', receivableError);
-      }
-
-      // 4. Atualizar ordens_servico paid_amount (se existir)
-      if (deposit.ordem_servico_id) {
-        const { data: currentOS, error: osSelectError } = await supabase
-          .from('ordens_servico')
-          .select('paid_amount, pending_amount')
-          .eq('id', deposit.ordem_servico_id)
-          .single();
-
-        if (!osSelectError && currentOS) {
-          const newPaidAmount = (currentOS.paid_amount || 0) + amount;
-          const newPendingAmount = Math.max(0, (currentOS.pending_amount || 0) - amount);
-
-          const { error: osError } = await supabase
-            .from('ordens_servico')
-            .update({
-              paid_amount: newPaidAmount,
-              pending_amount: newPendingAmount,
-            })
-            .eq('id', deposit.ordem_servico_id);
-
-          if (osError) {
-            console.warn('Erro ao atualizar OS:', osError);
-          }
-        }
-      }
-
-      // 5. NÃO criar/atualizar vendas parciais aqui.
-      // Depósitos são apenas recebimentos de entrada — a venda será criada
-      // apenas no momento do faturamento (FaturarSaldoDialog ou NovaVendaDialog).
-      // Isso evita dupla contagem entre quote_deposits e sales.
-
-      // 6. Atualizar quotes deposit_status
-      const { error: quoteError } = await supabase
-        .from('quotes')
-        .update({
-          deposit_status: 'received',
-        })
-        .eq('id', deposit.quote_id);
-
-      if (quoteError) {
-        console.warn('Erro ao atualizar quote:', quoteError);
-      }
-
-      return cashMovement;
+      const { data, error } = await supabase.rpc('receive_quote_deposit_transactional', {
+        _deposit_id: deposit.id,
+        _payment_method: paymentMethod,
+        _cash_register_id: cashRegisterId,
+        _operation_key: crypto.randomUUID(),
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; movement_id?: string } | null;
+      if (!result?.success) throw new Error('A entrada transacional não foi confirmada');
+      return result;
     },
     onSuccess: () => {
       toast.success('Entrada recebida com sucesso!', {
