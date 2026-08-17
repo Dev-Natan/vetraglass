@@ -92,7 +92,7 @@ interface CommissionsTabProps {
 }
 
 export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: CommissionsTabProps) {
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
 
   // Use internal state if no external control
@@ -185,15 +185,25 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
   // Pay commission mutation
   const payCommissionMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      const { error } = await supabase
-        .from('employee_commissions')
-        .update({ 
-          status: 'paid', 
-          paid_at: new Date().toISOString(),
-          notes: notes || null,
-        })
-        .eq('id', id);
+      const { data: openRegister, error: registerError } = await supabase
+        .from('cash_registers')
+        .select('id')
+        .eq('company_id', currentCompany?.id)
+        .eq('opened_by', user?.id)
+        .eq('status', 'open')
+        .maybeSingle();
+      if (registerError) throw registerError;
+      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissões');
+
+      const { data, error } = await supabase.rpc('pay_employee_commissions_transactional', {
+        _commission_ids: [id],
+        _cash_register_id: openRegister.id,
+        _operation_key: crypto.randomUUID(),
+        _notes: notes || null,
+      });
       if (error) throw error;
+      const result = data as { success?: boolean } | null;
+      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
     },
     onSuccess: () => {
       toast.success('Comissão marcada como paga!');
@@ -234,42 +244,25 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
       
       if (pendingCommissions.length === 0) return;
 
-      const totalAmount = pendingCommissions.reduce((sum, c) => sum + Number(c.commission_amount), 0);
-      const employeeName = pendingCommissions[0].employee?.name || 'Funcionário';
-
-      // 1. Mark all as paid
-      for (const commission of pendingCommissions) {
-        await supabase
-          .from('employee_commissions')
-          .update({ 
-            status: 'paid', 
-            paid_at: new Date().toISOString(),
-            notes: 'Pagamento em lote',
-          })
-          .eq('id', commission.id);
-      }
-
-      // 2. Register cash movement
-      const { data: openRegister } = await supabase
+      const { data: openRegister, error: registerError } = await supabase
         .from('cash_registers')
         .select('id')
         .eq('company_id', currentCompany?.id)
+        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
+      if (registerError) throw registerError;
+      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissões');
 
-      if (openRegister) {
-        await supabase
-          .from('cash_movements')
-          .insert({
-            company_id: currentCompany?.id,
-            cash_register_id: openRegister.id,
-            type: 'saida',
-            category: 'comissao',
-            amount: totalAmount,
-            description: `Pagamento de comissões - ${employeeName}`,
-            created_by: (await supabase.auth.getUser()).data.user?.id,
-          });
-      }
+      const { data, error } = await supabase.rpc('pay_employee_commissions_transactional', {
+        _commission_ids: pendingCommissions.map((commission) => commission.id),
+        _cash_register_id: openRegister.id,
+        _operation_key: crypto.randomUUID(),
+        _notes: 'Pagamento em lote',
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean } | null;
+      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
     },
     onSuccess: () => {
       toast.success('Comissões pagas com sucesso!');
