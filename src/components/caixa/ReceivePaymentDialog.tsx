@@ -31,7 +31,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { useSalesFinancial, calculateFinancialStatus } from '@/hooks/useSalesFinancial';
 import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
 
 interface Receivable {
@@ -70,7 +69,7 @@ export function ReceivePaymentDialog({
 
   // Buscar caixa aberto
   const { data: openCashRegister, isLoading: isLoadingCash } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id],
+    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       
@@ -78,13 +77,14 @@ export function ReceivePaymentDialog({
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
+        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && open,
+    enabled: !!currentCompany?.id && !!user?.id && open,
   });
 
   const formatCurrency = (value: number) => {
@@ -125,98 +125,26 @@ export function ReceivePaymentDialog({
         throw new Error('Valor não pode ser maior que o saldo pendente');
       }
 
-      const description = receivable.installment_number > 0
-        ? `Parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`
-        : `Pagamento - ${receivable.customer_name}`;
+      const { data, error } = await supabase.rpc('receive_receivable_payment', {
+        _receivable_id: receivable.id,
+        _amount: amountToPay,
+        _payment_method: paymentMethod,
+        _cash_register_id: openCashRegister.id,
+        _operation_key: crypto.randomUUID(),
+      });
+      if (error) throw error;
 
-      // 1. Criar movimento de caixa (entrada real de dinheiro)
-      const { data: cashMovement, error: movementError } = await supabase
-        .from('cash_movements')
-        .insert({
-          cash_register_id: openCashRegister.id,
-          company_id: currentCompany.id,
-          type: 'entrada',
-          category: 'recebimento_parcela',
-          amount: amountToPay,
-          description: description,
-          payment_method: paymentMethod,
-          receivable_id: receivable.id,
-          sale_id: receivable.sale_id,
-          created_by: user.id,
-          origem: 'conta_receber',
-        })
-        .select('id')
-        .single();
-
-      if (movementError) throw movementError;
-
-      // 2. Atualizar a conta a receber
-      const newPaidAmount = (receivable.paid_amount || 0) + amountToPay;
-      const isFullyPaid = newPaidAmount >= receivable.total_amount;
-
-      const { error: receivableUpdateError } = await supabase
-        .from('accounts_receivable')
-        .update({
-          paid_amount: newPaidAmount,
-          status: isFullyPaid ? 'paid' : 'partial',
-          paid_date: isFullyPaid ? format(new Date(), 'yyyy-MM-dd') : null,
-          payment_method: paymentMethod,
-        })
-        .eq('id', receivable.id);
-
-      if (receivableUpdateError) throw receivableUpdateError;
-
-      // 3. Atualizar venda vinculada (se existir)
-      if (receivable.sale_id) {
-        const { data: sale, error: saleSelectError } = await supabase
-          .from('sales')
-          .select('total_amount, paid_amount')
-          .eq('id', receivable.sale_id)
-          .single();
-
-        if (!saleSelectError && sale) {
-          const saleNewPaidAmount = (sale.paid_amount || 0) + amountToPay;
-          const saleNewPendingAmount = Math.max(0, sale.total_amount - saleNewPaidAmount);
-          const status = calculateFinancialStatus(saleNewPaidAmount, sale.total_amount);
-          const paymentStatus = status === 'PAGO' ? 'paid' : status === 'PARCIAL' ? 'partial' : 'pending';
-
-          await supabase
-            .from('sales')
-            .update({
-              paid_amount: saleNewPaidAmount,
-              pending_amount: saleNewPendingAmount,
-              payment_status: paymentStatus,
-            })
-            .eq('id', receivable.sale_id);
-        }
-      }
-
-      // 4. Atualizar OS vinculada (se existir)
-      if (receivable.ordem_servico_id) {
-        const { data: os, error: osSelectError } = await supabase
-          .from('ordens_servico')
-          .select('paid_amount, pending_amount, total_amount')
-          .eq('id', receivable.ordem_servico_id)
-          .single();
-
-        if (!osSelectError && os) {
-          const osNewPaidAmount = (os.paid_amount || 0) + amountToPay;
-          const osNewPendingAmount = Math.max(0, (os.pending_amount || os.total_amount) - amountToPay);
-
-          await supabase
-            .from('ordens_servico')
-            .update({
-              paid_amount: osNewPaidAmount,
-              pending_amount: osNewPendingAmount,
-            })
-            .eq('id', receivable.ordem_servico_id);
-        }
-      }
+      const result = data as {
+        success?: boolean;
+        movement_id?: string;
+        status?: string;
+      } | null;
+      if (!result?.success) throw new Error('O recebimento transacional não foi confirmado');
 
       return {
-        cashMovementId: cashMovement.id,
+        cashMovementId: result.movement_id,
         amountPaid: amountToPay,
-        isFullyPaid,
+        isFullyPaid: result.status === 'paid',
       };
     },
     onSuccess: (data) => {
