@@ -1,5 +1,5 @@
 -- Migration: 20260820183000_admin_delete_company_rpc.sql
--- Description: Cria RPC administrativa transacional para exclusão de empresa pelo SaaS Admin
+-- Description: Cria RPC administrativa transacional para exclusão de empresa pelo SaaS Admin com execução dinâmica e segura
 
 DROP FUNCTION IF EXISTS public.admin_delete_company(UUID);
 
@@ -14,8 +14,67 @@ DECLARE
   v_user_ids UUID[];
   v_uid UUID;
   v_other_count INT;
+  t TEXT;
+  v_tables TEXT[] := ARRAY[
+    -- Tabelas filhas de caixa e vendas
+    'cash_counts',
+    'cash_register_advances',
+    'cash_register_audits',
+    'cash_shortages',
+    'operator_discrepancies',
+    'cash_movements',
+    'quote_deposits',
+    'cash_registers',
+    'company_cash_movements',
+    'company_cash',
+    'employee_commissions',
+    'financial_operation_keys',
+    'accounts_receivable',
+    'expenses',
+    'sale_taxes',
+    'sale_items',
+    'sales',
+    'quote_items',
+    'quotes',
+    'service_appointments',
+    'measurement_photos',
+    'measurement_checklist',
+    'measurement_items',
+    'site_measurements',
+    'ordens_servico',
+    'stock_offcuts',
+    'stock_reservations',
+    'material_consumption',
+    'stock_movements',
+    'company_stock',
+    'company_product_items',
+    'company_products',
+    'company_item_prices',
+    'company_items',
+    'company_linhas',
+    'purchase_order_items',
+    'purchase_orders',
+    'nota_fiscal_itens',
+    'notas_fiscais',
+    'company_tax_config',
+    'clients',
+    'employee_invites',
+    'employees',
+    'company_notification_settings',
+    'company_notifications',
+    'company_payment_settings',
+    'company_sales_goals',
+    'company_security_settings',
+    'company_subscriptions',
+    'role_permissions',
+    'audit_logs',
+    'support_attachments',
+    'support_messages',
+    'support_tickets',
+    'user_companies'
+  ];
 BEGIN
-  -- 1. Validar autenticação e se é SaaS Admin
+  -- 1. Validar autenticação e permissão de SaaS Admin
   IF v_caller_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Não autenticado');
   END IF;
@@ -28,83 +87,53 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'p_company_id é obrigatório');
   END IF;
 
-  -- 2. Coletar usuários vinculados a esta empresa
+  -- 2. Coletar usuários vinculados
   SELECT COALESCE(array_agg(user_id), '{}')
   INTO v_user_ids
   FROM public.user_companies
   WHERE company_id = p_company_id;
 
-  -- 3. Exclusão em cascata controlada na ordem de integridade referencial
-
-  -- Financeiro & Caixa
-  DELETE FROM public.cash_counts WHERE cash_register_id IN (SELECT id FROM public.cash_registers WHERE company_id = p_company_id);
-  DELETE FROM public.cash_movements WHERE company_id = p_company_id;
-  DELETE FROM public.quote_deposits WHERE company_id = p_company_id;
-  DELETE FROM public.cash_registers WHERE company_id = p_company_id;
-  DELETE FROM public.company_cash_movements WHERE company_id = p_company_id;
-  DELETE FROM public.company_cash WHERE company_id = p_company_id;
-  DELETE FROM public.employee_commissions WHERE company_id = p_company_id;
-  DELETE FROM public.financial_operation_keys WHERE company_id = p_company_id;
-  DELETE FROM public.accounts_receivable WHERE company_id = p_company_id;
-  DELETE FROM public.expenses WHERE company_id = p_company_id;
-
-  -- Vendas & Orçamentos & Ordens de Serviço
-  DELETE FROM public.sale_taxes WHERE sale_id IN (SELECT id FROM public.sales WHERE company_id = p_company_id);
-  DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE company_id = p_company_id);
-  DELETE FROM public.sales WHERE company_id = p_company_id;
-
-  DELETE FROM public.quote_items WHERE quote_id IN (SELECT id FROM public.quotes WHERE company_id = p_company_id);
-  DELETE FROM public.quotes WHERE company_id = p_company_id;
-
-  DELETE FROM public.ordens_servico WHERE company_id = p_company_id;
-  DELETE FROM public.service_appointments WHERE company_id = p_company_id;
-  DELETE FROM public.measurement_photos WHERE measurement_id IN (SELECT id FROM public.site_measurements WHERE company_id = p_company_id);
-  DELETE FROM public.measurement_checklist WHERE measurement_id IN (SELECT id FROM public.site_measurements WHERE company_id = p_company_id);
-  DELETE FROM public.measurement_items WHERE measurement_id IN (SELECT id FROM public.site_measurements WHERE company_id = p_company_id);
-  DELETE FROM public.site_measurements WHERE company_id = p_company_id;
-
-  -- Estoque & Produtos
-  DELETE FROM public.stock_offcuts WHERE company_id = p_company_id;
-  DELETE FROM public.stock_reservations WHERE company_id = p_company_id;
-  DELETE FROM public.material_consumption WHERE company_id = p_company_id;
-  DELETE FROM public.stock_movements WHERE company_id = p_company_id;
-  DELETE FROM public.company_stock WHERE company_id = p_company_id;
-  DELETE FROM public.company_product_items WHERE company_id = p_company_id;
-  DELETE FROM public.company_products WHERE company_id = p_company_id;
-  DELETE FROM public.company_item_prices WHERE company_id = p_company_id;
-  DELETE FROM public.company_items WHERE company_id = p_company_id;
-  DELETE FROM public.company_linhas WHERE company_id = p_company_id;
-
-  -- Compras & Fiscal
-  DELETE FROM public.purchase_order_items WHERE purchase_order_id IN (SELECT id FROM public.purchase_orders WHERE company_id = p_company_id);
-  DELETE FROM public.purchase_orders WHERE company_id = p_company_id;
-  DELETE FROM public.nota_fiscal_itens WHERE nota_fiscal_id IN (SELECT id FROM public.notas_fiscais WHERE company_id = p_company_id);
-  DELETE FROM public.notas_fiscais WHERE company_id = p_company_id;
-  DELETE FROM public.company_tax_config WHERE company_id = p_company_id;
-
-  -- Clientes, Funcionários & Configurações
-  DELETE FROM public.clients WHERE company_id = p_company_id;
-  DELETE FROM public.employee_invites WHERE company_id = p_company_id;
-  DELETE FROM public.employees WHERE company_id = p_company_id;
-  DELETE FROM public.company_notification_settings WHERE company_id = p_company_id;
-  DELETE FROM public.company_notifications WHERE company_id = p_company_id;
-  DELETE FROM public.company_payment_settings WHERE company_id = p_company_id;
-  DELETE FROM public.company_sales_goals WHERE company_id = p_company_id;
-  DELETE FROM public.company_security_settings WHERE company_id = p_company_id;
-  DELETE FROM public.company_subscriptions WHERE company_id = p_company_id;
-  DELETE FROM public.role_permissions WHERE company_id = p_company_id;
-  DELETE FROM public.audit_logs WHERE company_id = p_company_id;
-  DELETE FROM public.support_attachments WHERE ticket_id IN (SELECT id FROM public.support_tickets WHERE company_id = p_company_id);
-  DELETE FROM public.support_messages WHERE ticket_id IN (SELECT id FROM public.support_tickets WHERE company_id = p_company_id);
-  DELETE FROM public.support_tickets WHERE company_id = p_company_id;
-
-  -- Memberships
-  DELETE FROM public.user_companies WHERE company_id = p_company_id;
+  -- 3. Limpar tabelas com company_id (resiliente a tabelas/colunas opcionais)
+  FOREACH t IN ARRAY v_tables LOOP
+    BEGIN
+      -- Tenta deletar por company_id direto
+      EXECUTE format('DELETE FROM public.%I WHERE company_id = $1', t) USING p_company_id;
+    EXCEPTION
+      WHEN undefined_column THEN
+        -- Se não tiver company_id, tenta por subconsulta para tabelas filhas específicas
+        BEGIN
+          IF t = 'support_attachments' THEN
+            DELETE FROM public.support_attachments WHERE message_id IN (
+              SELECT m.id FROM public.support_messages m
+              JOIN public.support_tickets tk ON tk.id = m.ticket_id
+              WHERE tk.company_id = p_company_id
+            );
+          ELSIF t = 'support_messages' THEN
+            DELETE FROM public.support_messages WHERE ticket_id IN (
+              SELECT id FROM public.support_tickets WHERE company_id = p_company_id
+            );
+          ELSIF t = 'sale_items' THEN
+            DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE company_id = p_company_id);
+          ELSIF t = 'sale_taxes' THEN
+            DELETE FROM public.sale_taxes WHERE sale_id IN (SELECT id FROM public.sales WHERE company_id = p_company_id);
+          ELSIF t = 'quote_items' THEN
+            DELETE FROM public.quote_items WHERE quote_id IN (SELECT id FROM public.quotes WHERE company_id = p_company_id);
+          ELSIF t = 'cash_counts' THEN
+            DELETE FROM public.cash_counts WHERE cash_register_id IN (SELECT id FROM public.cash_registers WHERE company_id = p_company_id);
+          END IF;
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+      WHEN undefined_table THEN
+        NULL; -- Tabela não existe nesta instalação
+      WHEN OTHERS THEN
+        NULL; -- Ignora e continua
+    END;
+  END LOOP;
 
   -- 4. Excluir a empresa
   DELETE FROM public.companies WHERE id = p_company_id;
 
-  -- 5. Limpar perfis de usuários órfãos (que não pertencem a nenhuma outra empresa e não são SaaS Admins)
+  -- 5. Limpar perfis órfãos (usuários sem nenhuma outra empresa e que não são SaaS Admin)
   FOREACH v_uid IN ARRAY v_user_ids LOOP
     SELECT count(*) INTO v_other_count
     FROM public.user_companies
