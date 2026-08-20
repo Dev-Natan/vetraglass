@@ -15,9 +15,9 @@ export function useCaixa() {
   });
 
   const openCashRegisterQuery = useQuery({
-    queryKey: ['cash-register-open', currentCompany?.id, user?.id],
+    queryKey: ['cash-register-open', currentCompany?.id],
     queryFn: () => caixaService.getOpenCashRegister(currentCompany!.id),
-    enabled: !!currentCompany?.id && !!user?.id,
+    enabled: !!currentCompany?.id,
   });
 
   const lastClosingQuery = useQuery({

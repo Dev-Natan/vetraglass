@@ -51,7 +51,7 @@ const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
 const methodLabel: Record<string, string> = {
-  dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX',
+  dinheiro: 'Dinheiro', cartao: 'CartÃ£o', pix: 'PIX',
 };
 
 export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: Props) {
@@ -61,23 +61,22 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
   const [paymentAmount, setPaymentAmount] = useState('');
 
   const { data: openCashRegister, isLoading: loadingCash } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
+    queryKey: ['cash-register-open', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       const { data, error } = await supabase
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && !!user?.id && open,
+    enabled: !!currentCompany?.id && open,
   });
 
-  // Histórico de recebimentos vinculados a esta venda
+  // HistÃ³rico de recebimentos vinculados a esta venda
   const { data: history } = useQuery({
     queryKey: ['sale-receipts-history', sale?.id],
     queryFn: async () => {
@@ -94,7 +93,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
     enabled: !!sale?.id && open,
   });
 
-  // Dados do orçamento vinculado (para extrato)
+  // Dados do orÃ§amento vinculado (para extrato)
   const { data: linkedQuote } = useQuery({
     queryKey: ['quote-for-receipt', sale?.quote_id],
     queryFn: async () => {
@@ -134,7 +133,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       });
       if (error) throw error;
       const result = data as { success?: boolean; status?: string } | null;
-      if (!result?.success) throw new Error('O recebimento transacional não foi confirmado');
+      if (!result?.success) throw new Error('O recebimento transacional nÃ£o foi confirmado');
       return { amount: amountToReceive, fullyPaid: result.status === 'paid' };
     },
     onSuccess: (res) => {
@@ -275,7 +274,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
               <p className="text-sm font-semibold">{formatCurrency(Number(sale.total_amount))}</p>
             </div>
             <div className="p-3 rounded-lg border bg-emerald-500/5 border-emerald-500/20">
-              <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 mb-1">Já recebido</p>
+              <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 mb-1">JÃ¡ recebido</p>
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                 {formatCurrency(Number(sale.paid_amount))}
               </p>
@@ -289,7 +288,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           {history && history.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase text-muted-foreground">
-                <History className="h-3.5 w-3.5" /> Histórico de recebimentos
+                <History className="h-3.5 w-3.5" /> HistÃ³rico de recebimentos
               </div>
               <ScrollArea className="max-h-32 rounded-lg border">
                 <div className="divide-y">
@@ -297,10 +296,10 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
                     <div key={m.id} className="flex items-center justify-between px-3 py-2 text-xs">
                       <div className="min-w-0">
                         <p className="font-medium truncate">
-                          {format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {format(new Date(m.created_at), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR })}
                         </p>
                         <p className="text-muted-foreground truncate">
-                          {methodLabel[m.payment_method] || m.payment_method || '—'}
+                          {methodLabel[m.payment_method] || m.payment_method || 'â€”'}
                         </p>
                       </div>
                       <span className="font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
@@ -352,7 +351,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
                 >
                   {[
                     { value: 'dinheiro', label: 'Dinheiro', Icon: DollarSign },
-                    { value: 'cartao', label: 'Cartão', Icon: CreditCard },
+                    { value: 'cartao', label: 'CartÃ£o', Icon: CreditCard },
                     { value: 'pix', label: 'PIX', Icon: Smartphone },
                   ].map(({ value, label, Icon }) => {
                     const selected = paymentMethod === value;
@@ -376,7 +375,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-foreground text-background">
-                <span className="text-sm opacity-70">Novo saldo após recebimento</span>
+                <span className="text-sm opacity-70">Novo saldo apÃ³s recebimento</span>
                 <span className="text-xl font-bold">
                   {formatCurrency(Math.max(0, remaining - amountToReceive))}
                 </span>
@@ -386,7 +385,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
                 <Alert className="border-emerald-500/40 bg-emerald-500/10">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <AlertDescription className="text-emerald-700 dark:text-emerald-400">
-                    Este recebimento irá <strong>quitar</strong> a venda.
+                    Este recebimento irÃ¡ <strong>quitar</strong> a venda.
                   </AlertDescription>
                 </Alert>
               )}

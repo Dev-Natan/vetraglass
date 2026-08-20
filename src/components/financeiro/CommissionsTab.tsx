@@ -189,11 +189,10 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
         .from('cash_registers')
         .select('id')
         .eq('company_id', currentCompany?.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (registerError) throw registerError;
-      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissões');
+      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissÃµes');
 
       const { data, error } = await supabase.rpc('pay_employee_commissions_transactional', {
         _commission_ids: [id],
@@ -203,10 +202,10 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
       });
       if (error) throw error;
       const result = data as { success?: boolean } | null;
-      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
+      if (!result?.success) throw new Error('O pagamento transacional nÃ£o foi confirmado');
     },
     onSuccess: () => {
-      toast.success('Comissão marcada como paga!');
+      toast.success('ComissÃ£o marcada como paga!');
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
       setPayDialogOpen(false);
       setSelectedCommission(null);
@@ -227,7 +226,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Comissão cancelada!');
+      toast.success('ComissÃ£o cancelada!');
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
     },
     onError: (error: Error) => {
@@ -248,11 +247,10 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
         .from('cash_registers')
         .select('id')
         .eq('company_id', currentCompany?.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (registerError) throw registerError;
-      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissões');
+      if (!openRegister) throw new Error('Abra seu caixa antes de pagar comissÃµes');
 
       const { data, error } = await supabase.rpc('pay_employee_commissions_transactional', {
         _commission_ids: pendingCommissions.map((commission) => commission.id),
@@ -262,10 +260,10 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
       });
       if (error) throw error;
       const result = data as { success?: boolean } | null;
-      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
+      if (!result?.success) throw new Error('O pagamento transacional nÃ£o foi confirmado');
     },
     onSuccess: () => {
-      toast.success('Comissões pagas com sucesso!');
+      toast.success('ComissÃµes pagas com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
     },
     onError: (error: Error) => {
@@ -326,7 +324,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(summary.totalSales)}</div>
-            <p className="text-xs text-muted-foreground">{filteredCommissions.length} vendas com comissão</p>
+            <p className="text-xs text-muted-foreground">{filteredCommissions.length} vendas com comissÃ£o</p>
           </CardContent>
         </Card>
 
@@ -337,7 +335,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{formatCurrency(summary.totalPending)}</div>
-            <p className="text-xs text-muted-foreground">{summary.countPending} comissões pendentes</p>
+            <p className="text-xs text-muted-foreground">{summary.countPending} comissÃµes pendentes</p>
           </CardContent>
         </Card>
 
@@ -348,18 +346,18 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalPaid)}</div>
-            <p className="text-xs text-muted-foreground">{summary.countPaid} comissões pagas</p>
+            <p className="text-xs text-muted-foreground">{summary.countPaid} comissÃµes pagas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Funcionários</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">FuncionÃ¡rios</CardTitle>
             <Users className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{employees.length}</div>
-            <p className="text-xs text-muted-foreground">com comissão ativa</p>
+            <p className="text-xs text-muted-foreground">com comissÃ£o ativa</p>
           </CardContent>
         </Card>
       </div>
@@ -370,7 +368,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Resumo por Funcionário
+              Resumo por FuncionÃ¡rio
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -415,7 +413,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por funcionário, venda ou cliente..."
+            placeholder="Buscar por funcionÃ¡rio, venda ou cliente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -440,7 +438,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
         <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
           <SelectTrigger className="w-[180px]">
             <Users className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Funcionário" />
+            <SelectValue placeholder="FuncionÃ¡rio" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -460,19 +458,19 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
                 <TableHead>Data</TableHead>
                 <TableHead>Venda</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Funcionário</TableHead>
+                <TableHead>FuncionÃ¡rio</TableHead>
                 <TableHead className="text-right">Valor Venda</TableHead>
                 <TableHead className="text-center">%</TableHead>
-                <TableHead className="text-right">Comissão</TableHead>
+                <TableHead className="text-right">ComissÃ£o</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">AÃ§Ãµes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCommissions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    Nenhuma comissão encontrada
+                    Nenhuma comissÃ£o encontrada
                   </TableCell>
                 </TableRow>
               ) : (
@@ -486,7 +484,7 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
                         #{String(commission.sale?.sale_number || 0).padStart(4, '0')}
                       </span>
                     </TableCell>
-                    <TableCell>{commission.sale?.customer_name || 'Cliente não identificado'}</TableCell>
+                    <TableCell>{commission.sale?.customer_name || 'Cliente nÃ£o identificado'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -565,9 +563,9 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
       <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Pagamento de Comissão</DialogTitle>
+            <DialogTitle>Confirmar Pagamento de ComissÃ£o</DialogTitle>
             <DialogDescription>
-              Confirme o pagamento da comissão para {selectedCommission?.employee?.name}
+              Confirme o pagamento da comissÃ£o para {selectedCommission?.employee?.name}
             </DialogDescription>
           </DialogHeader>
           
@@ -593,12 +591,12 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Observações (opcional)</Label>
+                <Label htmlFor="notes">ObservaÃ§Ãµes (opcional)</Label>
                 <Textarea
                   id="notes"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
-                  placeholder="Observações sobre o pagamento..."
+                  placeholder="ObservaÃ§Ãµes sobre o pagamento..."
                 />
               </div>
             </div>

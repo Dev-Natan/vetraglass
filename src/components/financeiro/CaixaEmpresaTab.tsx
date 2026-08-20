@@ -12,7 +12,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   Settings, 
-
   ArrowDownCircle,
   ArrowUpCircle,
   History,
@@ -57,7 +56,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
 
-  // Fetch company cash
+  // Fetch company cash (Cofre Central — não é caixa operacional)
   const { data: companyCash, isLoading: loadingCash } = useQuery({
     queryKey: ['company-cash', currentCompany?.id],
     queryFn: async () => {
@@ -73,7 +72,8 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch open cash register
+  // Fetch open cash register — único por empresa, sem filtro por usuário.
+  // "Caixa e Venda" e "Financeiro" devem consumir o MESMO cash_register.id.
   const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
     queryKey: ['cash-register-open', currentCompany?.id],
     queryFn: async () => {
@@ -82,7 +82,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         .from('cash_registers')
         .select('*')
         .eq('company_id', currentCompany.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       if (error) throw error;
@@ -123,7 +122,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     enabled: !!openCashRegister?.id,
   });
 
-  // Fetch company cash movements
+  // Fetch company cash movements (histórico do Cofre Central)
   const { data: movements = [], isLoading: loadingMovements } = useQuery({
     queryKey: ['company-cash-movements', currentCompany?.id],
     queryFn: async () => {
@@ -193,7 +192,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // Register movement
+  // Register movement (no Cofre Central — não é operacional)
   const movementMutation = useMutation({
     mutationFn: async ({ type, category, amount, description }: { type: string; category: string; amount: number; description: string }) => {
       if (!currentCompany?.id) throw new Error('Empresa não encontrada');
@@ -290,8 +289,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     };
   }, [currentCompany?.id, queryClient]);
 
-
-
   const formatCurrency = (value: number | null | undefined) => {
     return (Number(value) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -355,12 +352,9 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     );
   }
 
-  
-
   return (
     <div className="space-y-6">
       {/* Card do Caixa do Dia */}
-
       <Card className={openCashRegister ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : ''}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -462,9 +456,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
                 </p>
               </div>
             )}
-
           </CardContent>
-
         </Card>
 
         {/* Ações */}

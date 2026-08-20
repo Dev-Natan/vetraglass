@@ -69,7 +69,7 @@ export function ReceivePaymentDialog({
 
   // Buscar caixa aberto
   const { data: openCashRegister, isLoading: isLoadingCash } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
+    queryKey: ['cash-register-open', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       
@@ -77,14 +77,13 @@ export function ReceivePaymentDialog({
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && !!user?.id && open,
+    enabled: !!currentCompany?.id && open,
   });
 
   const formatCurrency = (value: number) => {
@@ -104,7 +103,7 @@ export function ReceivePaymentDialog({
         throw new Error('Dados incompletos');
       }
 
-      // Validar se a venda vinculada está cancelada
+      // Validar se a venda vinculada estÃ¡ cancelada
       if (receivable.sale_id) {
         const { data: saleData } = await supabase
           .from('sales')
@@ -113,7 +112,7 @@ export function ReceivePaymentDialog({
           .single();
         
         if (saleData?.payment_status === 'cancelled') {
-          throw new Error('Esta venda está cancelada e não pode receber novos pagamentos.');
+          throw new Error('Esta venda estÃ¡ cancelada e nÃ£o pode receber novos pagamentos.');
         }
       }
 
@@ -122,7 +121,7 @@ export function ReceivePaymentDialog({
       }
 
       if (amountToPay > remainingAmount) {
-        throw new Error('Valor não pode ser maior que o saldo pendente');
+        throw new Error('Valor nÃ£o pode ser maior que o saldo pendente');
       }
 
       const { data, error } = await supabase.rpc('receive_receivable_payment', {
@@ -139,7 +138,7 @@ export function ReceivePaymentDialog({
         movement_id?: string;
         status?: string;
       } | null;
-      if (!result?.success) throw new Error('O recebimento transacional não foi confirmado');
+      if (!result?.success) throw new Error('O recebimento transacional nÃ£o foi confirmado');
 
       return {
         cashMovementId: result.movement_id,
@@ -245,12 +244,12 @@ export function ReceivePaymentDialog({
             </div>
           </div>
 
-          {/* Já pago (se houver) */}
+          {/* JÃ¡ pago (se houver) */}
           {(receivable.paid_amount || 0) > 0 && (
             <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Já pago
+                JÃ¡ pago
               </span>
               <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
                 {formatCurrency(receivable.paid_amount || 0)}
@@ -268,7 +267,7 @@ export function ReceivePaymentDialog({
             </Alert>
           )}
 
-          {/* Opções de pagamento */}
+          {/* OpÃ§Ãµes de pagamento */}
           {isCaixaAberto && (
             <>
               <div className="flex items-center gap-2">
@@ -302,7 +301,7 @@ export function ReceivePaymentDialog({
                   />
                   {amountToPay > remainingAmount && (
                     <p className="text-xs text-destructive mt-1">
-                      Valor não pode ser maior que o saldo pendente
+                      Valor nÃ£o pode ser maior que o saldo pendente
                     </p>
                   )}
                 </div>
@@ -320,7 +319,7 @@ export function ReceivePaymentDialog({
                 >
                   {[
                     { value: 'dinheiro', label: 'Dinheiro', Icon: DollarSign },
-                    { value: 'cartao', label: 'Cartão', Icon: CreditCard },
+                    { value: 'cartao', label: 'CartÃ£o', Icon: CreditCard },
                     { value: 'pix', label: 'Pix', Icon: Smartphone },
                   ].map(({ value, label, Icon }) => {
                     const selected = paymentMethod === value;

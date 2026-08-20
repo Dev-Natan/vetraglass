@@ -49,7 +49,7 @@ export function FaturarSaldoDialog({
 
   // Buscar caixa aberto
   const { data: openCashRegister } = useQuery({
-    queryKey: ['open-cash-register', currentCompany?.id, user?.id],
+    queryKey: ['cash-register-open', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       
@@ -57,23 +57,22 @@ export function FaturarSaldoDialog({
         .from('cash_registers')
         .select('id, status')
         .eq('company_id', currentCompany.id)
-        .eq('opened_by', user?.id)
         .eq('status', 'open')
         .maybeSingle();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && !!user?.id && open,
+    enabled: !!currentCompany?.id && open,
   });
 
-  // FLUXO CORRIGIDO: Buscar TODAS as entradas já pagas do orçamento
+  // FLUXO CORRIGIDO: Buscar TODAS as entradas jÃ¡ pagas do orÃ§amento
   const { data: allDeposits, isLoading: isLoadingDeposits } = useQuery({
     queryKey: ['quote-all-deposits', ordemServico.quote_id],
     queryFn: async () => {
       if (!ordemServico.quote_id) return { deposits: [], totalReceived: 0 };
       
-      // Buscar todos os depósitos recebidos
+      // Buscar todos os depÃ³sitos recebidos
       const { data: deposits, error: depositsError } = await supabase
         .from('quote_deposits')
         .select('id, amount, status, received_at, payment_method')
@@ -82,7 +81,7 @@ export function FaturarSaldoDialog({
       
       if (depositsError) throw depositsError;
 
-      // A aprovação já cria a venda canônica; o faturamento apenas quita seu saldo.
+      // A aprovaÃ§Ã£o jÃ¡ cria a venda canÃ´nica; o faturamento apenas quita seu saldo.
       const { data: canonicalSale, error: salesError } = await supabase
         .from('sales')
         .select('id, total_amount, paid_amount, pending_amount, payment_status')
@@ -94,13 +93,13 @@ export function FaturarSaldoDialog({
 
       if (salesError) console.warn('Erro ao buscar vendas parciais:', salesError);
 
-      // Calcular total recebido via depósitos
+      // Calcular total recebido via depÃ³sitos
       const depositsReceived = (deposits || [])
         .filter(d => d.status === 'received')
         .reduce((sum, d) => sum + Number(d.amount), 0);
 
-      // Total efetivamente recebido: depósitos são a fonte canônica
-      // Não usar Math.max pois pode ignorar entradas adicionais
+      // Total efetivamente recebido: depÃ³sitos sÃ£o a fonte canÃ´nica
+      // NÃ£o usar Math.max pois pode ignorar entradas adicionais
       const totalReceived = depositsReceived;
       
       return {
@@ -123,7 +122,7 @@ export function FaturarSaldoDialog({
   const faturarMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !user?.id) {
-        throw new Error('Empresa ou usuário não encontrado');
+        throw new Error('Empresa ou usuÃ¡rio nÃ£o encontrado');
       }
 
       if (!openCashRegister?.id) {
@@ -134,7 +133,7 @@ export function FaturarSaldoDialog({
       const totalOrcamento = ordemServico.total_amount;
       const sale = allDeposits?.canonicalSale;
       if (!sale?.id) {
-        throw new Error('Venda canônica da OS não encontrada. Reprocesse a aprovação do orçamento.');
+        throw new Error('Venda canÃ´nica da OS nÃ£o encontrada. Reprocesse a aprovaÃ§Ã£o do orÃ§amento.');
       }
       const saldoRestante = Math.max(0, Number(sale.pending_amount ?? ordemServico.pending_amount));
 
@@ -148,7 +147,7 @@ export function FaturarSaldoDialog({
         });
         if (error) throw error;
         const result = data as { success?: boolean } | null;
-        if (!result?.success) throw new Error('O faturamento transacional não foi confirmado');
+        if (!result?.success) throw new Error('O faturamento transacional nÃ£o foi confirmado');
       }
 
       return { 
@@ -163,7 +162,7 @@ export function FaturarSaldoDialog({
         ? `Entrada de ${formatCurrency(data.entradaJaRecebida)} reconhecida. Saldo de ${formatCurrency(data.saldoFaturado)} faturado.`
         : `Venda de ${formatCurrency(data.totalFaturado)} registrada`;
 
-      toast.success('Serviço faturado e concluído!', {
+      toast.success('ServiÃ§o faturado e concluÃ­do!', {
         description: mensagem,
       });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
@@ -204,15 +203,15 @@ export function FaturarSaldoDialog({
             Faturar Saldo - OS #{String(ordemServico.os_number).padStart(4, '0')}
           </DialogTitle>
           <DialogDescription>
-            Finalize o faturamento do serviço concluído
+            Finalize o faturamento do serviÃ§o concluÃ­do
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Badge de OS Concluída */}
+          {/* Badge de OS ConcluÃ­da */}
           <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
             <ClipboardList className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-700 dark:text-green-400 font-medium">Serviço Concluído</span>
+            <span className="text-sm text-green-700 dark:text-green-400 font-medium">ServiÃ§o ConcluÃ­do</span>
             <Badge variant="outline" className="ml-auto text-green-600 border-green-300">Pronto para Faturar</Badge>
           </div>
 
@@ -225,7 +224,7 @@ export function FaturarSaldoDialog({
           {/* Resumo Financeiro Detalhado */}
           <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Valor total do orçamento:</span>
+              <span className="text-muted-foreground">Valor total do orÃ§amento:</span>
               <span className="font-medium">{formatCurrency(totalOrcamento)}</span>
             </div>
             
@@ -233,7 +232,7 @@ export function FaturarSaldoDialog({
               <div className="flex justify-between text-sm">
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-3 w-3" />
-                  Entrada(s) já recebida(s):
+                  Entrada(s) jÃ¡ recebida(s):
                 </span>
                 <span className="font-medium text-green-600">
                   - {formatCurrency(entradaRecebida)}
@@ -253,7 +252,7 @@ export function FaturarSaldoDialog({
             {entradaRecebida > 0 && (
               <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded text-xs text-green-700 dark:text-green-400">
                 <ArrowRight className="h-3 w-3" />
-                As entradas anteriores serão vinculadas automaticamente a esta venda
+                As entradas anteriores serÃ£o vinculadas automaticamente a esta venda
               </div>
             )}
           </div>
@@ -268,7 +267,7 @@ export function FaturarSaldoDialog({
             </Alert>
           )}
 
-          {/* Forma de Pagamento (apenas se há saldo) */}
+          {/* Forma de Pagamento (apenas se hÃ¡ saldo) */}
           {isCaixaAberto && saldoRestante > 0 && (
             <div>
               <Label className="text-sm font-medium">Forma de Pagamento do Saldo</Label>
@@ -288,7 +287,7 @@ export function FaturarSaldoDialog({
                   <RadioGroupItem value="cartao" id="fat-cartao" />
                   <Label htmlFor="fat-cartao" className="flex items-center gap-1 cursor-pointer">
                     <CreditCard className="w-4 h-4" />
-                    Cartão
+                    CartÃ£o
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -302,12 +301,12 @@ export function FaturarSaldoDialog({
             </div>
           )}
 
-          {/* Caso não haja saldo (já está tudo pago) */}
+          {/* Caso nÃ£o haja saldo (jÃ¡ estÃ¡ tudo pago) */}
           {isCaixaAberto && saldoRestante === 0 && entradaRecebida >= totalOrcamento && (
             <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-700 dark:text-green-400">
-                O valor total já foi recebido via entradas. Clique em "Faturar" para finalizar.
+                O valor total jÃ¡ foi recebido via entradas. Clique em "Faturar" para finalizar.
               </AlertDescription>
             </Alert>
           )}

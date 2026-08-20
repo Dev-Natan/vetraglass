@@ -272,9 +272,9 @@ export function ContasPagarTab() {
 
   const saveMut = useMutation({
     mutationFn: async (f: FormState) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      if (!f.description.trim()) throw new Error('Informe a descrição');
-      if (!f.amount || f.amount <= 0) throw new Error('Valor inválido');
+      if (!currentCompany?.id) throw new Error('Empresa nÃ£o selecionada');
+      if (!f.description.trim()) throw new Error('Informe a descriÃ§Ã£o');
+      if (!f.amount || f.amount <= 0) throw new Error('Valor invÃ¡lido');
       if (!f.due_date) throw new Error('Informe o vencimento');
       if (!f.supplier_id) throw new Error('Selecione o fornecedor de destino');
 
@@ -361,7 +361,7 @@ export function ContasPagarTab() {
   const payMut = useMutation({
     mutationFn: async () => {
       if (!payDialog) return;
-      if (!payAmount || payAmount <= 0) throw new Error('Valor inválido');
+      if (!payAmount || payAmount <= 0) throw new Error('Valor invÃ¡lido');
       const bankId = payBankId || payDialog.bank_account_id;
       let cashRegisterId: string | null = null;
       if (!bankId) {
@@ -369,7 +369,6 @@ export function ContasPagarTab() {
           .from('cash_registers')
           .select('id')
           .eq('company_id', currentCompany?.id)
-          .eq('opened_by', user?.id)
           .eq('status', 'open')
           .maybeSingle();
         if (registerError) throw registerError;
@@ -387,7 +386,7 @@ export function ContasPagarTab() {
       });
       if (error) throw error;
       const result = data as { success?: boolean } | null;
-      if (!result?.success) throw new Error('O pagamento transacional não foi confirmado');
+      if (!result?.success) throw new Error('O pagamento transacional nÃ£o foi confirmado');
     },
     onSuccess: () => {
       toast.success('Pagamento registrado');
@@ -417,8 +416,8 @@ export function ContasPagarTab() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <SumCard label="A pagar" value={summary.totalPending} icon={Clock} color="text-yellow-600" />
         <SumCard label="Atrasado" value={summary.totalOverdue} icon={AlertCircle} color="text-red-600" />
-        <SumCard label="Pago no período" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
-        <SumCard label="Total no período" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Calendar} color="text-foreground" />
+        <SumCard label="Pago no perÃ­odo" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
+        <SumCard label="Total no perÃ­odo" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Calendar} color="text-foreground" />
       </div>
 
       <Card>
@@ -429,10 +428,10 @@ export function ContasPagarTab() {
               <Select value={scope} onValueChange={(v) => setScope(v as PeriodScope)}>
                 <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="next30">Próximos 30 dias</SelectItem>
-                  <SelectItem value="next60">Próximos 60 dias</SelectItem>
-                  <SelectItem value="next90">Próximos 90 dias</SelectItem>
-                  <SelectItem value="month">Mês específico</SelectItem>
+                  <SelectItem value="next30">PrÃ³ximos 30 dias</SelectItem>
+                  <SelectItem value="next60">PrÃ³ximos 60 dias</SelectItem>
+                  <SelectItem value="next90">PrÃ³ximos 90 dias</SelectItem>
+                  <SelectItem value="month">MÃªs especÃ­fico</SelectItem>
                   <SelectItem value="all">Todos</SelectItem>
                 </SelectContent>
               </Select>
@@ -448,7 +447,7 @@ export function ContasPagarTab() {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por descrição, fornecedor ou documento…"
+                placeholder="Buscar por descriÃ§Ã£o, fornecedor ou documentoâ€¦"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -477,7 +476,7 @@ export function ContasPagarTab() {
 
           {isLoading ? (
             <div className="h-40 flex items-center justify-center">
-              <span className="animate-spin mr-2">⏳</span> Carregando contas...
+              <span className="animate-spin mr-2">â³</span> Carregando contas...
             </div>
           ) : (
             <div className="overflow-x-auto border rounded-md">
@@ -485,19 +484,19 @@ export function ContasPagarTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Vencimento</TableHead>
-                    <TableHead>Descrição</TableHead>
+                    <TableHead>DescriÃ§Ã£o</TableHead>
                     <TableHead>Fornecedor / Destino</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead>Parcela</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">AÃ§Ãµes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                      Nenhuma conta a pagar no período.
+                      Nenhuma conta a pagar no perÃ­odo.
                     </TableCell></TableRow>
                   ) : filtered.map((p) => {
                     const cat = categories.find((c) => c.id === p.category_id);
@@ -507,7 +506,7 @@ export function ContasPagarTab() {
                     return (
                       <TableRow key={p.id} className="cursor-pointer" onClick={() => setDetailsPayable(p)}>
                         <TableCell className="whitespace-nowrap">
-                          {p.due_date ? format(parseISO(p.due_date), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                          {p.due_date ? format(parseISO(p.due_date), 'dd/MM/yyyy', { locale: ptBR }) : 'â€”'}
                         </TableCell>
                         <TableCell className="max-w-[260px]">
                           <p className="truncate font-medium">{p.description}</p>
@@ -517,7 +516,7 @@ export function ContasPagarTab() {
                         </TableCell>
                         <TableCell className="text-sm">
                           <p className="truncate max-w-[180px] font-medium">
-                            {p.supplier?.name || p.supplier_name || '—'}
+                            {p.supplier?.name || p.supplier_name || 'â€”'}
                           </p>
                           {(p.supplier?.phone || p.supplier?.document) && (
                             <p className="text-[11px] text-muted-foreground">
@@ -531,7 +530,7 @@ export function ContasPagarTab() {
                               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#64748b' }} />
                               <span className="text-xs">{cat.name}</span>
                             </div>
-                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                          ) : <span className="text-xs text-muted-foreground">â€”</span>}
                         </TableCell>
                         <TableCell>
                           {p.total_installments > 1 ? (
@@ -539,7 +538,7 @@ export function ContasPagarTab() {
                               <Layers className="w-3 h-3" />
                               {p.installment_number}/{p.total_installments}
                             </Badge>
-                          ) : <span className="text-xs text-muted-foreground">À vista</span>}
+                          ) : <span className="text-xs text-muted-foreground">Ã€ vista</span>}
                         </TableCell>
                         <TableCell className="text-right font-semibold whitespace-nowrap">{fmt(Number(p.amount))}</TableCell>
                         <TableCell><Badge className={cfg.cls + ' border-0'}>{cfg.label}</Badge></TableCell>
@@ -588,7 +587,7 @@ export function ContasPagarTab() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <Label>Descrição *</Label>
+              <Label>DescriÃ§Ã£o *</Label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ex.: Compra de vidro temperado lote #4521" />
             </div>
             <div>
@@ -655,7 +654,7 @@ export function ContasPagarTab() {
                 onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })} />
             </div>
             <div>
-              <Label>1º vencimento *</Label>
+              <Label>1Âº vencimento *</Label>
               <Input type="date" value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
             </div>
@@ -670,23 +669,23 @@ export function ContasPagarTab() {
                   <Label className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Intervalo (dias)</Label>
                   <Input type="number" min={1} value={form.installment_interval_days}
                     onChange={(e) => setForm({ ...form, installment_interval_days: parseInt(e.target.value) || 30 })} />
-                  <p className="text-[10px] text-muted-foreground mt-1">Parcelas geradas mensalmente a partir do 1º vencimento.</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Parcelas geradas mensalmente a partir do 1Âº vencimento.</p>
                 </div>
                 {form.total_installments > 1 && form.amount > 0 && (
                   <div className="col-span-2 p-3 rounded-md bg-muted/50 text-xs">
                     <strong>{form.total_installments}x</strong> de aproximadamente{' '}
-                    <strong>{fmt(form.amount / form.total_installments)}</strong> · total {fmt(form.amount)}
+                    <strong>{fmt(form.amount / form.total_installments)}</strong> Â· total {fmt(form.amount)}
                   </div>
                 )}
               </>
             )}
             <div className="col-span-2 grid grid-cols-2 gap-3">
               <div>
-                <Label>Nº documento</Label>
-                <Input value={form.document_number} onChange={(e) => setForm({ ...form, document_number: e.target.value })} placeholder="NF, boleto…" />
+                <Label>NÂº documento</Label>
+                <Input value={form.document_number} onChange={(e) => setForm({ ...form, document_number: e.target.value })} placeholder="NF, boletoâ€¦" />
               </div>
               <div>
-                <Label>Observações</Label>
+                <Label>ObservaÃ§Ãµes</Label>
                 <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
             </div>
@@ -694,7 +693,7 @@ export function ContasPagarTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => saveMut.mutate(form)} disabled={saveMut.isPending}>
-              {saveMut.isPending ? 'Salvando…' : 'Salvar'}
+              {saveMut.isPending ? 'Salvandoâ€¦' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -732,7 +731,7 @@ export function ContasPagarTab() {
             <div className="space-y-3">
               <div className="p-3 rounded-md bg-muted/40 text-sm">
                 <p className="font-medium">{payDialog.description}</p>
-                <p className="text-xs text-muted-foreground">Vencimento: {payDialog.due_date ? format(parseISO(payDialog.due_date), 'dd/MM/yyyy') : '—'} · Original: {fmt(Number(payDialog.amount))}</p>
+                <p className="text-xs text-muted-foreground">Vencimento: {payDialog.due_date ? format(parseISO(payDialog.due_date), 'dd/MM/yyyy') : 'â€”'} Â· Original: {fmt(Number(payDialog.amount))}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -750,7 +749,7 @@ export function ContasPagarTab() {
                     <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
                     <SelectContent>
                       {bankAccounts.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name} — {fmt(Number(b.current_balance))}</SelectItem>
+                        <SelectItem key={b.id} value={b.id}>{b.name} â€” {fmt(Number(b.current_balance))}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -761,7 +760,7 @@ export function ContasPagarTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayDialog(null)}>Cancelar</Button>
             <Button onClick={() => payMut.mutate()} disabled={payMut.isPending}>
-              {payMut.isPending ? 'Registrando…' : 'Confirmar pagamento'}
+              {payMut.isPending ? 'Registrandoâ€¦' : 'Confirmar pagamento'}
             </Button>
           </DialogFooter>
         </DialogContent>
