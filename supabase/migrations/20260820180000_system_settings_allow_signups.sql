@@ -43,3 +43,6 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_system_setting(TEXT) TO anon, authenticated, service_role;
+
+-- Recarregar cache de schema do PostgREST/Supabase
+NOTIFY pgrst, 'reload schema';
