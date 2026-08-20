@@ -229,11 +229,27 @@ export default function AdminCompanies() {
     if (!companyToDelete) return;
     setIsDeleting(true);
     try {
+      // 1. Tenta executar via RPC PostgreSQL transacional direta
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('admin_delete_company', {
+        p_company_id: companyToDelete.id,
+      });
+
+      if (!rpcError && rpcData?.success) {
+        toast.success(`Empresa "${companyToDelete.name}" excluída com sucesso`);
+        queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+        return;
+      }
+
+      if (rpcError && !rpcError.message.includes('function') && !rpcError.message.includes('does not exist')) {
+        throw new Error(rpcError.message);
+      }
+
+      // 2. Fallback para Edge Function caso a RPC ainda não esteja carregada
       const res = await supabase.functions.invoke('admin-delete-company', {
         body: { company_id: companyToDelete.id },
       });
       if (res.error || res.data?.error) {
-        throw new Error(res.data?.error || res.error?.message || 'Erro ao excluir');
+        throw new Error(res.data?.error || res.error?.message || rpcError?.message || 'Erro ao excluir');
       }
       toast.success(`Empresa "${companyToDelete.name}" excluída com sucesso`);
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
