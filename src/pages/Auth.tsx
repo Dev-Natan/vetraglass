@@ -14,10 +14,8 @@ import { useRateLimiting } from '@/hooks/useRateLimiting';
 import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import { strongPasswordSchema } from '@/utils/passwordValidation';
 import { supabase } from '@/integrations/supabase/client';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
-// 🚧 FLAG TEMPORÁRIA: cadastros suspensos para manutenção.
-// Para reabrir cadastros, defina como `false` (ou remova o bloco de bloqueio abaixo).
-const SIGNUP_DISABLED = true;
 const SIGNUP_DISABLED_MESSAGE = 'Cadastros temporariamente suspensos para manutenção do sistema. Voltaremos em breve!';
 
 const loginSchema = z.object({
@@ -39,12 +37,14 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading, signIn, signUp } = useAuth();
+  const { allowNewSignups } = useSystemSettings();
+  const signupDisabled = !allowNewSignups;
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { rateLimitStatus, checkRateLimit, recordLoginAttempt, formatRemainingTime } = useRateLimiting();
   
   // Get initial tab from URL parameter
-  const initialTab = !SIGNUP_DISABLED && searchParams.get('tab') === 'signup' ? 'signup' : 'login';
+  const initialTab = !signupDisabled && searchParams.get('tab') === 'signup' ? 'signup' : 'login';
   const [activeTab, setActiveTab] = useState(initialTab);
   
   // Login form - now uses username
@@ -138,7 +138,7 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (SIGNUP_DISABLED) return;
+    if (signupDisabled) return;
     setErrors({});
     
     const validation = signupSchema.safeParse({
@@ -198,9 +198,9 @@ export default function Auth() {
         <Card className="border-border/40 shadow-2xl backdrop-blur-sm bg-card/95 rounded-3xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader className="pb-4">
-              <TabsList className={`grid w-full ${SIGNUP_DISABLED ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              <TabsList className={`grid w-full ${signupDisabled ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <TabsTrigger value="login">Entrar</TabsTrigger>
-                {!SIGNUP_DISABLED && <TabsTrigger value="signup">Criar Conta</TabsTrigger>}
+                {!signupDisabled && <TabsTrigger value="signup">Criar Conta</TabsTrigger>}
               </TabsList>
             </CardHeader>
             
@@ -214,7 +214,7 @@ export default function Auth() {
                 </Alert>
               )}
 
-              {SIGNUP_DISABLED && (
+              {signupDisabled && (
                 <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-800">
                   <ShieldAlert className="h-4 w-4 !text-amber-600" />
                   <AlertDescription className="font-medium">
@@ -278,7 +278,7 @@ export default function Auth() {
                 </form>
               </TabsContent>
               
-              {!SIGNUP_DISABLED && (
+              {!signupDisabled && (
                 <TabsContent value="signup" className="mt-0">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">

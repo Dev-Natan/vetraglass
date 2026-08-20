@@ -31,10 +31,12 @@ import {
   Building2,
   HardDrive,
   Activity,
-  Puzzle
+  Puzzle,
+  UserPlus
 } from "lucide-react";
 import { ModulesTab } from "@/components/admin/settings/ModulesTab";
 import { SaasAdminsTab } from "@/components/admin/settings/SaasAdminsTab";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +58,7 @@ import {
 
 export default function AdminSettings() {
   const { isSaasAdmin } = useAuth();
+  const { allowNewSignups, updateSetting, isUpdating } = useSystemSettings();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("general");
 
@@ -397,6 +400,33 @@ export default function AdminSettings() {
 
           {/* Security Settings */}
           <TabsContent value="security" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Controle de Cadastros
+                </CardTitle>
+                <CardDescription>
+                  Gerencie se novos usuários e empresas podem criar conta no sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Permitir Novos Cadastros (allow_new_signups)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Quando desativado, o formulário de cadastro é bloqueado na tela de login com mensagem de manutenção.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={allowNewSignups}
+                    disabled={isUpdating}
+                    onCheckedChange={(checked) => updateSetting({ key: 'allow_new_signups', value: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

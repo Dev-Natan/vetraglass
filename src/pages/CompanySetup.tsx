@@ -290,22 +290,40 @@ export default function CompanySetup() {
         throw companyError;
       }
 
-      // Nenhum trial concedido — conta inicia como pendente de pagamento
+      // Define período de teste (14 dias) para a nova empresa
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
       const newCompanyId = typeof companyData === 'string' ? companyData : (companyData as any)?.id ?? (companyData as any)?.company_id;
       if (newCompanyId) {
         await supabase
           .from('companies')
-          .update({ subscription_status: 'pending_payment', trial_ends_at: null } as never)
+          .update({
+            subscription_status: 'trialing',
+            trial_ends_at: trialEndsAt
+          } as never)
           .eq('id', newCompanyId);
+
+        // Registra assinatura inicial de trial para integração com painel admin
+        await supabase
+          .from('company_subscriptions')
+          .insert({
+            company_id: newCompanyId,
+            plan_name: 'trial',
+            plan_price: 0,
+            status: 'trial',
+            started_at: new Date().toISOString(),
+            expires_at: trialEndsAt,
+            notes: 'Teste grátis de 14 dias concedido no cadastro',
+          })
+          .catch(() => {});
       }
 
       toast({
-        title: "Empresa cadastrada!",
-        description: "Escolha um plano para ativar o acesso ao sistema.",
+        title: "Empresa cadastrada com sucesso!",
+        description: "Seu teste grátis de 14 dias foi ativado. Bem-vindo ao Vetra!",
       });
 
-      // Redireciona obrigatoriamente para a seleção de planos / checkout
-      navigate('/planos', { replace: true });
+      // Recarrega o app para sincronizar empresas no AuthContext e acessar o painel
+      window.location.href = '/dashboard';
     } catch (error: any) {
       console.error('Error creating company:', error);
       toast({
