@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Shield } from "lucide-react";
+import { CompanyDataResetCard } from "@/components/configuracoes/CompanyDataResetCard";
 
 interface ExportOption {
   id: string;
@@ -297,6 +298,9 @@ export default function ConfiguracoesDados() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Zona de Perigo - Reset Controlado de Dados */}
+        <CompanyDataResetCard />
 
         {/* Mobile Export All Button */}
         <div className="md:hidden">
