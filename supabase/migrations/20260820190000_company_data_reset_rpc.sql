@@ -34,7 +34,15 @@ BEGIN
 
   -- 2. Validar permissão (Admin da Empresa ou SaaS Admin)
   v_is_saas_adm := public.is_saas_admin(v_user_id);
-  v_is_company_admin := (public.user_role_in_company(v_user_id, p_company_id) = 'admin');
+  
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_companies
+    WHERE user_id = v_user_id
+      AND company_id = p_company_id
+      AND role = 'admin'
+      AND is_active = true
+  ) INTO v_is_company_admin;
 
   IF NOT v_is_company_admin AND NOT v_is_saas_adm THEN
     RETURN jsonb_build_object('success', false, 'error', 'Apenas administradores da empresa podem redefinir dados');
@@ -48,9 +56,7 @@ BEGIN
   v_clear_products := v_clear_all OR ('products' = ANY(p_modules));
   v_clear_clients := v_clear_all OR ('clients' = ANY(p_modules));
 
-  -- 4. DESVINCULAR chaves estrangeiras nullable para evitar travas de FK
-
-  -- Desvincular Ordens de Serviço e Notas Fiscais
+  -- 4. Desvincular chaves estrangeiras nullable para evitar travas de FK
   IF v_clear_financial OR v_clear_quotes THEN
     BEGIN UPDATE public.ordens_servico SET sale_id = NULL, parent_sale_id = NULL, quote_id = NULL WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN UPDATE public.notas_fiscais SET sale_id = NULL, quote_id = NULL, ordem_servico_id = NULL WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -67,7 +73,7 @@ BEGIN
     BEGIN UPDATE public.ordens_servico SET client_id = NULL WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 5. LIMPAR FINANCEIRO & VENDAS
+  -- 5. Limpar Financeiro & Vendas
   IF v_clear_financial THEN
     BEGIN DELETE FROM public.quote_deposits WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN DELETE FROM public.sale_taxes WHERE sale_id IN (SELECT id FROM public.sales WHERE company_id = p_company_id); EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -92,7 +98,7 @@ BEGIN
     BEGIN DELETE FROM public.expenses WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 6. LIMPAR ORÇAMENTOS E ORDENS DE SERVIÇO
+  -- 6. Limpar Orçamentos e Ordens de Serviço
   IF v_clear_quotes THEN
     BEGIN DELETE FROM public.quote_deposits WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN DELETE FROM public.quote_items WHERE quote_id IN (SELECT id FROM public.quotes WHERE company_id = p_company_id); EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -105,7 +111,7 @@ BEGIN
     BEGIN DELETE FROM public.quotes WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 7. LIMPAR ESTOQUE & MOVIMENTAÇÕES
+  -- 7. Limpar Estoque & Movimentações
   IF v_clear_stock THEN
     BEGIN DELETE FROM public.stock_offcuts WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN DELETE FROM public.stock_reservations WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -116,7 +122,7 @@ BEGIN
     BEGIN DELETE FROM public.purchase_orders WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 8. LIMPAR PRODUTOS E PREÇOS DA EMPRESA
+  -- 8. Limpar Produtos e Preços da Empresa
   IF v_clear_products THEN
     BEGIN DELETE FROM public.company_product_items WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN DELETE FROM public.company_products WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -125,7 +131,7 @@ BEGIN
     BEGIN DELETE FROM public.company_linhas WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 9. LIMPAR CLIENTES
+  -- 9. Limpar Clientes
   IF v_clear_clients THEN
     BEGIN DELETE FROM public.clients WHERE company_id = p_company_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
