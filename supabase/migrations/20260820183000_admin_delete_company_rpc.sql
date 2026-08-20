@@ -1,6 +1,8 @@
 -- Migration: 20260820183000_admin_delete_company_rpc.sql
 -- Description: Cria RPC administrativa transacional para exclusão de empresa pelo SaaS Admin
 
+DROP FUNCTION IF EXISTS public.admin_delete_company(UUID);
+
 CREATE OR REPLACE FUNCTION public.admin_delete_company(p_company_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
