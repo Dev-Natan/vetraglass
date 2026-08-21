@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import {
   Dialog,
   DialogContent,
@@ -170,7 +171,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
   });
 
   const handleAddProduct = (product: {
-    product_template_id: string;
+    product_template_id: string | null;
     company_product_id?: string;
     name: string;
     base_price: number;
@@ -205,6 +206,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       quantity: number;
       unit_price: number;
     }>;
+    composition_mode?: 'fixed' | 'parametric';
+    composition_snapshot?: Json;
   }) => {
     addItem({
       product_template_id: product.product_template_id,
@@ -235,6 +238,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       include_contramarco: product.include_contramarco,
       excluded_optional_ids: product.excluded_optional_ids,
       notes: product.notes,
+      composition_mode: product.composition_mode,
+      composition_snapshot: product.composition_snapshot,
+      parametric_snapshot_version: product.composition_mode === 'parametric' ? 1 : null,
     });
     setShowAddProduct(false);
     

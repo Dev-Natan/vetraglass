@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
+import { useParametricEngineering } from '@/hooks/useParametricEngineering';
 import { useProductPriceLines, formatUnitLabel } from '@/hooks/useProductPriceLines';
 
 import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
@@ -38,6 +39,7 @@ import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
 import { useAvailableColorsForTemplates } from '@/hooks/useItemColorPrices';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
+import type { Json } from '@/integrations/supabase/types';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
@@ -64,6 +66,7 @@ interface ProductTemplateRef {
   default_glasses_count?: number | null;
   default_panels_count?: number | null;
   default_sides_count?: number | null;
+  composition_mode?: string | null;
 }
 
 interface AddProductPanelProps {
@@ -109,6 +112,8 @@ interface AddProductPanelProps {
       quantity: number;
       unit_price: number;
     }>;
+    composition_mode?: 'fixed' | 'parametric';
+    composition_snapshot?: Json;
   }) => void;
   onCancel: () => void;
   mode?: 'quote' | 'cutting';
@@ -199,7 +204,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           sides_count,
           product_template:product_templates (
             id, name, description, category, linha, image_url, has_multiple_sides, has_cutting_plan,
-            default_leaves_count, default_glasses_count, default_panels_count, default_sides_count
+            default_leaves_count, default_glasses_count, default_panels_count, default_sides_count,
+            composition_mode
           )
         `)
         .eq('company_id', currentCompany.id)
@@ -232,6 +238,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           default_glasses_count,
           default_panels_count,
           default_sides_count
+          ,composition_mode
         `)
         .eq('is_active', true)
         .order('name');
@@ -274,6 +281,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         glasses_count: cp.glasses_count || template?.default_glasses_count || 1,
         panels_count: cp.panels_count || template?.default_panels_count || 1,
         sides_count: cp.sides_count || template?.default_sides_count || 1,
+        composition_mode: template?.composition_mode || 'fixed',
       };
     });
 
@@ -304,6 +312,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         glasses_count: template.default_glasses_count || 1,
         panels_count: template.default_panels_count || 1,
         sides_count: template.default_sides_count || 1,
+        composition_mode: template.composition_mode || 'fixed',
       }));
 
     return [...companyCatalog, ...templateCatalog];
@@ -473,6 +482,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const productUsesGlass = pricingType === 'glass';
   const productUsesAluminum = pricingType === 'aluminum';
   const productUsesComposition = pricingType === 'composition';
+  const isParametric = selectedProduct?.composition_mode === 'parametric';
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
 
   // Fetch aluminum color prices (only when product uses aluminum pricing)
@@ -491,12 +501,12 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         .select('item_template:item_templates(id, type)')
         .eq('company_product_id', companyProduct.id);
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (data ?? [])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((r: any) => r.item_template)
-        .filter((t: { type: string } | null) => t && t.type === 'profile')
-        .map((t: { id: string }) => t.id);
+        .map((row) => row.item_template)
+        .filter((template): template is { id: string; type: string } => (
+          Boolean(template) && template.type === 'profile'
+        ))
+        .map((template) => template.id);
     },
     enabled: !!companyProduct?.id,
     staleTime: 60_000,
@@ -594,7 +604,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const aluminumPricePerSqm = selectedAluminumPriceOption?.pricePerSqm || 0;
 
   // Use price_per_sqm as the primary pricing method
-  const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
+  const productBasePricePerSqm = Number(companyProduct?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
   // Composition-based dynamic pricing (Fase 2: variáveis dinâmicas)
   const compositionPricing = useDynamicCompositionPricing({
@@ -614,6 +624,29 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     glassThicknessMm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
     aluminumColor: selectedAluminumColor || customAluminumColor || null,
   });
+
+  const parametricVariants = useMemo(() => ({
+    folhas: selectedProduct?.leaves_count || companyProduct?.leaves_count || 2,
+  }), [selectedProduct?.leaves_count, companyProduct?.leaves_count]);
+  const parametricEngineering = useParametricEngineering({
+    companyId: currentCompany?.id,
+    productTemplateId: selectedProductTemplateId,
+    width_mm: width,
+    height_mm: height,
+    quantity: quantity || 1,
+    line: selectedProduct?.linha || null,
+    glass: selectedGlassPrice?.glass_type || null,
+    profile_color: selectedAluminumColor || customAluminumColor || null,
+    glass_color: selectedGlassPrice?.glass_color || selectedGlassColor || null,
+    variants: parametricVariants,
+    enabled: isParametric && mode === 'quote',
+  });
+  const parametricResult = parametricEngineering.result;
+  const hasCompleteParametricPrice = Boolean(
+    parametricResult
+      && parametricResult.totals.missing_price_items === 0
+      && parametricResult.totals.sale_price > 0,
+  );
 
   // Get optional items for toggle UI
   const optionalItems = compositionPricing.optionalItems || [];
@@ -642,13 +675,17 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const unitPrice = (priceLinePerUnit > 0 && customPrice === null)
     // Variação com unidade fixa (un, par, ml, kg): preço direto por unidade
     ? priceLinePerUnit
+    : (isParametric && hasCompleteParametricPrice && parametricResult)
+      ? parametricResult.totals.sale_price / Math.max(quantity, 1)
     : (productUsesComposition && compositionPricing.isReady && priceLinePerSqm <= 0)
       ? compositionPricing.compositionCostPerUnit
       : (area > 0 ? basePrice * area : 0);
 
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
   const hasPriceLineOverride = !!selectedPriceLine && (priceLinePerSqm > 0 || priceLinePerUnit > 0);
-  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady && !hasPriceLineOverride)
+  const computedTotalPrice = ((isParametric && hasCompleteParametricPrice && parametricResult)
+    ? parametricResult.totals.sale_price
+    : (productUsesComposition && compositionPricing.isReady && !hasPriceLineOverride)
     ? compositionPricing.totalCost
     : unitPrice * quantity) + componentsTotal;
 
@@ -682,7 +719,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const getProductImage = resolveProductImageUrl;
 
   const handleAdd = () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || (isParametric && !parametricResult)) return;
 
     // For aluminum-priced products, the color name comes from the price option
     // For other products, it comes from the simple selector
@@ -729,6 +766,18 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       excluded_optional_ids: excludedOptionalIds.length > 0 ? excludedOptionalIds : undefined,
       notes: notes.trim() || undefined,
       components: components.length > 0 ? components : undefined,
+      composition_mode: isParametric ? 'parametric' : 'fixed',
+      composition_snapshot: parametricResult ? ({
+        ...parametricResult,
+        pricing_source: hasCompleteParametricPrice
+          ? 'parametric_bom_company_prices'
+          : 'existing_company_product_pricing',
+        totals: {
+          ...parametricResult.totals,
+          quote_unit_price: effectiveUnitPrice,
+          quote_total: totalPrice,
+        },
+      } as unknown as Json) : undefined,
     });
   };
 
@@ -747,7 +796,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     setSelectedProductId('');
   };
 
-  const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0;
+  const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0
+    && (!isParametric || (Boolean(parametricResult) && totalPrice > 0));
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -889,7 +939,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
                       <button
                         type="button"
-                        onClick={() => handleCategoryChange('__all__' as any)}
+                        onClick={() => handleCategoryChange('__all__')}
                         className={cn(
                           "group relative flex flex-col items-start gap-4 rounded-2xl border border-dashed border-border bg-card p-5 text-left min-h-[140px]",
                           "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
@@ -1463,6 +1513,111 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             </div>
             )}
           </div>
+
+          {mode === 'quote' && isParametric && (
+            <div className="mt-4 rounded-xl border bg-card p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Engenharia / Composição paramétrica
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {width || 0} × {height || 0} mm · {parametricVariants.folhas} folhas · {selectedProduct?.linha}
+                  </p>
+                </div>
+                <Badge variant="outline">PARAMETRIC</Badge>
+              </div>
+
+              {parametricEngineering.isLoading && (
+                <p className="text-sm text-muted-foreground">Calculando composição…</p>
+              )}
+              {(parametricEngineering.error || parametricEngineering.calculationError) && (
+                <div className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    {parametricEngineering.calculationError?.message
+                      || 'Não foi possível carregar as regras paramétricas.'}
+                  </span>
+                </div>
+              )}
+
+              {parametricResult && (
+                <>
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/60 text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Material</th>
+                          <th className="px-3 py-2 text-left font-medium">Tipo</th>
+                          <th className="px-3 py-2 text-left font-medium">Cortes / vidro</th>
+                          <th className="px-3 py-2 text-right font-medium">Quantidade</th>
+                          <th className="px-3 py-2 text-center font-medium">Regra</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parametricResult.materials.map((material) => (
+                          <tr key={material.source_rule_id} className="border-t">
+                            <td className="px-3 py-2 font-medium">{material.item_name}</td>
+                            <td className="px-3 py-2 capitalize">{material.material_type}</td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {material.cuts_mm.length > 0
+                                ? `${material.cuts_mm[0].toFixed(0)} mm × ${material.cuts_mm.length}`
+                                : material.glass_pieces.length > 0
+                                  ? material.glass_pieces.map((piece) => (
+                                      `${piece.width_mm.toFixed(0)} × ${piece.height_mm.toFixed(0)} mm × ${piece.quantity}`
+                                    )).join(', ')
+                                  : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {material.quantity.toFixed(3)} {material.unit}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <Badge variant={material.validated ? 'default' : 'secondary'} className="text-[10px]">
+                                {material.validated ? 'VALIDATED' : 'ESTIMATED'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-md bg-muted/50 p-2">
+                      <span className="text-muted-foreground">Custo</span>
+                      <p className="font-semibold">{formatCurrency(parametricResult.totals.cost)}</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-2">
+                      <span className="text-muted-foreground">Venda BOM</span>
+                      <p className="font-semibold">{formatCurrency(parametricResult.totals.sale_price)}</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-2">
+                      <span className="text-muted-foreground">Margem</span>
+                      <p className="font-semibold">{formatCurrency(parametricResult.totals.margin)}</p>
+                    </div>
+                  </div>
+
+                  {parametricResult.warnings.length > 0 && (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                      {parametricResult.warnings.map((warning) => (
+                        <p key={warning} className="flex gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                          <span>{warning}</span>
+                        </p>
+                      ))}
+                      {!hasCompleteParametricPrice && (
+                        <p className="mt-2 font-medium">
+                          O orçamento usa o preço vigente do produto; o snapshot registra esse fallback explicitamente.
+                          Se ele estiver zerado, informe o total manualmente antes de adicionar.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {mode === 'cutting' ? (
             /* Rodapé limpo — modo Plano de Corte (omitido se onLiveChange estiver ativo) */

@@ -602,13 +602,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cash_movements_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "cash_movements_cash_register_id_fkey"
             columns: ["cash_register_id"]
             isOneToOne: false
@@ -616,10 +609,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cash_movements_funcionario_id_fkey"
-            columns: ["funcionario_id"]
+            foreignKeyName: "cash_movements_cliente_id_fkey"
+            columns: ["cliente_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
@@ -634,6 +627,20 @@ export type Database = {
             columns: ["expense_id"]
             isOneToOne: false
             referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "company_members_view"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "cash_movements_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -1818,6 +1825,82 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_parametric_rule_overrides: {
+        Row: {
+          company_id: string
+          company_item_id: string | null
+          condition_override: string | null
+          created_at: string
+          formula_override: string | null
+          height_formula_override: string | null
+          id: string
+          is_disabled: boolean
+          loss_percent_override: number | null
+          pieces_formula_override: string | null
+          pieces_quantity_override: number | null
+          quantity_formula_override: string | null
+          rule_id: string
+          updated_at: string
+          width_formula_override: string | null
+        }
+        Insert: {
+          company_id: string
+          company_item_id?: string | null
+          condition_override?: string | null
+          created_at?: string
+          formula_override?: string | null
+          height_formula_override?: string | null
+          id?: string
+          is_disabled?: boolean
+          loss_percent_override?: number | null
+          pieces_formula_override?: string | null
+          pieces_quantity_override?: number | null
+          quantity_formula_override?: string | null
+          rule_id: string
+          updated_at?: string
+          width_formula_override?: string | null
+        }
+        Update: {
+          company_id?: string
+          company_item_id?: string | null
+          condition_override?: string | null
+          created_at?: string
+          formula_override?: string | null
+          height_formula_override?: string | null
+          id?: string
+          is_disabled?: boolean
+          loss_percent_override?: number | null
+          pieces_formula_override?: string | null
+          pieces_quantity_override?: number | null
+          quantity_formula_override?: string | null
+          rule_id?: string
+          updated_at?: string
+          width_formula_override?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_parametric_overrides_company_item_fk"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "company_parametric_rule_overrides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_parametric_rule_overrides_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "product_parametric_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -5394,6 +5477,111 @@ export type Database = {
         }
         Relationships: []
       }
+      product_parametric_rules: {
+        Row: {
+          applies_to: string
+          calculation_type: string
+          condition_expression: string | null
+          created_at: string
+          cut_angle: string | null
+          cut_orientation: string | null
+          formula: string | null
+          group_name: string
+          height_formula: string | null
+          id: string
+          is_active: boolean
+          is_validated: boolean
+          item_template_id: string | null
+          loss_percent: number
+          material_type: string
+          pieces_formula: string | null
+          pieces_quantity: number
+          product_template_id: string
+          quantity_formula: string | null
+          rule_key: string
+          side: string
+          sort_order: number
+          unit: string
+          updated_at: string
+          validation_source: string | null
+          version: number
+          width_formula: string | null
+        }
+        Insert: {
+          applies_to?: string
+          calculation_type?: string
+          condition_expression?: string | null
+          created_at?: string
+          cut_angle?: string | null
+          cut_orientation?: string | null
+          formula?: string | null
+          group_name?: string
+          height_formula?: string | null
+          id?: string
+          is_active?: boolean
+          is_validated?: boolean
+          item_template_id?: string | null
+          loss_percent?: number
+          material_type: string
+          pieces_formula?: string | null
+          pieces_quantity?: number
+          product_template_id: string
+          quantity_formula?: string | null
+          rule_key: string
+          side?: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          validation_source?: string | null
+          version?: number
+          width_formula?: string | null
+        }
+        Update: {
+          applies_to?: string
+          calculation_type?: string
+          condition_expression?: string | null
+          created_at?: string
+          cut_angle?: string | null
+          cut_orientation?: string | null
+          formula?: string | null
+          group_name?: string
+          height_formula?: string | null
+          id?: string
+          is_active?: boolean
+          is_validated?: boolean
+          item_template_id?: string | null
+          loss_percent?: number
+          material_type?: string
+          pieces_formula?: string | null
+          pieces_quantity?: number
+          product_template_id?: string
+          quantity_formula?: string | null
+          rule_key?: string
+          side?: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          validation_source?: string | null
+          version?: number
+          width_formula?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_parametric_rules_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_parametric_rules_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_template_items: {
         Row: {
           applies_to: string | null
@@ -5507,6 +5695,7 @@ export type Database = {
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           company_id: string | null
+          composition_mode: string
           contramarco: string | null
           cor_componentes: string | null
           corte_contramarco: string | null
@@ -5544,6 +5733,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string | null
+          composition_mode?: string
           contramarco?: string | null
           cor_componentes?: string | null
           corte_contramarco?: string | null
@@ -5581,6 +5771,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string | null
+          composition_mode?: string
           contramarco?: string | null
           cor_componentes?: string | null
           corte_contramarco?: string | null
@@ -5618,6 +5809,56 @@ export type Database = {
           {
             foreignKeyName: "product_templates_parent_template_id_fkey"
             columns: ["parent_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variant_definitions: {
+        Row: {
+          allowed_values: Json
+          created_at: string
+          default_value: Json | null
+          id: string
+          input_type: string
+          is_active: boolean
+          label: string
+          product_template_id: string
+          sort_order: number
+          updated_at: string
+          variant_key: string
+        }
+        Insert: {
+          allowed_values?: Json
+          created_at?: string
+          default_value?: Json | null
+          id?: string
+          input_type: string
+          is_active?: boolean
+          label: string
+          product_template_id: string
+          sort_order?: number
+          updated_at?: string
+          variant_key: string
+        }
+        Update: {
+          allowed_values?: Json
+          created_at?: string
+          default_value?: Json | null
+          id?: string
+          input_type?: string
+          is_active?: boolean
+          label?: string
+          product_template_id?: string
+          sort_order?: number
+          updated_at?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variant_definitions_product_template_id_fkey"
+            columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
             referencedColumns: ["id"]
@@ -5911,6 +6152,7 @@ export type Database = {
           aluminum_color: string | null
           company_item_id: string | null
           company_product_id: string | null
+          composition_mode: string
           composition_snapshot: Json | null
           created_at: string
           description: string
@@ -5928,6 +6170,7 @@ export type Database = {
           leaves_count: number | null
           notes: string | null
           panels_count: number | null
+          parametric_snapshot_version: number | null
           product_template_id: string | null
           quantity: number
           quote_id: string
@@ -5943,6 +6186,7 @@ export type Database = {
           aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
+          composition_mode?: string
           composition_snapshot?: Json | null
           created_at?: string
           description: string
@@ -5960,6 +6204,7 @@ export type Database = {
           leaves_count?: number | null
           notes?: string | null
           panels_count?: number | null
+          parametric_snapshot_version?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id: string
@@ -5975,6 +6220,7 @@ export type Database = {
           aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
+          composition_mode?: string
           composition_snapshot?: Json | null
           created_at?: string
           description?: string
@@ -5992,6 +6238,7 @@ export type Database = {
           leaves_count?: number | null
           notes?: string | null
           panels_count?: number | null
+          parametric_snapshot_version?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id?: string
@@ -7322,6 +7569,27 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       tax_categories: {
         Row: {
           aliquota_cbs: number | null
@@ -7486,6 +7754,14 @@ export type Database = {
         Args: { _company_id: string; _product_template_id: string }
         Returns: string
       }
+      admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
+      admin_preview_delete_company: {
+        Args: { _company_id: string }
+        Returns: {
+          records_count: number
+          table_name: string
+        }[]
+      }
       approve_quote_transactional: {
         Args: {
           p_balance_due_date?: string
@@ -7500,72 +7776,6 @@ export type Database = {
           p_priority?: string
           p_quote_id: string
           p_total_amount: number
-        }
-        Returns: Json
-      }
-      pay_employee_commissions_transactional: {
-        Args: {
-          _cash_register_id: string
-          _commission_ids: string[]
-          _notes?: string
-          _operation_key: string
-        }
-        Returns: Json
-      }
-      pay_expense_transactional: {
-        Args: {
-          _amount: number
-          _bank_account_id: string | null
-          _cash_register_id: string | null
-          _expense_id: string
-          _operation_key: string
-          _paid_date?: string
-          _payment_method: string
-        }
-        Returns: Json
-      }
-      receive_quote_deposit_transactional: {
-        Args: {
-          _cash_register_id: string
-          _deposit_id: string
-          _operation_key: string
-          _payment_method: string
-        }
-        Returns: Json
-      }
-      receive_receivable_payment: {
-        Args: {
-          _amount: number
-          _cash_register_id: string
-          _operation_key: string
-          _payment_method: string
-          _receivable_id: string
-        }
-        Returns: Json
-      }
-      receive_sale_payment_transactional: {
-        Args: {
-          _amount: number
-          _cash_register_id: string
-          _operation_key: string
-          _payment_method: string
-          _sale_id: string
-        }
-        Returns: Json
-      }
-      register_cash_movement_transactional: {
-        Args: {
-          _amount: number
-          _cash_register_id: string
-          _category: string
-          _cliente_id?: string
-          _description: string
-          _fornecedor_id?: string
-          _funcionario_id?: string
-          _operation_key: string
-          _payment_method: string
-          _quote_id?: string
-          _type: string
         }
         Returns: Json
       }
@@ -7591,26 +7801,14 @@ export type Database = {
         Returns: Json
       }
       cancel_approved_quote: { Args: { _quote_id: string }; Returns: Json }
-      phase2a_eval_formula: {
-        Args: { p_formula: string; p_height: number; p_width: number }
-        Returns: number
-      }
       cancel_os_materials: {
         Args: { _ordem_servico_id: string }
         Returns: number
       }
-      complete_os_production: {
-        Args: {
-          _cancelled_consumption_ids?: string[]
-          _lines: Json
-          _ordem_servico_id: string
-        }
-        Returns: Json
-      }
       cancel_sale: {
         Args: {
           p_company_id: string
-          p_reason: string
+          p_reason?: string
           p_sale_id: string
           p_user_id: string
         }
@@ -7660,6 +7858,14 @@ export type Database = {
           _cash_register_id: string
           _company_id: string
           _excess_amount: number
+        }
+        Returns: Json
+      }
+      complete_os_production: {
+        Args: {
+          _cancelled_consumption_ids?: string[]
+          _lines: Json
+          _ordem_servico_id: string
         }
         Returns: Json
       }
@@ -7866,6 +8072,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: Json
       }
+      get_system_setting: { Args: { p_key: string }; Returns: Json }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_open_cash_register: {
         Args: { _company_id: string }
@@ -7967,6 +8174,7 @@ export type Database = {
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           company_id: string | null
+          composition_mode: string
           contramarco: string | null
           cor_componentes: string | null
           corte_contramarco: string | null
@@ -8036,12 +8244,41 @@ export type Database = {
       }
       normalize_text: { Args: { input_text: string }; Returns: string }
       open_daily_cash: {
-        Args: { _company_id: string; _opening_amount: number; _user_id: string }
+        Args: {
+          _company_id: string
+          _opening_amount: number
+          _user_id?: string
+        }
         Returns: Json
       }
       open_daily_cash_multiuser: {
         Args: { _company_id: string; _opening_amount: number; _user_id: string }
         Returns: Json
+      }
+      pay_employee_commissions_transactional: {
+        Args: {
+          _cash_register_id: string
+          _commission_ids: string[]
+          _notes?: string
+          _operation_key: string
+        }
+        Returns: Json
+      }
+      pay_expense_transactional: {
+        Args: {
+          _amount: number
+          _bank_account_id: string
+          _cash_register_id: string
+          _expense_id: string
+          _operation_key: string
+          _paid_date?: string
+          _payment_method: string
+        }
+        Returns: Json
+      }
+      phase2a_eval_formula: {
+        Args: { p_formula: string; p_height: number; p_width: number }
+        Returns: number
       }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
@@ -8052,6 +8289,35 @@ export type Database = {
           _items: Json
           _purchase_order_id: string
           _total_actual?: number
+        }
+        Returns: Json
+      }
+      receive_quote_deposit_transactional: {
+        Args: {
+          _cash_register_id: string
+          _deposit_id: string
+          _operation_key: string
+          _payment_method: string
+        }
+        Returns: Json
+      }
+      receive_receivable_payment: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _operation_key: string
+          _payment_method: string
+          _receivable_id: string
+        }
+        Returns: Json
+      }
+      receive_sale_payment_transactional: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _operation_key: string
+          _payment_method: string
+          _sale_id: string
         }
         Returns: Json
       }
@@ -8076,6 +8342,22 @@ export type Database = {
           _category: string
           _description: string
           _payment_method?: string
+        }
+        Returns: Json
+      }
+      register_cash_movement_transactional: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _category: string
+          _cliente_id?: string
+          _description: string
+          _fornecedor_id?: string
+          _funcionario_id?: string
+          _operation_key: string
+          _payment_method: string
+          _quote_id?: string
+          _type: string
         }
         Returns: Json
       }
@@ -8139,6 +8421,10 @@ export type Database = {
       }
       reserve_os_materials: {
         Args: { _ordem_servico_id: string }
+        Returns: Json
+      }
+      reset_company_data: {
+        Args: { p_company_id: string; p_modules: string[] }
         Returns: Json
       }
       reset_company_product_field: {
@@ -8227,6 +8513,7 @@ export type Database = {
     }
   }
 }
+
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

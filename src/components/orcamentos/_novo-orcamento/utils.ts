@@ -39,4 +39,7 @@ export const mapItemForInsert = (item: QuoteItem, quoteId: string) => ({
   include_contramarco: item.include_contramarco ?? true,
   excluded_optional_ids: item.excluded_optional_ids || [],
   notes: item.notes || null,
+  composition_mode: item.composition_mode || 'fixed',
+  composition_snapshot: item.composition_snapshot || null,
+  parametric_snapshot_version: item.parametric_snapshot_version || null,
 });

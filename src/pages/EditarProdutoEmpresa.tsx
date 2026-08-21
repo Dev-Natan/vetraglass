@@ -16,6 +16,7 @@ import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
 import { ProductCompositionPricing } from '@/components/produtos/ProductCompositionPricing';
+import { ParametricEngineeringRulesPanel } from '@/components/produtos/ParametricEngineeringRulesPanel';
 
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
@@ -89,6 +90,7 @@ type CompanyProduct = {
     name: string;
     image_url: string | null;
     linha: string | null;
+    composition_mode: string;
   } | null;
 };
 
@@ -203,7 +205,7 @@ export default function EditarProdutoEmpresa() {
         .from('company_products')
         .select(`
           *,
-          product_template:product_templates(id, name, image_url, linha)
+          product_template:product_templates(id, name, image_url, linha, composition_mode)
         `)
         .eq('id', id!)
         .maybeSingle();
@@ -217,7 +219,7 @@ export default function EditarProdutoEmpresa() {
           .from('company_products')
           .select(`
             *,
-            product_template:product_templates(id, name, image_url, linha)
+            product_template:product_templates(id, name, image_url, linha, composition_mode)
           `)
           .eq('product_template_id', id!)
           .eq('company_id', currentCompany.id)
@@ -1125,6 +1127,15 @@ export default function EditarProdutoEmpresa() {
             )}
           </CardContent>
         </Card>
+
+        {product.product_template_id
+          && product.product_template?.composition_mode === 'parametric'
+          && currentCompany?.id && (
+            <ParametricEngineeringRulesPanel
+              companyId={currentCompany.id}
+              productTemplateId={product.product_template_id}
+            />
+          )}
 
         {/* Composição do Produto — split view idêntico ao admin */}
         <div className="space-y-4">

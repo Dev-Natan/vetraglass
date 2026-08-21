@@ -44,6 +44,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   const imageUrl = getProductImage(item.image_url);
   const area = item.width && item.height ? (((item.width + (item.width_b || 0)) / 1000) * (item.height / 1000)).toFixed(2) : null;
   const isItem = item.item_type === 'item';
+  const isParametric = item.composition_mode === 'parametric';
 
   const addComponent = () => {
     const components = [...(item.components || [])];
@@ -60,7 +61,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
     onUpdate(index, 'components', components);
   };
 
-  const updateComponent = (compIndex: number, field: keyof QuoteComponent, value: any) => {
+  const updateComponent = (compIndex: number, field: keyof QuoteComponent, value: unknown) => {
     const components = item.components?.map((comp, i) => {
       if (i === compIndex) {
         return { ...comp, [field]: value };
@@ -107,6 +108,11 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                 {item.linha && (
                   <Badge variant="secondary" className="text-xs">{item.linha}</Badge>
                 )}
+                {isParametric && (
+                  <Badge variant="outline" className="text-xs">
+                    PARAMETRIC · snapshot v{item.parametric_snapshot_version || 1}
+                  </Badge>
+                )}
                 {item.category && (
                   <Badge variant="outline" className="text-xs">
                     {isItem ? getItemTypeLabel(item.category) : (categoryLabels[item.category] || item.category)}
@@ -117,6 +123,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                     <Select
                       value={item.glass_color || ''}
                       onValueChange={(v) => onUpdate(index, 'glass_color', v)}
+                      disabled={isParametric}
                     >
                       <SelectTrigger className="h-7 text-xs w-[120px] bg-primary/10 border-primary/30 text-primary">
                         <SelectValue placeholder="Cor" />
@@ -130,6 +137,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                     <Select
                       value={item.glass_thickness ? String(item.glass_thickness).replace('mm', '') : ''}
                       onValueChange={(v) => onUpdate(index, 'glass_thickness', `${v}mm`)}
+                      disabled={isParametric}
                     >
                       <SelectTrigger className="h-7 text-xs w-[100px] bg-success/10 border-success/30 text-success">
                         <SelectValue placeholder="Espessura" />
@@ -232,6 +240,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   onChange={(e) => onUpdate(index, 'width', Number(e.target.value))}
                   placeholder="1200"
                   min={0}
+                  disabled={isParametric}
                   className="h-9"
                 />
               </div>
@@ -243,6 +252,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   onChange={(e) => onUpdate(index, 'height', Number(e.target.value))}
                   placeholder="1500"
                   min={0}
+                  disabled={isParametric}
                   className="h-9"
                 />
               </div>
@@ -257,6 +267,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                       onChange={(e) => onUpdate(index, 'width_b', Number(e.target.value))}
                       placeholder="1200"
                       min={0}
+                      disabled={isParametric}
                       className="h-9"
                     />
                   </div>
@@ -268,6 +279,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                       onChange={(e) => onUpdate(index, 'height_b', Number(e.target.value))}
                       placeholder="1500"
                       min={0}
+                      disabled={isParametric}
                       className="h-9"
                     />
                   </div>
@@ -281,6 +293,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   value={item.quantity}
                   onChange={(e) => onUpdate(index, 'quantity', Number(e.target.value))}
                   min={1}
+                  disabled={isParametric}
                   className="h-9"
                 />
               </div>
@@ -292,10 +305,17 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   onChange={(e) => onUpdate(index, 'base_price_m2', Number(e.target.value))}
                   min={0}
                   step={0.01}
+                  disabled={isParametric}
                   className="h-9"
                 />
               </div>
             </div>
+          )}
+
+          {isParametric && (
+            <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              Medidas, variantes e preço estão congelados no snapshot. Para recalcular, remova o item e adicione-o novamente.
+            </p>
           )}
 
           {/* Components / Accessories */}
@@ -308,6 +328,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                 size="sm" 
                 className="h-7 text-[10px]"
                 onClick={addComponent}
+                disabled={isParametric}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Adicionar

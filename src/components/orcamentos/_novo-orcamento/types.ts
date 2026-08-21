@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Json } from '@/integrations/supabase/types';
 
 export const quoteSchema = z.object({
   client_id: z.string().uuid().nullable().optional(),
@@ -30,7 +31,7 @@ export interface QuoteComponent {
 export interface QuoteItem {
   id?: string;
   company_product_id?: string;
-  product_template_id?: string;
+  product_template_id?: string | null;
   company_item_id?: string;
   item_type?: 'product' | 'item';
   description: string;
@@ -64,6 +65,9 @@ export interface QuoteItem {
   excluded_optional_ids?: string[];
   notes?: string;
   components?: QuoteComponent[];
+  composition_mode?: 'fixed' | 'parametric';
+  composition_snapshot?: Json | null;
+  parametric_snapshot_version?: number | null;
 }
 
 export interface Quote {
