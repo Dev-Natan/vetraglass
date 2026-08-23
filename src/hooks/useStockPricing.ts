@@ -8,12 +8,12 @@ const sb = supabase as any;
 
 /**
  * Precificação centralizada em `company_items`.
- *   custo_unitario   = cost_per_meter (perfis) ou cost (demais)
- *   markup           = sale_margin_percent
- *   preco_venda_final = sale_price_per_meter / sale_price
+ *   custo_unitario    = cost
+ *   markup            = markup_percent
+ *   preco_venda_final = sale_price
+ *   unidade comercial = pricing_unit
  *
- * O trigger `trg_recompute_company_item_sale_price` mantém o preço
- * final sincronizado quando o custo ou o markup mudam.
+ * Escritas passam pela RPC transacional `save_company_item_pricing`.
  */
 export interface StockPricingRow {
   id: string;
@@ -23,10 +23,10 @@ export interface StockPricingRow {
   unit: string | null;
   linha: string | null;
   cost: number | null;
-  cost_per_meter: number | null;
   sale_price: number | null;
-  sale_price_per_meter: number | null;
-  sale_margin_percent: number | null;
+  markup_percent: number | null;
+  pricing_unit: string | null;
+  pricing_configured_at: string | null;
   glass_color?: string | null;
   thickness_mm?: number | null;
 }
@@ -51,7 +51,7 @@ export function useStockPricing(filter?: { type?: string; linha?: string }) {
       let q = sb
         .from('company_items')
         .select(
-          'id, item_template_id, name, type, unit, linha, cost, cost_per_meter, sale_price, sale_price_per_meter, sale_margin_percent, glass_color, thickness_mm'
+          'id, item_template_id, name, type, unit, linha, cost, sale_price, markup_percent, pricing_unit, pricing_configured_at, glass_color, thickness_mm'
         )
         .eq('company_id', companyId)
         .eq('is_active', true);
@@ -76,14 +76,22 @@ export function useUpdateItemPricing() {
     mutationFn: async (input: {
       id: string;
       cost?: number | null;
-      cost_per_meter?: number | null;
-      sale_margin_percent?: number | null;
+      markup_percent?: number | null;
       sale_price?: number | null;
-      sale_price_per_meter?: number | null;
+      pricing_unit?: string | null;
+      basis?: 'MARKUP' | 'SALE_PRICE';
     }) => {
       if (!currentCompany?.id) throw new Error('Sem empresa ativa');
-      const { id, ...patch } = input;
-      const { error } = await sb.from('company_items').update(patch).eq('id', id);
+      const basis = input.basis ?? 'MARKUP';
+      const value = basis === 'MARKUP' ? input.markup_percent : input.sale_price;
+      const { error } = await sb.rpc('save_company_item_pricing', {
+        _company_id: currentCompany.id,
+        _company_item_id: input.id,
+        _cost: input.cost,
+        _basis: basis,
+        _value: value,
+        _pricing_unit: input.pricing_unit ?? null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -138,8 +146,10 @@ export function usePricingByTemplate() {
         string,
         {
           cost: number | null;
+          /** Derived compatibility alias; source remains company_items.cost. */
           costPerMeter: number | null;
           salePrice: number | null;
+          /** Derived compatibility alias; source remains company_items.sale_price. */
           salePricePerMeter: number | null;
           markupPercent: number | null;
           unit: string | null;
@@ -149,7 +159,7 @@ export function usePricingByTemplate() {
       const { data, error } = await sb
         .from('company_items')
         .select(
-          'item_template_id, cost, cost_per_meter, sale_price, sale_price_per_meter, sale_margin_percent, unit'
+          'item_template_id, cost, sale_price, markup_percent, pricing_unit, unit'
         )
         .eq('company_id', companyId)
         .eq('is_active', true)
@@ -158,13 +168,12 @@ export function usePricingByTemplate() {
       for (const row of data ?? []) {
         map.set(row.item_template_id as string, {
           cost: row.cost != null ? Number(row.cost) : null,
-          costPerMeter: row.cost_per_meter != null ? Number(row.cost_per_meter) : null,
+          costPerMeter: row.cost != null ? Number(row.cost) : null,
           salePrice: row.sale_price != null ? Number(row.sale_price) : null,
-          salePricePerMeter:
-            row.sale_price_per_meter != null ? Number(row.sale_price_per_meter) : null,
+          salePricePerMeter: row.sale_price != null ? Number(row.sale_price) : null,
           markupPercent:
-            row.sale_margin_percent != null ? Number(row.sale_margin_percent) : null,
-          unit: row.unit ?? null,
+            row.markup_percent != null ? Number(row.markup_percent) : null,
+          unit: row.pricing_unit ?? row.unit ?? null,
         });
       }
       return map;

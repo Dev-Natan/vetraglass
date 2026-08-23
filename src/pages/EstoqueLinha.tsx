@@ -2,15 +2,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { recalculateProductPrice } from '@/utils/productPriceUpdater';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
@@ -18,17 +16,6 @@ import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentos
 import { ItemHistoricoDialog } from '@/components/estoque/ItemHistoricoDialog';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
 import { useStockData } from '@/hooks/useStockData';
@@ -164,86 +151,6 @@ export default function EstoqueLinha() {
     onError: (error: Error) => { toast.error('Erro ao atualizar item: ' + error.message); },
   });
 
-  const resetStockMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentCompany?.id) return;
-      
-      // Zero out stock quantities
-      const { error: stockError } = await supabase
-        .from('company_stock')
-        .update({ quantity: 0 })
-        .eq('company_id', currentCompany.id);
-        
-      if (stockError) throw stockError;
-      
-      // Zero out costs in company_items
-      const { error: itemsError } = await supabase
-        .from('company_items')
-        .update({ 
-          cost: 0, 
-          cost_per_bar: 0, 
-          cost_per_kg: 0, 
-          cost_per_meter: 0 
-        })
-        .eq('company_id', currentCompany.id);
-        
-      if (itemsError) throw itemsError;
-
-      // Zero out costs in company_item_prices
-      const { error: pricesError } = await supabase
-        .from('company_item_prices')
-        .update({ cost: 0 })
-        .eq('company_id', currentCompany.id);
-        
-      if (pricesError) throw pricesError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      invalidateStock();
-      queryClient.invalidateQueries({ queryKey: ['company-items'] });
-      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
-      toast.success('Estoque zerado com sucesso!');
-    },
-    onError: (error: Error) => {
-      toast.error('Erro ao zerar estoque: ' + error.message);
-    }
-  });
-
-  const [isRecalculating, setIsRecalculating] = useState(false);
-  const handleRecalculateAllPrices = async () => {
-    if (!currentCompany?.id) return;
-    setIsRecalculating(true);
-    try {
-      // Get all company products
-      const { data: products, error } = await supabase
-        .from('company_products')
-        .select('id')
-        .eq('company_id', currentCompany.id);
-
-      if (error) throw error;
-      if (!products || products.length === 0) {
-        toast.info('Nenhum produto encontrado para atualizar.');
-        return;
-      }
-
-      toast.info(`Iniciando atualização de ${products.length} produtos...`);
-      
-      // Use chunks to avoid overwhelming the browser/API
-      const CHUNK_SIZE = 5;
-      for (let i = 0; i < products.length; i += CHUNK_SIZE) {
-        const chunk = products.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(p => recalculateProductPrice(p.id)));
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      toast.success('Todos os preços de produtos foram atualizados com base nos custos atuais do estoque!');
-    } catch (error: any) {
-      toast.error('Erro ao recalcular preços: ' + error.message);
-    } finally {
-      setIsRecalculating(false);
-    }
-  };
-
   const { inStockItems, outOfStockItems } = useMemo(() => {
     // Lock scope to current line (from URL)
     let items = activeItems.filter((item) => {
@@ -362,39 +269,6 @@ export default function EstoqueLinha() {
           </div>
 
           <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Zerar Estoque</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Zerar Estoque?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação irá definir a quantidade e os custos de TODOS os itens do seu estoque para zero. Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => resetStockMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Confirmar e Zerar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            
-            <Button 
-              variant="outline" 
-              className="gap-2" 
-              onClick={handleRecalculateAllPrices}
-              disabled={isRecalculating}
-            >
-              <RefreshCw className={cn("w-4 h-4", isRecalculating && "animate-spin")} />
-              <span className="hidden sm:inline">Atualizar Preços Produtos</span>
-            </Button>
-            
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Saída</span>
@@ -598,6 +472,7 @@ export default function EstoqueLinha() {
         stockItems={activeItems.map(item => ({
           id: item.id,
           item_template_id: item.item_template_id,
+          company_item_id: item.company_item?.id ?? null,
           quantity: item.quantity,
           item_template: item.item_template ? {
             id: item.item_template.id, name: item.item_template.name,
@@ -615,6 +490,7 @@ export default function EstoqueLinha() {
         stockItems={activeItems.map(item => ({
           id: item.id,
           item_template_id: item.item_template_id,
+          company_item_id: item.company_item?.id ?? null,
           quantity: item.quantity,
           item_template: item.item_template ? {
             id: item.item_template.id, name: item.item_template.name,

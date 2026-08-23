@@ -138,7 +138,6 @@ export default function EditarProduto() {
     name: '',
     description: '',
     unit: 'm2',
-    composition_finished: false,
     is_ready_product: false,
     has_glass: true,
     gap_type: 'normal',
@@ -348,7 +347,6 @@ export default function EditarProduto() {
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        composition_finished: (product as any).composition_finished || false,
         unit: 'm2',
         is_ready_product: false,
         has_glass: true,
@@ -375,7 +373,6 @@ export default function EditarProduto() {
       const updateData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
-        composition_finished: formData.composition_finished,
         base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
         has_multiple_sides: formData.has_multiple_sides,
       };
@@ -748,16 +745,6 @@ export default function EditarProduto() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Nome do produto"
                   />
-                  <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
-                    <Checkbox 
-                      id="composition-finished" 
-                      checked={formData.composition_finished} 
-                      onCheckedChange={(checked) => setFormData({ ...formData, composition_finished: checked === true })}
-                    />
-                    <Label htmlFor="composition-finished" className="text-xs font-medium cursor-pointer whitespace-nowrap">
-                      Concluído
-                    </Label>
-                  </div>
                   <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
                     <Checkbox 
                       id="has-multiple-sides" 

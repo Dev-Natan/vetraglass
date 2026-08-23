@@ -15,31 +15,21 @@ export const saleService = {
   },
 
   async fetchAvailableItems(companyId: string) {
-    const { data: allItems, error: itemsError } = await supabase
-      .from('item_templates')
-      .select('id, name, unit, type, linha, default_price')
+    const { data: companyItems, error } = await supabase
+      .from('company_items')
+      .select('id,item_template_id,name,pricing_unit,unit,type,linha,sale_price,cost')
+      .eq('company_id', companyId)
       .eq('is_active', true);
-    if (itemsError) throw itemsError;
-
-    const { data: companyPrices, error: pricesError } = await supabase
-      .from('company_item_prices')
-      .select('item_template_id, price')
-      .eq('company_id', companyId);
-    if (pricesError) throw pricesError;
-
-    const priceMap = new Map<string, number>();
-    (companyPrices || []).forEach(cp => {
-      if (cp.item_template_id && cp.price !== null) priceMap.set(cp.item_template_id, cp.price);
-    });
-
-    return (allItems || []).map(item => ({
-      id: item.id,
+    if (error) throw error;
+    return (companyItems || []).map(item => ({
+      id: item.item_template_id ?? item.id,
       name: item.name,
-      unit: item.unit,
+      unit: item.pricing_unit ?? item.unit,
       type: item.type,
       linha: item.linha,
-      price: priceMap.get(item.id) ?? (item.default_price || 0),
-      isDefaultPrice: !priceMap.has(item.id)
+      price: Number(item.sale_price),
+      isDefaultPrice: false,
+      pricingError: Number(item.cost) <= 0 ? 'MISSING_COST' : Number(item.sale_price) <= 0 ? 'MISSING_PRICE' : null,
     }));
   },
 

@@ -14,7 +14,6 @@ type RuleRow = Tables<'product_parametric_rules'>;
 type OverrideRow = Tables<'company_parametric_rule_overrides'>;
 type CompanyItemRow = Tables<'company_items'>;
 type ItemTemplateRow = Tables<'item_templates'>;
-type CompanyItemPriceRow = Tables<'company_item_prices'>;
 
 interface UseParametricEngineeringOptions extends ParametricEngineInputs {
   companyId?: string;
@@ -24,11 +23,11 @@ interface UseParametricEngineeringOptions extends ParametricEngineInputs {
 }
 
 function resolveUnitPrices(
-  price: CompanyItemPriceRow | undefined,
+  item: CompanyItemRow | undefined,
 ): { cost: number | null; salePrice: number | null } {
   return {
-    cost: price ? Number(price.cost ?? 0) : null,
-    salePrice: price ? Number(price.price) : null,
+    cost: item && Number(item.cost) > 0 ? Number(item.cost) : null,
+    salePrice: item && Number(item.sale_price) > 0 ? Number(item.sale_price) : null,
   };
 }
 
@@ -61,7 +60,7 @@ async function loadResolvedRules(
 
   const ruleIds = rules.map((rule) => rule.id);
   const templateIds = [...new Set(rules.map((rule) => rule.item_template_id).filter(Boolean))] as string[];
-  const [overridesResult, companyItemsResult, templatesResult, pricesResult] = await Promise.all([
+  const [overridesResult, companyItemsResult, templatesResult] = await Promise.all([
     companyId
       ? supabase
           .from('company_parametric_rule_overrides')
@@ -79,15 +78,8 @@ async function loadResolvedRules(
     templateIds.length
       ? supabase.from('item_templates').select('*').in('id', templateIds)
       : Promise.resolve({ data: [] as ItemTemplateRow[], error: null }),
-    companyId && templateIds.length
-      ? supabase
-          .from('company_item_prices')
-          .select('*')
-          .eq('company_id', companyId)
-          .in('item_template_id', templateIds)
-      : Promise.resolve({ data: [] as CompanyItemPriceRow[], error: null }),
   ]);
-  const firstError = overridesResult.error || companyItemsResult.error || templatesResult.error || pricesResult.error;
+  const firstError = overridesResult.error || companyItemsResult.error || templatesResult.error;
   if (firstError) throw firstError;
 
   const overrides = new Map((overridesResult.data ?? []).map((row) => [row.rule_id, row]));
@@ -97,7 +89,6 @@ async function loadResolvedRules(
     companyItems.filter((row) => row.item_template_id).map((row) => [row.item_template_id as string, row]),
   );
   const templates = new Map((templatesResult.data ?? []).map((row) => [row.id, row]));
-  const prices = new Map((pricesResult.data ?? []).map((row) => [row.item_template_id, row]));
 
   return rules.flatMap((rule) => {
     const override = overrides.get(rule.id);
@@ -109,8 +100,7 @@ async function loadResolvedRules(
         ? companyItemsByTemplate.get(rule.item_template_id)
         : undefined;
     const template = rule.item_template_id ? templates.get(rule.item_template_id) : undefined;
-    const itemPrice = rule.item_template_id ? prices.get(rule.item_template_id) : undefined;
-    const unitPrices = resolveUnitPrices(itemPrice);
+    const unitPrices = resolveUnitPrices(companyItem);
     const technicalRule = rule as RuleRow & Record<string, unknown>;
 
     return [{

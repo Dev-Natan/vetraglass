@@ -15,7 +15,6 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
-import { useCompositionPricing } from '@/hooks/useCompositionPricing';
 import { Loader2, DollarSign, Calculator, Settings2, FileCode2, ExternalLink, Lock, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,7 +41,7 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
   // Preços
   const [costPerSqm, setCostPerSqm] = useState('');
   const [pricePerSqm, setPricePerSqm] = useState('');
-  const [pricingType, setPricingType] = useState<'fixed' | 'composition'>('fixed');
+  const [pricingType, setPricingType] = useState<'COMPOSITION' | 'FIXED_PER_SQM'>('COMPOSITION');
   const [marginPct, setMarginPct] = useState('50');
 
   const { data: product, isLoading } = useQuery({
@@ -67,33 +66,55 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
       setIsActive(!!(product as any).is_active);
       setCostPerSqm(String((product as any).cost_per_sqm || ''));
       setPricePerSqm(String((product as any).price_per_sqm || ''));
-      setPricingType(((product as any).pricing_type === 'composition' ? 'composition' : 'fixed'));
+      setPricingType(product.pricing_type === 'FIXED_PER_SQM' ? 'FIXED_PER_SQM' : 'COMPOSITION');
       const m = (product as any).margin_percent ?? (product as any).default_margin ?? 50;
       setMarginPct(String(m));
       setTab('geral');
     }
   }, [product, open]);
 
-  // Calcula custo automático a partir da composição × estoque da empresa (custo unitário atual)
-  // Tamanho-padrão de teste: box 1,20 × 1,90 m (em mm)
-  const composition = useCompositionPricing({
-    companyProductId: companyProductId || undefined,
-    width: 1200,
-    height: 1900,
-    quantity: 1,
-    enabled: open && pricingType === 'composition' && !!companyProductId,
+  const canonicalSimulation = useQuery({
+    queryKey: ['phase3e-product-simulation', currentCompany?.id, companyProductId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('resolve_company_product_pricing', {
+        _company_id: currentCompany!.id,
+        _company_product_id: companyProductId!,
+        _width_mm: 1200,
+        _height_mm: 1900,
+        _quantity: 1,
+        _variants: {},
+      });
+      if (error) throw error;
+      return data as unknown as {
+        materials: Array<{ item_name: string; unit: string; quantity: number; cost: number }>;
+        totals: { cost: number; sale_price: number };
+      };
+    },
+    enabled: open && !!currentCompany?.id && !!companyProductId,
+    retry: false,
   });
+  const simulationArea = 1.2 * 1.9;
+  const composition = {
+    isReady: !canonicalSimulation.isLoading,
+    hasComposition: !!canonicalSimulation.data,
+    compositionCostSimpleTotal: canonicalSimulation.data?.totals.cost ?? 0,
+    compositionCostSimplePerSqm: (canonicalSimulation.data?.totals.cost ?? 0) / simulationArea,
+    compositionCostPerSqm: (canonicalSimulation.data?.totals.cost ?? 0) / simulationArea,
+    simpleBreakdown: (canonicalSimulation.data?.materials ?? []).map(material => ({
+      nome: material.item_name, unidade: material.unit,
+      detalhe: `${material.quantity} ${material.unit}`, subtotal: material.cost,
+    })),
+  };
 
   // Quando composição estiver pronta, atualiza custo e sugere preço pela margem
   useEffect(() => {
-    if (pricingType !== 'composition' || !composition.isReady || !composition.hasComposition) return;
+    if (pricingType !== 'COMPOSITION' || !composition.isReady || !composition.hasComposition) return;
     // Prefere a soma simples (Σ qtd × custo do estoque) — auditável e previsível
     const autoCost = composition.compositionCostSimplePerSqm || composition.compositionCostPerSqm || 0;
     setCostPerSqm(autoCost.toFixed(2));
-    const m = parseFloat(marginPct) || 0;
-    const suggested = autoCost * (1 + m / 100);
-    setPricePerSqm(suggested.toFixed(2));
-  }, [pricingType, composition.isReady, composition.hasComposition, composition.compositionCostSimplePerSqm, composition.compositionCostPerSqm, marginPct]);
+    const canonicalSalePerSqm = (canonicalSimulation.data?.totals.sale_price ?? 0) / simulationArea;
+    setPricePerSqm(canonicalSalePerSqm.toFixed(2));
+  }, [pricingType, composition.isReady, composition.hasComposition, composition.compositionCostSimplePerSqm, composition.compositionCostPerSqm, canonicalSimulation.data]);
 
 
   const saveGeral = useMutation({
@@ -120,16 +141,12 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
 
   const savePricing = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('company_products')
-        .update({
-          cost_per_sqm: parseFloat(costPerSqm) || 0,
-          price_per_sqm: parseFloat(pricePerSqm) || 0,
-          pricing_type: pricingType,
-          margin_percent: parseFloat(marginPct) || 0,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', companyProductId!);
+      const { error } = await supabase.rpc('save_company_product_pricing', {
+        _company_id: currentCompany!.id,
+        _company_product_id: companyProductId!,
+        _pricing_type: pricingType,
+        _fixed_price_per_sqm: pricingType === 'FIXED_PER_SQM' ? parseFloat(pricePerSqm) : undefined,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -140,7 +157,7 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
     onError: (e: any) => toast.error('Erro ao salvar', { description: e.message }),
   });
 
-  const isCompositionMode = pricingType === 'composition';
+  const isCompositionMode = pricingType === 'COMPOSITION';
   const compositionReady = composition.isReady && composition.hasComposition;
 
   const margin = (() => {
@@ -221,18 +238,18 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
             <TabsContent value="precos" className="space-y-5 mt-6">
               <div className="space-y-3">
                 <Label>Forma de Precificação</Label>
-                <RadioGroup value={pricingType} onValueChange={(v) => setPricingType(v as any)} className="grid grid-cols-2 gap-3">
+                <RadioGroup value={pricingType} onValueChange={(v) => setPricingType(v as typeof pricingType)} className="grid grid-cols-2 gap-3">
                   <label className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'fixed' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    pricingType === 'FIXED_PER_SQM' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                   }`}>
-                    <RadioGroupItem value="fixed" className="sr-only" />
+                    <RadioGroupItem value="FIXED_PER_SQM" className="sr-only" />
                     <DollarSign className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Preços Fixos</span>
+                    <span className="text-xs font-medium">Preço fixo por m²</span>
                   </label>
                   <label className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'composition' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    pricingType === 'COMPOSITION' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                   }`}>
-                    <RadioGroupItem value="composition" className="sr-only" />
+                    <RadioGroupItem value="COMPOSITION" className="sr-only" />
                     <Calculator className="w-5 h-5 text-muted-foreground" />
                     <span className="text-xs font-medium">Por Composição</span>
                   </label>
@@ -284,19 +301,20 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
                     Custo/m² (R$) {isCompositionMode && <Lock className="w-3 h-3" />}
                   </Label>
                   <Input type="number" step="0.01" min="0" placeholder="0,00"
-                    value={costPerSqm} readOnly={isCompositionMode}
-                    className={isCompositionMode ? 'bg-muted cursor-not-allowed' : ''}
-                    onChange={(e) => setCostPerSqm(e.target.value)} />
+                    value={costPerSqm} readOnly
+                    className="bg-muted cursor-not-allowed" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Margem (%)</Label>
+                  <Label>Markup de simulação (%)</Label>
                   <Input type="number" step="0.1" min="0" placeholder="50"
-                    value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
+                    value={marginPct} onChange={(e) => setMarginPct(e.target.value)} disabled={!isCompositionMode} />
                 </div>
                 <div className="space-y-2">
                   <Label>Preço/m² (R$)</Label>
                   <Input type="number" step="0.01" min="0" placeholder="0,00"
-                    value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} />
+                    value={pricePerSqm} readOnly={isCompositionMode}
+                    className={isCompositionMode ? 'bg-muted cursor-not-allowed' : ''}
+                    onChange={(e) => setPricePerSqm(e.target.value)} />
                 </div>
               </div>
 

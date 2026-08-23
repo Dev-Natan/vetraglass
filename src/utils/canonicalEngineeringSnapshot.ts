@@ -29,39 +29,31 @@ export async function buildImmediateItemSnapshot(params: {
   width?: number;
   height?: number;
 }): Promise<CanonicalEngineeringSnapshot> {
-  const [{ data: companyItem, error: itemError }, { data: price, error: priceError }] = await Promise.all([
-    supabase
-      .from('company_items')
-      .select('id, item_template_id, name, type, unit')
-      .eq('company_id', params.companyId)
-      .eq('item_template_id', params.itemTemplateId)
-      .eq('is_active', true)
-      .maybeSingle(),
-    supabase
-      .from('company_item_prices')
-      .select('price, cost')
-      .eq('company_id', params.companyId)
-      .eq('item_template_id', params.itemTemplateId)
-      .maybeSingle(),
-  ]);
+  const { data: companyItem, error: itemError } = await supabase
+    .from('company_items')
+    .select('id, item_template_id, name, type, unit, pricing_unit, cost, sale_price')
+    .eq('company_id', params.companyId)
+    .eq('item_template_id', params.itemTemplateId)
+    .eq('is_active', true)
+    .maybeSingle();
   if (itemError) throw itemError;
-  if (priceError) throw priceError;
   if (!companyItem) throw new Error('MISSING_COMPANY_ITEM');
-  if (!price) throw new Error('MISSING_PRICE');
+  if (!companyItem.cost || Number(companyItem.cost) <= 0) throw new Error(`MISSING_COST: ${companyItem.name}`);
+  if (!companyItem.sale_price || Number(companyItem.sale_price) <= 0) throw new Error(`MISSING_PRICE: ${companyItem.name}`);
 
   const width = Number(params.width || 0);
   const height = Number(params.height || 0);
   let stockQuantity = params.quantity;
-  if (companyItem.unit === 'm²' || companyItem.unit === 'm2') {
+  if (companyItem.pricing_unit === 'm²' || companyItem.pricing_unit === 'm2') {
     if (width <= 0 || height <= 0) throw new Error('INVALID_ENGINEERING_RULE');
     stockQuantity = (width * height * params.quantity) / 1_000_000;
-  } else if (['m', 'ml', 'metro', 'metros'].includes(companyItem.unit)) {
+  } else if (['m', 'ml', 'metro', 'metros'].includes(companyItem.pricing_unit ?? companyItem.unit)) {
     if (Math.max(width, height) <= 0) throw new Error('INVALID_ENGINEERING_RULE');
     stockQuantity = (Math.max(width, height) * params.quantity) / 1000;
   }
   stockQuantity = roundQuantity(stockQuantity);
-  const cost = roundQuantity(stockQuantity * Number(price.cost ?? 0));
-  const salePrice = roundQuantity(stockQuantity * Number(price.price));
+  const cost = roundQuantity(stockQuantity * Number(companyItem.cost));
+  const salePrice = roundQuantity(stockQuantity * Number(companyItem.sale_price));
   const fulfillmentMode: FulfillmentMode = companyItem.type === 'service' ? 'SERVICE' : 'IMMEDIATE';
 
   return {
@@ -86,7 +78,9 @@ export async function buildImmediateItemSnapshot(params: {
       company_item_id: companyItem.id,
       item_name: companyItem.name,
       material_type: companyItem.type,
-      unit: companyItem.unit,
+      unit: companyItem.pricing_unit ?? companyItem.unit,
+      unit_cost: Number(companyItem.cost),
+      unit_sale_price: Number(companyItem.sale_price),
       quantity: stockQuantity,
       cost,
       sale_price: salePrice,

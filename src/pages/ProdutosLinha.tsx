@@ -38,7 +38,6 @@ type DisplayProduct = {
   base_price?: number | null;
   companyProductId?: string;
   productTemplateId?: string;
-  composition_finished?: boolean;
   has_cutting_plan?: boolean;
 };
 

@@ -44,7 +44,7 @@ function parseInputNumber(value: string): number {
 }
 
 export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
-  const { currentCompany, user } = useAuth();
+  const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const invalidateStock = useInvalidateStock();
@@ -116,13 +116,12 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         weightKg: selectedItem.weight_per_bar?.toString() ?? '',
         weightPerMeter: selectedItem.weight_per_meter?.toString() ?? '',
         // Pre-fill cost
-        costPerBar: isProfile ? (selectedItem.default_cost?.toString() ?? '') : '',
-        costPerUnit: isUnit ? (selectedItem.default_cost?.toString() ?? '') : '',
-        costPerSqm: isGlass ? (selectedItem.default_cost?.toString() ?? '') : '',
-        // Pre-fill sale price
-        salePricePerBar: isProfile ? ((selectedItem.default_sale_price || selectedItem.default_price)?.toString() ?? '') : '',
-        salePricePerUnit: isUnit ? (selectedItem.default_price?.toString() ?? '') : '',
-        salePricePerSqm: isGlass ? (selectedItem.default_price?.toString() ?? '') : '',
+        costPerBar: '',
+        costPerUnit: '',
+        costPerSqm: '',
+        salePricePerBar: '',
+        salePricePerUnit: '',
+        salePricePerSqm: '',
       });
 
       const templateSpecs = selectedItem.specifications as Record<string, unknown> | null;
@@ -142,14 +141,14 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     mutationFn: async () => {
       if (!currentCompany?.id || !selectedItem) throw new Error('Dados incompletos');
       const quantityNum = parseInputNumber(quantity);
-      const costNum =
-        parseInputNumber(pricingData.costPerBar) ||
-        parseInputNumber(pricingData.costPerKg) ||
-        parseInputNumber(pricingData.costPerMeter);
-      const salePriceNum =
-        parseInputNumber(pricingData.salePricePerBar) ||
-        parseInputNumber(pricingData.salePricePerKg) ||
-        parseInputNumber(pricingData.salePricePerMeter);
+      const isProfile = category.toLowerCase() === 'profile';
+      const isGlass = category.toLowerCase() === 'glass';
+      const costNum = parseInputNumber(isProfile
+        ? (pricingData.costPerMeter || pricingData.costPerBar)
+        : isGlass ? pricingData.costPerSqm : pricingData.costPerUnit);
+      const salePriceNum = parseInputNumber(isProfile
+        ? (pricingData.salePricePerMeter || pricingData.salePricePerBar)
+        : isGlass ? pricingData.salePricePerSqm : pricingData.salePricePerUnit);
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
@@ -159,64 +158,44 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         return parsed > 0 ? parsed : null;
       };
 
-      const { data: companyItem, error: itemError } = await supabase
-        .from('company_items')
-        .upsert({
-          company_id: currentCompany.id, item_template_id: selectedItemId, name: selectedItem.name,
-          description: selectedItem.description, type: category, unit: selectedItem.unit || 'un', linha,
-          cost: costNum, sale_price: salePriceNum, image_url: selectedItem.image_url,
-          is_custom: false, is_active: true,
-          bar_length_mm: pNum(pricingData.barLengthMm),
-          weight_kg: pNum(pricingData.weightKg),
-          weight_per_meter: pNum(pricingData.weightPerMeter),
-          cost_per_bar: pNum(pricingData.costPerBar),
-          cost_per_kg: pNum(pricingData.costPerKg),
-          cost_per_meter: pNum(pricingData.costPerMeter),
-          sale_price_per_bar: pNum(pricingData.salePricePerBar),
-          sale_price_per_kg: pNum(pricingData.salePricePerKg),
-          sale_price_per_meter: pNum(pricingData.salePricePerMeter),
-          sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
-          ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
-          cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
-          cest: fiscalData.cest || null, origem: fiscalData.origem || null,
-          codigo_servico: fiscalData.codigo_servico || null,
-          aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
-        }, { onConflict: 'company_id,item_template_id' })
-        .select().single();
-      if (itemError) throw new Error(`Erro ao salvar item: ${itemError.message}`);
-
-      const { data: existingStockRecord } = await supabase.from('company_stock').select('id, quantity')
-        .eq('company_id', currentCompany.id).eq('item_template_id', selectedItemId).maybeSingle();
-
-      if (existingStockRecord) {
-        const { error: updateError } = await supabase.from('company_stock').update({
-          quantity: existingStockRecord.quantity + quantityNum, company_item_id: companyItem.id,
-          min_quantity: parseInputNumber(minQuantity) || 0, allow_fractional: allowFractional,
-          updated_at: new Date().toISOString()
-        }).eq('id', existingStockRecord.id);
-        if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
-      } else {
-        const { error: insertError } = await supabase.from('company_stock').insert({
-          company_id: currentCompany.id, item_template_id: selectedItemId, company_item_id: companyItem.id,
-          quantity: quantityNum, min_quantity: parseInputNumber(minQuantity) || 0,
-          allow_fractional: allowFractional, is_active: true,
-        });
-        if (insertError) throw new Error(`Erro ao criar estoque: ${insertError.message}`);
-      }
-
-      await supabase.from('stock_movements').insert({
-        company_id: currentCompany.id, company_item_id: companyItem.id, item_template_id: selectedItemId,
-        type: 'entrada', category: 'compra_fornecedor', quantity: quantityNum, unit_cost: costNum,
-        valor_financeiro: quantityNum * costNum, description: `Compra: ${selectedItem.name}`,
-        reference_type: 'manual', created_by: user?.id,
+      if (costNum <= 0) throw new Error('MISSING_COST');
+      if (salePriceNum <= 0) throw new Error('MISSING_PRICE');
+      const metadata = {
+        description: selectedItem.description,
+        linha,
+        image_url: selectedItem.image_url,
+        bar_length_mm: pNum(pricingData.barLengthMm),
+        weight_kg: pNum(pricingData.weightKg),
+        weight_per_meter: pNum(pricingData.weightPerMeter),
+        ncm: fiscalData.ncm || null,
+        cfop_venda: fiscalData.cfop_venda || null,
+        cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
+        cest: fiscalData.cest || null,
+        origem: fiscalData.origem || null,
+        codigo_servico: fiscalData.codigo_servico || null,
+        aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
+      };
+      const { error } = await supabase.rpc('save_company_item_configuration', {
+        _company_id: currentCompany.id,
+        _company_item_id: null as unknown as string,
+        _item_template_id: selectedItemId,
+        _name: selectedItem.name,
+        _item_type: category,
+        _stock_unit: selectedItem.unit || 'un',
+        _pricing_unit: isProfile ? 'm' : isGlass ? 'm²' : (selectedItem.unit || 'un'),
+        _cost: costNum,
+        _basis: 'SALE_PRICE',
+        _value: salePriceNum,
+        _target_stock: quantityNum,
+        _min_stock: parseInputNumber(minQuantity) || 0,
+        _allow_fractional: allowFractional,
+        _is_active: true,
+        _metadata: metadata,
       });
-
-      await supabase.from('company_item_prices').upsert({
-        company_id: currentCompany.id, item_template_id: selectedItemId, cost: costNum, price: salePriceNum,
-      }, { onConflict: 'company_id,item_template_id' });
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Compra registrada', description: 'O item foi adicionado ao estoque com sucesso.' });
+      toast({ title: 'Entrada registrada', description: 'Item, preço e saldo foram salvos em uma única operação.' });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
@@ -227,7 +206,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       onClose();
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao registrar compra', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao registrar entrada', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -238,21 +217,21 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItemId) {
-      toast({ title: 'Selecione um item', description: 'Você precisa selecionar um item para registrar a compra.', variant: 'destructive' });
+      toast({ title: 'Selecione um item', description: 'Você precisa selecionar um item para registrar a entrada.', variant: 'destructive' });
       return;
     }
     if (!quantity || parseInputNumber(quantity) <= 0) {
-      toast({ title: 'Quantidade obrigatória', description: 'Informe a quantidade comprada.', variant: 'destructive' });
+      toast({ title: 'Quantidade obrigatória', description: 'Informe a quantidade da entrada.', variant: 'destructive' });
       return;
     }
-    const costValue =
-      parseInputNumber(pricingData.costPerBar) ||
-      parseInputNumber(pricingData.costPerKg) ||
-      parseInputNumber(pricingData.costPerMeter);
-    const salePriceValue =
-      parseInputNumber(pricingData.salePricePerBar) ||
-      parseInputNumber(pricingData.salePricePerKg) ||
-      parseInputNumber(pricingData.salePricePerMeter);
+    const isProfile = category.toLowerCase() === 'profile';
+    const isGlass = category.toLowerCase() === 'glass';
+    const costValue = parseInputNumber(isProfile
+      ? (pricingData.costPerMeter || pricingData.costPerBar)
+      : isGlass ? pricingData.costPerSqm : pricingData.costPerUnit);
+    const salePriceValue = parseInputNumber(isProfile
+      ? (pricingData.salePricePerMeter || pricingData.salePricePerBar)
+      : isGlass ? pricingData.salePricePerSqm : pricingData.salePricePerUnit);
 
     if (costValue <= 0) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
     if (salePriceValue <= 0) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
@@ -415,7 +394,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       <div className="px-6 py-4 border-t space-y-4 bg-muted/20">
         <div className="flex items-center gap-2 mb-2">
           <ShoppingCart className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Dados da Compra</span>
+          <span className="text-sm font-medium">Dados da entrada manual</span>
           <span className="text-xs text-muted-foreground">(Campos obrigatórios *)</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -472,7 +451,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         <Button type="submit" disabled={registerPurchaseMutation.isPending || !selectedItemId} className="gap-2">
           {registerPurchaseMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
           <ShoppingCart className="w-4 h-4" />
-          Registrar Compra
+          Registrar entrada
         </Button>
       </div>
     </form>

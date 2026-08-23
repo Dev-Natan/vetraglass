@@ -15,7 +15,6 @@ import { Switch } from '@/components/ui/switch';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
-import { ProductCompositionPricing } from '@/components/produtos/ProductCompositionPricing';
 import { ParametricEngineeringRulesPanel } from '@/components/produtos/ParametricEngineeringRulesPanel';
 
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
@@ -82,7 +81,6 @@ type CompanyProduct = {
   pricing_type: string | null;
   is_active: boolean;
   is_custom: boolean | null;
-  composition_finished: boolean | null;
   linha: string | null;
   image_url: string | null;
   product_template?: {
@@ -177,14 +175,12 @@ export default function EditarProdutoEmpresa() {
   const [glassName, setGlassName] = useState('');
   const [side, setSide] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [pricingType, setPricingType] = useState<string>('fixed');
-  const [costPerSqm, setCostPerSqm] = useState<number>(0);
+  const [pricingType, setPricingType] = useState<'COMPOSITION' | 'FIXED_PER_SQM'>('COMPOSITION');
   const [pricePerSqm, setPricePerSqm] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     commercial_name: '',
     description: '',
-    composition_finished: false,
   });
 
   const [configData, setConfigData] = useState<ProductConfigData>({
@@ -448,7 +444,6 @@ export default function EditarProdutoEmpresa() {
       setFormData({
         commercial_name: product.commercial_name || '',
         description: product.description || '',
-        composition_finished: (product as any).composition_finished || false,
       });
       setConfigData({
         acabamento: (product as any).acabamento || '',
@@ -458,8 +453,7 @@ export default function EditarProdutoEmpresa() {
         corte_contramarco: (product as any).corte_contramarco || '',
         arremate: (product as any).arremate || '',
       });
-      setPricingType(product.pricing_type === 'composition' ? 'composition' : 'fixed');
-      setCostPerSqm(product.cost_per_sqm || 0);
+      setPricingType(product.pricing_type === 'FIXED_PER_SQM' ? 'FIXED_PER_SQM' : 'COMPOSITION');
       setPricePerSqm(product.price_per_sqm || 0);
     }
   }, [product]);
@@ -523,19 +517,22 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
-          composition_finished: formData.composition_finished,
           acabamento: configData.acabamento || null,
           cor_componentes: configData.cor_componentes || null,
           reforco: configData.reforco || null,
           contramarco: configData.contramarco || null,
           corte_contramarco: configData.corte_contramarco || null,
           arremate: configData.arremate || null,
-          pricing_type: pricingType,
-          cost_per_sqm: costPerSqm,
-          price_per_sqm: pricePerSqm,
         } as any)
         .eq('id', id);
       if (error) throw error;
+      const { error: pricingError } = await supabase.rpc('save_company_product_pricing', {
+        _company_id: currentCompany!.id,
+        _company_product_id: id!,
+        _pricing_type: pricingType,
+        _fixed_price_per_sqm: pricingType === 'FIXED_PER_SQM' ? pricePerSqm : undefined,
+      });
+      if (pricingError) throw pricingError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product', id] });
@@ -1018,16 +1015,6 @@ export default function EditarProdutoEmpresa() {
                 <Label>Nome do produto:</Label>
                 <div className="flex items-center gap-3">
                   <Input value={formData.commercial_name} onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })} placeholder="Nome comercial" />
-                  <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
-                    <Checkbox 
-                      id="composition-finished" 
-                      checked={formData.composition_finished} 
-                      onCheckedChange={(checked) => setFormData({ ...formData, composition_finished: checked === true })}
-                    />
-                    <Label htmlFor="composition-finished" className="text-xs font-medium cursor-pointer whitespace-nowrap">
-                      Concluído
-                    </Label>
-                  </div>
                 </div>
               </div>
               {product.product_template_id && (
@@ -1063,40 +1050,30 @@ export default function EditarProdutoEmpresa() {
                   <Tooltip>
                     <TooltipTrigger asChild><Info className="w-4 h-4 text-muted-foreground cursor-help" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p><strong>Preços Fixos:</strong> Você define manualmente o custo e o preço por m².<br/><strong>Por Composição:</strong> O sistema calcula o preço automaticamente baseado nos materiais abaixo.</p>
+                      <p><strong>Preço fixo/m²:</strong> você define somente a venda por m²; o custo sempre vem da composição.<br/><strong>Por composição:</strong> custo e venda vêm dos materiais abaixo.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
 
-              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'fixed' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
-                  <RadioGroupItem value="fixed" className="sr-only" />
-                  <DollarSign className={cn("w-6 h-6", pricingType === 'fixed' ? "text-primary" : "text-muted-foreground")} />
-                  <span className="font-semibold">Preços Fixos</span>
-                  <span className="text-xs text-muted-foreground text-center">Controle manual de custo e venda por m²</span>
+              <RadioGroup value={pricingType} onValueChange={(value) => setPricingType(value as typeof pricingType)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'FIXED_PER_SQM' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
+                  <RadioGroupItem value="FIXED_PER_SQM" className="sr-only" />
+                  <DollarSign className={cn("w-6 h-6", pricingType === 'FIXED_PER_SQM' ? "text-primary" : "text-muted-foreground")} />
+                  <span className="font-semibold">Preço fixo por m²</span>
+                  <span className="text-xs text-muted-foreground text-center">Venda por área; custo calculado pela composição</span>
                 </label>
-                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'composition' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
-                  <RadioGroupItem value="composition" className="sr-only" />
-                  <Calculator className={cn("w-6 h-6", pricingType === 'composition' ? "text-primary" : "text-muted-foreground")} />
+                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'COMPOSITION' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
+                  <RadioGroupItem value="COMPOSITION" className="sr-only" />
+                  <Calculator className={cn("w-6 h-6", pricingType === 'COMPOSITION' ? "text-primary" : "text-muted-foreground")} />
                   <span className="font-semibold">Por Composição</span>
                   <span className="text-xs text-muted-foreground text-center">Cálculo dinâmico baseado nos materiais utilizados</span>
                 </label>
               </RadioGroup>
             </div>
 
-            {pricingType === 'fixed' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
-                <div className="space-y-2">
-                  <Label>Custo Referencial / m² (R$)</Label>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    value={costPerSqm || 0} 
-                    onChange={(e) => setCostPerSqm(Number(e.target.value) || 0)} 
-                  />
-                  <p className="text-[10px] text-muted-foreground">O custo definido manualmente aqui será o usado no orçamento</p>
-                </div>
+            {pricingType === 'FIXED_PER_SQM' && (
+              <div className="grid grid-cols-1 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
                 <div className="space-y-2">
                   <Label>Preço de Venda / m² (R$)</Label>
                   <Input 
@@ -1107,6 +1084,7 @@ export default function EditarProdutoEmpresa() {
                     className="font-bold text-primary" 
                   />
                   <p className="text-[10px] text-muted-foreground">O preço de venda por m² usado no orçamento</p>
+                  <p className="text-[10px] text-muted-foreground">Custo, lucro e margem são calculados pela composição canônica em Meus Preços.</p>
                 </div>
               </div>
             )}
@@ -1444,21 +1422,6 @@ export default function EditarProdutoEmpresa() {
           </div>
         </div>
 
-
-        {/* Composition-Based Pricing (Visible if composition selected) */}
-        {pricingType === 'composition' && (
-          <ProductCompositionPricing
-            productId={id!}
-            onSuccess={(cost, price) => {
-              setCostPerSqm(cost);
-              setPricePerSqm(price);
-            }}
-            productItems={displayItems || []}
-            currentCostPerSqm={product.cost_per_sqm}
-            currentPricePerSqm={product.price_per_sqm}
-            currentMargin={product.margin_percent}
-          />
-        )}
       </div>
 
 

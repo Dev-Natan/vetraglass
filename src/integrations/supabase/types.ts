@@ -1478,6 +1478,75 @@ export type Database = {
           },
         ]
       }
+      company_item_variants: {
+        Row: {
+          company_id: string
+          company_item_id: string
+          cost: number | null
+          created_at: string
+          glass_color: string | null
+          glass_thickness_mm: number | null
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          markup_percent: number | null
+          profile_color: string | null
+          profile_finish: string | null
+          sale_price: number | null
+          updated_at: string
+          variant_type: string
+        }
+        Insert: {
+          company_id: string
+          company_item_id: string
+          cost?: number | null
+          created_at?: string
+          glass_color?: string | null
+          glass_thickness_mm?: number | null
+          glass_type?: string | null
+          id?: string
+          is_active?: boolean
+          markup_percent?: number | null
+          profile_color?: string | null
+          profile_finish?: string | null
+          sale_price?: number | null
+          updated_at?: string
+          variant_type: string
+        }
+        Update: {
+          company_id?: string
+          company_item_id?: string
+          cost?: number | null
+          created_at?: string
+          glass_color?: string | null
+          glass_thickness_mm?: number | null
+          glass_type?: string | null
+          id?: string
+          is_active?: boolean
+          markup_percent?: number | null
+          profile_color?: string | null
+          profile_finish?: string | null
+          sale_price?: number | null
+          updated_at?: string
+          variant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_item_variants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_item_variants_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_items: {
         Row: {
           aliquota_iss: number | null
@@ -1505,10 +1574,13 @@ export type Database = {
           item_template_id: string | null
           largura_mm: number | null
           linha: string | null
+          markup_percent: number | null
           name: string
           ncm: string | null
           origem: string | null
           preco_unitario: number | null
+          pricing_configured_at: string | null
+          pricing_unit: string | null
           sale_margin_percent: number | null
           sale_price: number | null
           sale_price_per_bar: number | null
@@ -1548,10 +1620,13 @@ export type Database = {
           item_template_id?: string | null
           largura_mm?: number | null
           linha?: string | null
+          markup_percent?: number | null
           name: string
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
+          pricing_configured_at?: string | null
+          pricing_unit?: string | null
           sale_margin_percent?: number | null
           sale_price?: number | null
           sale_price_per_bar?: number | null
@@ -1591,10 +1666,13 @@ export type Database = {
           item_template_id?: string | null
           largura_mm?: number | null
           linha?: string | null
+          markup_percent?: number | null
           name?: string
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
+          pricing_configured_at?: string | null
+          pricing_unit?: string | null
           sale_margin_percent?: number | null
           sale_price?: number | null
           sale_price_per_bar?: number | null
@@ -8178,6 +8256,15 @@ export type Database = {
         Args: { _company_id: string; _product_template_id: string }
         Returns: string
       }
+      adjust_company_stock: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _delta: number
+          _reason: string
+        }
+        Returns: Json
+      }
       admin_delete_company: { Args: { p_company_id: string }; Returns: Json }
       admin_preview_delete_company: {
         Args: { _company_id: string }
@@ -8256,10 +8343,6 @@ export type Database = {
           _new_role: Database["public"]["Enums"]["app_role"]
           _target_user_id: string
         }
-        Returns: Json
-      }
-      delete_item_template_transactional: {
-        Args: { _item_template_id: string }
         Returns: Json
       }
       check_employee_username_exists: {
@@ -8497,6 +8580,10 @@ export type Database = {
       }
       deactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      delete_item_template_transactional: {
+        Args: { _item_template_id: string }
         Returns: Json
       }
       distribute_product_template_to_all_companies: {
@@ -8833,6 +8920,10 @@ export type Database = {
         Args: { _expected_fulfillment?: string; _snapshot: Json }
         Returns: boolean
       }
+      phase3e_can_manage_pricing: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -9005,8 +9096,187 @@ export type Database = {
         Returns: Json
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
+      resolve_company_product_pricing: {
+        Args: {
+          _company_id: string
+          _company_product_id: string
+          _height_mm: number
+          _quantity?: number
+          _variants?: Json
+          _width_mm: number
+        }
+        Returns: Json
+      }
       resolve_product_linha_slug: { Args: { _input: string }; Returns: string }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
+      save_company_item_configuration: {
+        Args: {
+          _allow_fractional?: boolean
+          _basis: string
+          _company_id: string
+          _company_item_id: string
+          _cost: number
+          _is_active?: boolean
+          _item_template_id: string
+          _item_type: string
+          _location?: string
+          _metadata?: Json
+          _min_stock?: number
+          _name: string
+          _pricing_unit: string
+          _stock_unit: string
+          _target_stock: number
+          _value: number
+        }
+        Returns: Json
+      }
+      save_company_item_pricing: {
+        Args: {
+          _basis: string
+          _company_id: string
+          _company_item_id: string
+          _cost: number
+          _pricing_unit?: string
+          _value: number
+        }
+        Returns: {
+          aliquota_iss: number | null
+          altura_mm: number | null
+          bar_length_mm: number | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
+          company_id: string
+          comprimento_linear_mm: number | null
+          cost: number | null
+          cost_per_bar: number | null
+          cost_per_kg: number | null
+          cost_per_meter: number | null
+          created_at: string
+          description: string | null
+          glass_color: string | null
+          glass_thickness: string | null
+          glass_type_detail: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_custom: boolean
+          item_template_id: string | null
+          largura_mm: number | null
+          linha: string | null
+          markup_percent: number | null
+          name: string
+          ncm: string | null
+          origem: string | null
+          preco_unitario: number | null
+          pricing_configured_at: string | null
+          pricing_unit: string | null
+          sale_margin_percent: number | null
+          sale_price: number | null
+          sale_price_per_bar: number | null
+          sale_price_per_kg: number | null
+          sale_price_per_meter: number | null
+          specifications: Json | null
+          thickness_mm: number | null
+          type: string
+          unit: string
+          updated_at: string
+          weight_kg: number | null
+          weight_per_meter: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_company_item_variant: {
+        Args: {
+          _attributes: Json
+          _basis: string
+          _company_id: string
+          _company_item_id: string
+          _cost: number
+          _value: number
+          _variant_type: string
+        }
+        Returns: {
+          company_id: string
+          company_item_id: string
+          cost: number | null
+          created_at: string
+          glass_color: string | null
+          glass_thickness_mm: number | null
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          markup_percent: number | null
+          profile_color: string | null
+          profile_finish: string | null
+          sale_price: number | null
+          updated_at: string
+          variant_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_item_variants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_company_product_pricing: {
+        Args: {
+          _company_id: string
+          _company_product_id: string
+          _fixed_price_per_sqm?: number
+          _pricing_type: string
+        }
+        Returns: {
+          acabamento: string | null
+          arremate: string | null
+          base_price: number | null
+          category: string | null
+          commercial_name: string
+          company_id: string
+          contramarco: string | null
+          cor_componentes: string | null
+          corte_contramarco: string | null
+          cost_per_sqm: number | null
+          created_at: string
+          customized_at: string | null
+          description: string | null
+          glasses_count: number | null
+          has_multiple_sides: boolean | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_custom: boolean | null
+          leaves_count: number | null
+          linha: string | null
+          margin_percent: number | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
+          overridden_fields: Json
+          panels_count: number | null
+          price_per_sqm: number | null
+          pricing_type: string
+          product_template_id: string | null
+          reforco: string | null
+          sides_count: number | null
+          updated_at: string
+          uses_glass: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       save_composition_item: {
         Args: { _company_id: string; _item_id: string; _patch: Json }
         Returns: string
@@ -9016,7 +9286,7 @@ export type Database = {
           _company_id: string
           _items: Json
           _quote: Json
-          _quote_id: string | null
+          _quote_id: string
         }
         Returns: Json
       }

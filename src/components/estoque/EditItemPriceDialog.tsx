@@ -101,14 +101,14 @@ export function EditItemPriceDialog({
   const [aliquotaCbs, setAliquotaCbs] = useState('');
   const [aliquotaIs, setAliquotaIs] = useState('');
 
-  // Fetch existing price
+  // Canonical price lives on company_items; no legacy price-table read.
   const { data: existingPrice, isLoading: loadingPrice } = useQuery({
     queryKey: ['company-item-price', currentCompany?.id, itemTemplateId],
     queryFn: async () => {
       if (!currentCompany?.id || !itemTemplateId) return null;
       const { data, error } = await supabase
-        .from('company_item_prices')
-        .select('*')
+        .from('company_items')
+        .select('id,cost,sale_price')
         .eq('company_id', currentCompany.id)
         .eq('item_template_id', itemTemplateId)
         .maybeSingle();
@@ -246,17 +246,17 @@ export function EditItemPriceDialog({
         barLengthMm: companyItem.bar_length_mm?.toString() ?? tpl?.bar_length_mm?.toString() ?? '',
         weightKg: companyItem.weight_kg?.toString() ?? tpl?.weight_per_bar?.toString() ?? '',
         weightPerMeter: companyItem.weight_per_meter?.toString() ?? tpl?.weight_per_meter?.toString() ?? '',
-        costPerBar: companyItem.cost_per_bar?.toString() ?? (isProfile ? (tpl?.default_cost?.toString() ?? '') : ''),
+        costPerBar: '',
         costPerKg: companyItem.cost_per_kg?.toString() ?? '',
-        costPerMeter: companyItem.cost_per_meter?.toString() ?? '',
-        salePricePerBar: companyItem.sale_price_per_bar?.toString() ?? (isProfile ? (tpl?.default_price?.toString() ?? '') : ''),
+        costPerMeter: isProfile ? (companyItem.cost?.toString() ?? '') : '',
+        salePricePerBar: '',
         salePricePerKg: companyItem.sale_price_per_kg?.toString() ?? '',
-        salePricePerMeter: companyItem.sale_price_per_meter?.toString() ?? '',
-        saleMarginPercent: companyItem.sale_margin_percent?.toString() ?? '30',
-        costPerUnit: companyItem.cost?.toString() ?? (isUnit ? (tpl?.default_cost?.toString() ?? '') : ''),
-        salePricePerUnit: companyItem.sale_price?.toString() ?? (isUnit ? (tpl?.default_price?.toString() ?? '') : ''),
-        costPerSqm: companyItem.type === 'glass' ? (companyItem.cost_per_meter?.toString() ?? tpl?.default_cost?.toString() ?? '') : '',
-        salePricePerSqm: companyItem.type === 'glass' ? (companyItem.sale_price_per_meter?.toString() ?? tpl?.default_price?.toString() ?? '') : '',
+        salePricePerMeter: isProfile ? (companyItem.sale_price?.toString() ?? '') : '',
+        saleMarginPercent: companyItem.markup_percent?.toString() ?? '',
+        costPerUnit: isUnit ? (companyItem.cost?.toString() ?? '') : '',
+        salePricePerUnit: isUnit ? (companyItem.sale_price?.toString() ?? '') : '',
+        costPerSqm: isGlass ? (companyItem.cost?.toString() ?? '') : '',
+        salePricePerSqm: isGlass ? (companyItem.sale_price?.toString() ?? '') : '',
         alturaMm: (companyItem as any).altura_mm?.toString() ?? '',
         larguraMm: (companyItem as any).largura_mm?.toString() ?? '',
         comprimentoLinearMm: (companyItem as any).comprimento_linear_mm?.toString() ?? companyItem.bar_length_mm?.toString() ?? '',
@@ -271,7 +271,7 @@ export function EditItemPriceDialog({
       setPricingData(prev => ({
         ...prev,
         costPerBar: existingPrice.cost?.toString() ?? '',
-        salePricePerBar: existingPrice.price?.toString() ?? '',
+        salePricePerBar: existingPrice.sale_price?.toString() ?? '',
       }));
     } else if (itemTemplate) {
       // Fallback to template defaults if no company-specific data exists
@@ -348,41 +348,32 @@ export function EditItemPriceDialog({
       if (!currentCompany?.id) throw new Error('Dados incompletos');
       if (!itemTemplateId && !companyItemId) throw new Error('Dados incompletos');
 
-      const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? pNum(pricingData.costPerUnit) ?? 0;
-      const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? pNum(pricingData.salePricePerUnit) ?? 0;
+      const isProfile = itemTypeLocal.toLowerCase() === 'profile';
+      const isGlass = itemTypeLocal.toLowerCase() === 'glass';
+      const costNum = isProfile
+        ? pNum(pricingData.costPerMeter) ?? pNum(pricingData.costPerBar)
+        : isGlass
+          ? pNum(pricingData.costPerSqm) ?? pNum(pricingData.costPerMeter) ?? pNum(pricingData.costPerUnit)
+          : pNum(pricingData.costPerUnit);
+      const salePriceNum = isProfile
+        ? pNum(pricingData.salePricePerMeter) ?? pNum(pricingData.salePricePerBar)
+        : isGlass
+          ? pNum(pricingData.salePricePerSqm) ?? pNum(pricingData.salePricePerMeter) ?? pNum(pricingData.salePricePerUnit)
+          : pNum(pricingData.salePricePerUnit);
+      if (!costNum) throw new Error('MISSING_COST');
+      if (!salePriceNum) throw new Error('MISSING_PRICE');
 
-      let currentCompanyItemId = companyItemId;
-
-      // 1. Save/Update company_item
-      const companyItemData = {
-        company_id: currentCompany.id,
-        item_template_id: itemTemplateId || null,
-        name: itemName,
-        type: itemTypeLocal,
+      const metadata = {
         linha: linhaLocal || null,
-        cost: costNum,
-        sale_price: salePriceNum,
+        image_url: currentImageUrl || null,
         bar_length_mm: pNum(pricingData.barLengthMm),
         weight_kg: pNum(pricingData.weightKg),
         weight_per_meter: pNum(pricingData.weightPerMeter),
-        cost_per_bar: pNum(pricingData.costPerBar),
-        cost_per_kg: pNum(pricingData.costPerKg),
-        cost_per_meter: pNum(pricingData.costPerMeter),
-        sale_price_per_bar: pNum(pricingData.salePricePerBar),
-        sale_price_per_kg: pNum(pricingData.salePricePerKg),
-        sale_price_per_meter: pNum(pricingData.salePricePerMeter),
-        sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
         altura_mm: pNum(pricingData.alturaMm),
         largura_mm: pNum(pricingData.larguraMm),
         comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
-        preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
         thickness_mm: pNum(pricingData.thicknessMm),
         glass_color: pricingData.color?.trim() || null,
-
-        image_url: currentImageUrl || undefined,
-        is_custom: isCustomItem,
-        is_active: true,
-        unit: itemUnit,
         ncm: ncm || null,
         cest: cest || null,
         cfop_venda: cfopVenda || null,
@@ -391,81 +382,26 @@ export function EditItemPriceDialog({
         codigo_servico: codigoServico || null,
         aliquota_iss: pNum(aliquotaIss),
       };
-
-      if (currentCompanyItemId) {
-        const { error: itemError } = await supabase
-          .from('company_items')
-          .update(companyItemData)
-          .eq('id', currentCompanyItemId);
-        if (itemError) throw itemError;
-      } else if (itemTemplateId) {
-        const { data: newItem, error: itemError } = await supabase
-          .from('company_items')
-          .upsert({
-            ...companyItemData,
-            item_template_id: itemTemplateId
-          }, { onConflict: 'company_id,item_template_id' })
-          .select()
-          .single();
-        if (itemError) throw itemError;
-        currentCompanyItemId = newItem.id;
-      }
-
-      // 2. Save/Update company_item_prices (legacy/cache table)
-      if (itemTemplateId) {
-        await supabase
-          .from('company_item_prices')
-          .upsert({
-            company_id: currentCompany.id,
-            item_template_id: itemTemplateId,
-            cost: costNum,
-            price: salePriceNum,
-          }, { onConflict: 'company_id,item_template_id' });
-      }
-
-      // 3. Save/Update stock
-      const stockData = {
-        company_id: currentCompany.id,
-        item_template_id: itemTemplateId || null,
-        company_item_id: currentCompanyItemId,
-        quantity: parseFloat(quantity) || 0,
-        min_quantity: parseFloat(minQuantity) || 0,
-        location: location || null,
-        allow_fractional: allowFractional,
-        is_active: isActive,
-      };
-
-      if (existingStock?.id) {
-        const { error } = await supabase
-          .from('company_stock')
-          .update(stockData)
-          .eq('id', existingStock.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('company_stock')
-          .insert(stockData);
-        if (error) throw error;
-      }
-
-      // 4. Update template fiscal data if it's a template item
-      if (itemTemplateId) {
-        await supabase
-          .from('item_templates')
-          .update({
-            ncm: ncm || null,
-            cest: cest || null,
-            cfop_venda: cfopVenda || null,
-            cfop_venda_interestadual: cfopVendaInterestadual || null,
-            origem: origem || null,
-            codigo_servico: codigoServico || null,
-            aliquota_iss: pNum(aliquotaIss),
-            aliquota_ibs: pNum(aliquotaIbs),
-            aliquota_cbs: pNum(aliquotaCbs),
-            aliquota_is: pNum(aliquotaIs),
-          })
-          .eq('id', itemTemplateId);
-      }
+      const resolvedCompanyItemId = companyItem?.id ?? companyItemId ?? null;
+      const { error } = await supabase.rpc('save_company_item_configuration', {
+        _company_id: currentCompany.id,
+        _company_item_id: resolvedCompanyItemId as unknown as string,
+        _item_template_id: itemTemplateId as unknown as string,
+        _name: itemName,
+        _item_type: itemTypeLocal,
+        _stock_unit: itemUnit,
+        _pricing_unit: isProfile ? 'm' : isGlass ? 'm²' : itemUnit,
+        _cost: costNum,
+        _basis: 'SALE_PRICE',
+        _value: salePriceNum,
+        _target_stock: parseFloat(quantity) || 0,
+        _min_stock: parseFloat(minQuantity) || 0,
+        _location: location || undefined,
+        _allow_fractional: allowFractional,
+        _is_active: isActive,
+        _metadata: metadata,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       // Recalcula preços de produtos que usam este item
@@ -496,10 +432,6 @@ export function EditItemPriceDialog({
       if (!existingStock?.id) throw new Error('Item não encontrado');
       const { error: stockError } = await supabase.from('company_stock').delete().eq('id', existingStock.id);
       if (stockError) throw stockError;
-      if (existingPrice?.id) {
-        const { error: priceError } = await supabase.from('company_item_prices').delete().eq('id', existingPrice.id);
-        if (priceError) throw priceError;
-      }
     },
     onSuccess: () => {
       toast({ title: 'Item removido', description: 'O item foi removido do estoque.' });

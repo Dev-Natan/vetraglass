@@ -28,6 +28,7 @@ import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
+import type { Json } from '@/integrations/supabase/types';
 
 interface CreateCustomItemContentProps {
   onClose: () => void;
@@ -47,7 +48,7 @@ const UNITS = [
 ];
 
 export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProps) {
-  const { currentCompany, user } = useAuth();
+  const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const invalidateStock = useInvalidateStock();
@@ -58,8 +59,6 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   const [linha, setLinha] = useState('');
   const [unit, setUnit] = useState('un');
   const [quantity, setQuantity] = useState('');
-  const [cost, setCost] = useState('');
-  const [salePrice, setSalePrice] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tempItemId] = useState(createUuid);
@@ -78,72 +77,53 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
     if (selectedType?.unit_default) setUnit(selectedType.unit_default);
   };
 
-  const costNum = parseFloat(cost) || 0;
-  const salePriceNum = parseFloat(salePrice) || 0;
-
   const createItemMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       const quantityNum = parseFloat(quantity);
-      const costValue = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
-      const salePriceValue = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
+      const isProfile = category.toLowerCase() === 'profile';
+      const isGlass = category.toLowerCase() === 'glass';
+      const costValue = Number(isProfile
+        ? (pricingData.costPerMeter || pricingData.costPerBar)
+        : isGlass ? pricingData.costPerSqm : pricingData.costPerUnit) || 0;
+      const salePriceValue = Number(isProfile
+        ? (pricingData.salePricePerMeter || pricingData.salePricePerBar)
+        : isGlass ? pricingData.salePricePerSqm : pricingData.salePricePerUnit) || 0;
       const minQty = parseFloat(minQuantity) || 0;
 
       if (!name.trim()) throw new Error('Nome do item é obrigatório');
       if (!category) throw new Error('Categoria é obrigatória');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
+      if (costValue <= 0) throw new Error('MISSING_COST');
+      if (salePriceValue <= 0) throw new Error('MISSING_PRICE');
 
       const pNum = (v: string) => parseFloat(v) || null;
 
-      const { data: companyItem, error: itemError } = await supabase
-        .from('company_items')
-        .insert({
-          company_id: currentCompany.id, item_template_id: null, name: name.trim(),
-          description: description.trim() || null, type: category, unit, linha,
-          cost: costValue, sale_price: salePriceValue, image_url: imageUrl,
-          is_custom: true, is_active: true,
-          bar_length_mm: pNum(pricingData.barLengthMm),
-          weight_kg: pNum(pricingData.weightKg),
-          weight_per_meter: pNum(pricingData.weightPerMeter),
-          cost_per_bar: pNum(pricingData.costPerBar),
-          cost_per_kg: pNum(pricingData.costPerKg),
-          cost_per_meter: pNum(pricingData.costPerMeter),
-          sale_price_per_bar: pNum(pricingData.salePricePerBar),
-          sale_price_per_kg: pNum(pricingData.salePricePerKg),
-          sale_price_per_meter: pNum(pricingData.salePricePerMeter),
-          sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
-          altura_mm: pNum(pricingData.alturaMm),
-          largura_mm: pNum(pricingData.larguraMm),
-          comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
-          preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
-          thickness_mm: pNum(pricingData.thicknessMm),
-          glass_color: pricingData.color?.trim() || null,
-
-          ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
-          cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
-          cest: fiscalData.cest || null, origem: fiscalData.origem || null,
-          codigo_servico: fiscalData.codigo_servico || null,
-          aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
-        } as any)
-        .select().single();
-      if (itemError) throw new Error(`Erro ao criar item: ${itemError.message}`);
-
-      const { error: stockError } = await supabase.from('company_stock').insert({
-        company_id: currentCompany.id, item_template_id: null, company_item_id: companyItem.id,
-        quantity: quantityNum, min_quantity: minQty, is_active: true,
-        allow_fractional: unit === 'm' || unit === 'm²' || unit === 'kg' || unit === 'l' || category === 'profile',
+      const metadata: Json = {
+        description: description.trim() || null, image_url: imageUrl, linha,
+        bar_length_mm: pNum(pricingData.barLengthMm), weight_kg: pNum(pricingData.weightKg),
+        weight_per_meter: pNum(pricingData.weightPerMeter), altura_mm: pNum(pricingData.alturaMm),
+        largura_mm: pNum(pricingData.larguraMm),
+        comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
+        thickness_mm: pNum(pricingData.thicknessMm), glass_color: pricingData.color?.trim() || null,
+        ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
+        cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
+        cest: fiscalData.cest || null, origem: fiscalData.origem || null,
+        codigo_servico: fiscalData.codigo_servico || null,
+        aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
+      };
+      const { data, error } = await supabase.rpc('save_company_item_configuration', {
+        _company_id: currentCompany.id, _company_item_id: null, _item_template_id: null,
+        _name: name.trim(), _item_type: category, _stock_unit: unit,
+        _pricing_unit: isProfile ? 'm' : isGlass ? 'm²' : unit,
+        _cost: costValue, _basis: 'SALE_PRICE', _value: salePriceValue,
+        _target_stock: quantityNum, _min_stock: minQty, _location: undefined,
+        _allow_fractional: unit === 'm' || unit === 'ml' || unit === 'm²' || unit === 'kg' || unit === 'l' || isProfile,
+        _is_active: true, _metadata: metadata,
       });
-      if (stockError) throw new Error(`Erro ao criar estoque: ${stockError.message}`);
-
-      await supabase.from('stock_movements').insert({
-        company_id: currentCompany.id, company_item_id: companyItem.id, item_template_id: null,
-        type: 'entrada', category: 'compra_fornecedor', quantity: quantityNum, unit_cost: costValue,
-        valor_financeiro: quantityNum * costValue, description: `Compra inicial: ${name.trim()}`,
-        reference_type: 'manual', created_by: user?.id,
-      });
-
-      return companyItem;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast({ title: 'Item criado com sucesso!', description: 'O item personalizado foi adicionado ao seu estoque.' });
@@ -247,7 +227,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
       <div className="flex justify-end gap-2 px-6 py-4 border-t bg-muted/30">
         <Button type="button" variant="outline" onClick={onClose} disabled={createItemMutation.isPending}>Cancelar</Button>
         <Button type="submit" disabled={createItemMutation.isPending} className="gap-2">
-          {createItemMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Criando...</> : <><Sparkles className="h-4 w-4" />Criar e Registrar Compra</>}
+          {createItemMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Criando...</> : <><Sparkles className="h-4 w-4" />Criar e Registrar Entrada</>}
         </Button>
       </div>
     </form>

@@ -40,12 +40,12 @@ export const estoqueService = {
 
   async fetchItemPrices(companyId: string) {
     const { data, error } = await supabase
-      .from('company_item_prices')
-      .select('id, item_template_id, cost, price')
+      .from('company_items')
+      .select('id, item_template_id, cost, sale_price')
       .eq('company_id', companyId);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({ ...item, price: item.sale_price }));
   },
 
   async toggleActive(stockId: string, isActive: boolean): Promise<void> {

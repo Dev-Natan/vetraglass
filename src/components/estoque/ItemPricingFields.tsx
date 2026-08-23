@@ -243,15 +243,15 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
             </div>
           </div>
 
-          {/* Margem e Venda */}
+          {/* Markup e venda */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Margem e Preços de Venda</span>
+              <span className="text-xs font-medium text-muted-foreground">Markup sobre custo e preços de venda</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Margem (%)</Label>
+                <Label className="text-xs">Markup sobre custo (%)</Label>
                 <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
@@ -356,7 +356,7 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
                 <Input type="number" min="0" step="0.01" value={data.costPerSqm} onChange={(e) => update('costPerSqm', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Margem (%)</Label>
+                <Label className="text-xs">Markup sobre custo (%)</Label>
                 <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
@@ -421,7 +421,7 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
               <Input type="number" min="0" step="0.01" value={data.precoUnitario || data.costPerUnit} onChange={(e) => update('precoUnitario', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Margem (%)</Label>
+              <Label className="text-xs">Markup sobre custo (%)</Label>
               <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">

@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
 import { useParametricEngineering } from '@/hooks/useParametricEngineering';
-import { useProductPriceLines, formatUnitLabel } from '@/hooks/useProductPriceLines';
 
 import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
@@ -13,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, AlertTriangle } from 'lucide-react';
 
 // Ícone específico por categoria (slug ou nome normalizado)
 function getCategoryIcon(value?: string) {
@@ -35,22 +33,37 @@ import { cn } from '@/lib/utils';
 import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
-import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
-import { useAvailableColorsForTemplates } from '@/hooks/useItemColorPrices';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
 import type { Json } from '@/integrations/supabase/types';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
 
-interface ProductGlassPrice {
-  id: string;
-  glass_type: string;
-  glass_color: string;
-  thickness_mm: number;
-  price_per_sqm: number;
-  cost_per_sqm: number;
+interface CanonicalPricingSnapshot {
+  pricing_mode: 'COMPOSITION' | 'FIXED_PER_SQM';
+  materials: Array<Record<string, unknown>>;
+  warnings: Array<{ code: string; item_name: string; required: number; available: number }>;
+  totals: {
+    area_m2: number;
+    cost: number;
+    sale_price: number;
+    profit: number;
+    margin_percent: number | null;
+    composition_sale_price: number;
+    fixed_price_per_sqm: number | null;
+  };
+  [key: string]: unknown;
+}
+
+function describePricingError(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'Não foi possível calcular o preço.';
+  const candidate = error as { message?: string; details?: string };
+  const code = candidate.message ?? '';
+  const detail = candidate.details ? `: ${candidate.details}` : '';
+  if (code.includes('MISSING_COST')) return `Custo não configurado${detail}`;
+  if (code.includes('MISSING_PRICE')) return `Preço de venda não configurado${detail}`;
+  if (code.includes('MISSING_VARIANT')) return `Variação comercial não configurada${detail}`;
+  return `${code || 'Não foi possível calcular o preço'}${detail}`;
 }
 
 interface ProductTemplateRef {
@@ -164,14 +177,12 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const [folgaHeight, setFolgaHeight] = useState<number>(0);
   const [useVao, setUseVao] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(1);
-  const [customPrice, setCustomPrice] = useState<number | null>(null);
-  const [manualTotalOverride, setManualTotalOverride] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
-  const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
+  const [selectedGlassType, setSelectedGlassType] = useState<string>('');
   const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
   const [selectedGlassColor, setSelectedGlassColor] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
-  const [customAluminumColor, setCustomAluminumColor] = useState<string>('');
+  const [selectedProfileFinish, setSelectedProfileFinish] = useState<string>('');
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
@@ -441,140 +452,62 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.has_multiple_sides, width, height, widthB, heightB, quantity]);
 
-  // ── Linhas de preço (variações) do produto ──
-  const [selectedPriceLineId, setSelectedPriceLineId] = useState<string>('');
-  const { data: priceLines = [] } = useProductPriceLines(companyProduct?.id ?? null, true);
-  const selectedPriceLine = priceLines.find((pl) => pl.id === selectedPriceLineId) ?? null;
-
-  // Seleciona automaticamente quando existe apenas uma variação
-  useEffect(() => {
-    if (priceLines.length === 1 && !selectedPriceLineId) {
-      setSelectedPriceLineId(priceLines[0].id);
-    }
-  }, [priceLines, selectedPriceLineId]);
-
-  const priceLinePerSqm = selectedPriceLine && selectedPriceLine.unit === 'm2'
-    ? Number(selectedPriceLine.price) || 0
-    : 0;
-  const priceLinePerUnit = selectedPriceLine && selectedPriceLine.unit !== 'm2'
-    ? Number(selectedPriceLine.price) || 0
-    : 0;
-
-  // Fetch glass prices for selected product
-
-  const { data: productGlassPrices } = useQuery({
-    queryKey: ['product-glass-prices', companyProduct?.id],
-    queryFn: async () => {
-      if (!companyProduct?.id) return [];
-      const { data, error } = await supabase
-        .from('product_glass_prices')
-        .select('*')
-        .eq('company_product_id', companyProduct.id)
-        .eq('is_active', true)
-        .order('glass_type')
-        .order('glass_color')
-        .order('thickness_mm');
-      
-      if (error) throw error;
-      return data as ProductGlassPrice[];
-    },
-    enabled: !!companyProduct?.id
-  });
-
-  // Common aluminum finish colors (informational, for non-aluminum-priced products)
-  const defaultAluminumColors = [
-    'Branco', 'Preto', 'Bronze', 'Natural Fosco', 'Outros'
-  ];
-
-  const defaultGlassThicknessOptions = ['3', '4', '6', '8', '10', '12'];
-  const defaultGlassColorOptions = ['Incolor', 'Verde', 'Fumer', 'Bronze', 'Jateado', 'Refletivo'];
-
   // Get pricing type for the product
   const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'fixed');
-  const productUsesGlass = pricingType === 'glass';
-  const productUsesAluminum = pricingType === 'aluminum';
-  const productUsesComposition = pricingType === 'composition';
+  const productUsesGlass = hasGlass;
   const isParametric = selectedProduct?.composition_mode === 'parametric';
-  const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
 
-  // Fetch aluminum color prices (only when product uses aluminum pricing)
-  const { data: aluminumPriceOptions } = useProductAluminumPriceOptions(
-    productUsesAluminum ? (companyProduct?.id || null) : null
-  );
-  const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
-
-  // Perfis (item_templates) usados na composição deste produto — dirige as cores disponíveis.
-  const { data: productProfileTemplateIds = [] } = useQuery({
-    queryKey: ['product-profile-template-ids', companyProduct?.id],
+  // Variations are company-item owned and limited to the selected product BOM.
+  const { data: productCompanyItemIds = [] } = useQuery({
+    queryKey: ['phase3e-product-company-items', companyProduct?.id],
     queryFn: async () => {
       if (!companyProduct?.id) return [] as string[];
       const { data, error } = await supabase
         .from('company_product_items')
-        .select('item_template:item_templates(id, type)')
+        .select('company_item_id')
         .eq('company_product_id', companyProduct.id);
       if (error) throw error;
-      return (data ?? [])
-        .map((row) => row.item_template)
-        .filter((template): template is { id: string; type: string } => (
-          Boolean(template) && template.type === 'profile'
-        ))
-        .map((template) => template.id);
+      return (data ?? []).map(row => row.company_item_id).filter((id): id is string => Boolean(id));
     },
     enabled: !!companyProduct?.id,
     staleTime: 60_000,
   });
-  const { data: profileAvailableColors = [] } = useAvailableColorsForTemplates(productProfileTemplateIds);
+  const { data: canonicalVariants = [] } = useQuery({
+    queryKey: ['phase3e-product-variants', currentCompany?.id, productCompanyItemIds],
+    queryFn: async () => {
+      if (!currentCompany?.id || productCompanyItemIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('company_item_variants')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true)
+        .in('company_item_id', productCompanyItemIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && productCompanyItemIds.length > 0,
+  });
+  const profileAvailableColors = useMemo(() => Array.from(new Set(canonicalVariants
+    .filter(row => row.variant_type === 'PROFILE' && row.profile_color)
+    .map(row => row.profile_color as string))).sort(), [canonicalVariants]);
+  const profileFinishOptions = useMemo(() => Array.from(new Set(canonicalVariants
+    .filter(row => row.variant_type === 'PROFILE' && row.profile_finish
+      && (!selectedAluminumColor || row.profile_color === selectedAluminumColor))
+    .map(row => row.profile_finish as string))).sort(), [canonicalVariants, selectedAluminumColor]);
   const hasProfileColorPrices = profileAvailableColors.length > 0;
-
-  // ── Opções de vidro vindas do ESTOQUE (company_items unit = m²) ──
-  const glassStock = useGlassStockOptions(!!selectedProductId);
-
-  // Unique glass thicknesses and colors derived from the product's glass price catalog
-  // ⬇︎ Quando o produto NÃO tem catálogo próprio (product_glass_prices), caímos no estoque
+  const glassTypeOptions = useMemo(() => Array.from(new Set(canonicalVariants
+    .filter(row => row.variant_type === 'GLASS' && row.glass_type)
+    .map(row => row.glass_type as string))).sort(), [canonicalVariants]);
   const glassThicknessOptions = useMemo(() => {
-    const set = new Set<string>();
-    productGlassPrices?.forEach((gp) => set.add(String(gp.thickness_mm)));
-    glassStock.thicknessOptions.forEach((t) => set.add(t));
-    return Array.from(set).sort((a, b) => Number(a) - Number(b));
-  }, [productGlassPrices, glassStock.thicknessOptions]);
-
-  const glassColorOptions = useMemo(() => {
-    const set = new Set<string>();
-    productGlassPrices
-      ?.filter((gp) => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
-      .forEach((gp) => set.add(gp.glass_color));
-    glassStock.colorOptionsFor(selectedGlassThickness || undefined).forEach((c) => set.add(c));
-    return Array.from(set).sort();
-  }, [productGlassPrices, glassStock, selectedGlassThickness]);
-
-
-  // Set defaults when product changes
-  useEffect(() => {
-    if (productGlassPrices?.length && !selectedGlassPriceId) {
-      const first = productGlassPrices[0];
-      setSelectedGlassPriceId(first.id);
-      setSelectedGlassThickness(String(first.thickness_mm));
-      setSelectedGlassColor(first.glass_color);
-    }
-  }, [productGlassPrices, selectedGlassPriceId]);
-
-  // Sync selectedGlassPriceId whenever thickness/color change
-  useEffect(() => {
-    if (!selectedGlassThickness || !selectedGlassColor) return;
-    const match = productGlassPrices?.find(
-      gp => String(gp.thickness_mm) === selectedGlassThickness && gp.glass_color === selectedGlassColor
-    );
-    if (match && match.id !== selectedGlassPriceId) {
-      setSelectedGlassPriceId(match.id);
-    }
-  }, [selectedGlassThickness, selectedGlassColor, productGlassPrices, selectedGlassPriceId]);
-
-  // Set default aluminum color when product changes (for aluminum-priced products)
-  useEffect(() => {
-    if (productUsesAluminum && aluminumPriceOptions?.length && !selectedAluminumColor) {
-      setSelectedAluminumColor(aluminumPriceOptions[0].value);
-    }
-  }, [aluminumPriceOptions, selectedAluminumColor, productUsesAluminum]);
+    return Array.from(new Set(canonicalVariants.filter(row => row.variant_type === 'GLASS'
+      && (!selectedGlassType || row.glass_type === selectedGlassType))
+      .map(row => String(row.glass_thickness_mm)))).sort((a, b) => Number(a) - Number(b));
+  }, [canonicalVariants, selectedGlassType]);
+  const glassColorOptions = useMemo(() => Array.from(new Set(canonicalVariants
+    .filter(row => row.variant_type === 'GLASS' && row.glass_color
+      && (!selectedGlassType || row.glass_type === selectedGlassType)
+      && (!selectedGlassThickness || String(row.glass_thickness_mm) === selectedGlassThickness))
+    .map(row => row.glass_color as string))).sort(), [canonicalVariants, selectedGlassType, selectedGlassThickness]);
 
   // Sync Vão - Folga = Produto
   useEffect(() => {
@@ -597,45 +530,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   }, [width, height, widthB, heightB, folgaWidth, folgaHeight, !useVao]);
 
 
-  // Get selected glass price details
-  const selectedGlassPrice = productGlassPrices?.find((p) => p.id === selectedGlassPriceId);
-  // ⬇︎ Match no estoque por Cor+Espessura selecionadas
-  const stockGlassMatch = useMemo(
-    () => glassStock.findMatch(selectedGlassThickness, selectedGlassColor),
-    [glassStock, selectedGlassThickness, selectedGlassColor],
-  );
-  const stockGlassPricePerSqm = stockGlassMatch?.salePricePerSqm || 0;
-  // Catálogo tem prioridade; senão, usa estoque
-  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || stockGlassPricePerSqm || 0;
-
-
-  // Get selected aluminum price (only for aluminum-priced products)
-  const selectedAluminumPriceOption = productUsesAluminum 
-    ? aluminumPriceOptions?.find(p => p.value === selectedAluminumColor) 
-    : null;
-  const aluminumPricePerSqm = selectedAluminumPriceOption?.pricePerSqm || 0;
-
-  // Use price_per_sqm as the primary pricing method
-  const productBasePricePerSqm = Number(companyProduct?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
-  
-  // Composition-based dynamic pricing (Fase 2: variáveis dinâmicas)
-  const compositionPricing = useDynamicCompositionPricing({
-    companyProductId: companyProduct?.id,
-    width: width || 1000,
-    height: height || 1000,
-    widthB: widthB || 0,
-    heightB: heightB || 0,
-    leaves_count: selectedProduct?.leaves_count || companyProduct?.leaves_count || 1,
-    glasses_count: selectedProduct?.glasses_count || companyProduct?.glasses_count || 1,
-    panels_count: selectedProduct?.panels_count || companyProduct?.panels_count || 1,
-    sides_count: selectedProduct?.sides_count || companyProduct?.sides_count || 1,
-    quantity: quantity || 1,
-    enabled: !!companyProduct?.id && width > 0 && height > 0,
-    excludeOptionalIds: excludedOptionalIds,
-    glassColor: selectedGlassColor || null,
-    glassThicknessMm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
-    aluminumColor: selectedAluminumColor || customAluminumColor || null,
-  });
 
   const parametricVariants = useMemo(() => ({
     folhas: selectedProduct?.leaves_count || companyProduct?.leaves_count || 2,
@@ -649,65 +543,58 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     opening_height_mm: useVao ? vaoHeight : height + Number(selectedProduct?.installation_gap_height_mm || 0),
     quantity: quantity || 1,
     line: selectedProduct?.linha || null,
-    glass: selectedGlassPrice?.glass_type || null,
-    profile_color: selectedAluminumColor || customAluminumColor || null,
-    glass_color: selectedGlassPrice?.glass_color || selectedGlassColor || null,
+    glass: null,
+    profile_color: selectedAluminumColor || null,
+    glass_color: selectedGlassColor || null,
     variants: parametricVariants,
     fulfillmentMode: selectedProduct?.fulfillment_mode || 'PRODUCTION',
     enabled: isParametric && mode === 'quote',
   });
   const parametricResult = parametricEngineering.result;
-  const hasCompleteParametricPrice = Boolean(
-    parametricResult
-      && parametricResult.totals.missing_price_items === 0
-      && parametricResult.totals.sale_price > 0,
-  );
+  const canonicalVariantPayload = useMemo(() => ({
+    glass_type: selectedGlassType || null,
+    glass_color: selectedGlassColor || null,
+    glass_thickness_mm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
+    profile_color: selectedAluminumColor || null,
+    profile_finish: selectedProfileFinish || null,
+  }), [selectedGlassType, selectedGlassColor, selectedGlassThickness, selectedAluminumColor, selectedProfileFinish]);
+  const requiresGlassVariant = canonicalVariants.some(row => row.variant_type === 'GLASS');
+  const requiresProfileVariant = canonicalVariants.some(row => row.variant_type === 'PROFILE');
+  const requiresGlassType = canonicalVariants.some(row => row.variant_type === 'GLASS' && row.glass_type);
+  const requiresProfileFinish = canonicalVariants.some(row => row.variant_type === 'PROFILE' && row.profile_finish);
+  const canonicalVariantReady = (!requiresGlassVariant || (!!selectedGlassColor && !!selectedGlassThickness
+    && (!requiresGlassType || !!selectedGlassType)))
+    && (!requiresProfileVariant || (!!canonicalVariantPayload.profile_color
+      && (!requiresProfileFinish || !!selectedProfileFinish)));
+  const canonicalPricing = useQuery({
+    queryKey: ['phase3e-quote-pricing', currentCompany?.id, companyProduct?.id, width, height, quantity, canonicalVariantPayload],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('resolve_company_product_pricing', {
+        _company_id: currentCompany!.id,
+        _company_product_id: companyProduct!.id,
+        _width_mm: width,
+        _height_mm: height,
+        _quantity: quantity,
+        _variants: canonicalVariantPayload,
+      });
+      if (error) throw error;
+      return data as unknown as CanonicalPricingSnapshot;
+    },
+    enabled: mode === 'quote' && !!currentCompany?.id && !!companyProduct?.id
+      && width > 0 && height > 0 && quantity > 0 && canonicalVariantReady,
+    retry: false,
+  });
+  const canonicalSnapshot = canonicalPricing.data;
 
   // Get optional items for toggle UI
-  const optionalItems = compositionPricing.optionalItems || [];
-
-  // Determine final price based on pricing type
-  const finalPricePerSqm = (() => {
-    // A variação (linha de preço) escolhida tem prioridade máxima
-    if (priceLinePerSqm > 0) {
-      return priceLinePerSqm;
-    }
-    // Vidro do catálogo OU do estoque (cor+espessura selecionadas)
-    if (hasGlass && glassPricePerSqm > 0) {
-      return glassPricePerSqm;
-    }
-    if (productUsesAluminum && aluminumPricePerSqm > 0) {
-      return aluminumPricePerSqm;
-    }
-    return productBasePricePerSqm;
-  })();
-
-  
-  const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
-
-  // Calculate prices: use composition when available, otherwise area × price/m²
+  const optionalItems: Array<{ id: string; name: string }> = [];
   const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
-  const unitPrice = (priceLinePerUnit > 0 && customPrice === null)
-    // Variação com unidade fixa (un, par, ml, kg): preço direto por unidade
-    ? priceLinePerUnit
-    : (isParametric && hasCompleteParametricPrice && parametricResult)
-      ? parametricResult.totals.sale_price / Math.max(quantity, 1)
-    : (productUsesComposition && compositionPricing.isReady && priceLinePerSqm <= 0)
-      ? compositionPricing.compositionCostPerUnit
-      : (area > 0 ? basePrice * area : 0);
-
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const hasPriceLineOverride = !!selectedPriceLine && (priceLinePerSqm > 0 || priceLinePerUnit > 0);
-  const computedTotalPrice = ((isParametric && hasCompleteParametricPrice && parametricResult)
-    ? parametricResult.totals.sale_price
-    : (productUsesComposition && compositionPricing.isReady && !hasPriceLineOverride)
-    ? compositionPricing.totalCost
-    : unitPrice * quantity) + componentsTotal;
-
-  const isPriceOverridden = manualTotalOverride !== null && Math.abs(manualTotalOverride - computedTotalPrice) > 0.005;
-  const totalPrice = manualTotalOverride !== null ? manualTotalOverride : computedTotalPrice;
+  const computedTotalPrice = Number(canonicalSnapshot?.totals.sale_price ?? 0) + componentsTotal;
+  const totalPrice = computedTotalPrice;
+  const unitPrice = quantity > 0 ? Number(canonicalSnapshot?.totals.sale_price ?? 0) / quantity : 0;
   const effectiveUnitPrice = quantity > 0
-    ? Math.max(0, (totalPrice - componentsTotal) / quantity)
+    ? (totalPrice - componentsTotal) / quantity
     : unitPrice;
 
   // Check if the selected product is from "Temperado" line (always has glass)
@@ -716,14 +603,11 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   // Reset custom price when product changes and set glass based on line
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setCustomPrice(null);
-    setManualTotalOverride(null);
-    setSelectedGlassPriceId('');
+    setSelectedGlassType('');
     setSelectedGlassThickness('');
     setSelectedGlassColor('');
     setSelectedAluminumColor('');
-    setCustomAluminumColor('');
-    setSelectedPriceLineId('');
+    setSelectedProfileFinish('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -734,22 +618,19 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const getProductImage = resolveProductImageUrl;
 
   const handleAdd = () => {
-    if (!selectedProduct || (isParametric && !parametricResult)) return;
+    if (!selectedProduct || !canonicalSnapshot || (isParametric && !parametricResult)) return;
 
     // For aluminum-priced products, the color name comes from the price option
     // For other products, it comes from the simple selector
-    const aluminumColorName = productUsesAluminum 
-      ? (selectedAluminumPriceOption?.colorName || '') 
-      : (selectedAluminumColor === 'Outros' ? customAluminumColor : selectedAluminumColor);
+    const aluminumColorName = selectedAluminumColor;
 
     onAdd({
       product_template_id: cuttingPlanProductId,
       company_product_id: companyProduct?.id,
       name: [
         useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
-        selectedPriceLine ? `— ${selectedPriceLine.description}` : '',
       ].filter(Boolean).join(' '),
-      base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
+      base_price: effectiveUnitPrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
@@ -771,10 +652,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       unit_price: effectiveUnitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
-      glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
-      glass_color: hasGlass ? (selectedGlassPrice?.glass_color || selectedGlassColor || undefined) : undefined,
-      glass_thickness: hasGlass ? (selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : (selectedGlassThickness ? `${selectedGlassThickness}mm` : undefined)) : undefined,
-      glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
+      glass_type: hasGlass ? (selectedGlassType || undefined) : undefined,
+      glass_color: hasGlass ? (selectedGlassColor || undefined) : undefined,
+      glass_thickness: hasGlass && selectedGlassThickness ? `${selectedGlassThickness}mm` : undefined,
+      glass_price_per_sqm: undefined,
       aluminum_color: aluminumColorName || undefined,
       is_custom: selectedProduct.is_custom,
       include_contramarco: excludedOptionalIds.length === 0,
@@ -783,17 +664,16 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       components: components.length > 0 ? components : undefined,
       composition_mode: isParametric ? 'parametric' : 'fixed',
       fulfillment_mode: selectedProduct.fulfillment_mode || 'PRODUCTION',
-      composition_snapshot: parametricResult ? ({
-        ...parametricResult,
-        pricing_source: hasCompleteParametricPrice
-          ? 'parametric_bom_company_prices'
-          : 'existing_company_product_pricing',
+      composition_snapshot: ({
+        ...canonicalSnapshot,
+        pricing_source: 'phase3e_company_items',
+        technical_snapshot: parametricResult ?? null,
         totals: {
-          ...parametricResult.totals,
+          ...canonicalSnapshot.totals,
           quote_unit_price: effectiveUnitPrice,
           quote_total: totalPrice,
         },
-      } as unknown as Json) : undefined,
+      } as unknown as Json),
     });
   };
 
@@ -813,7 +693,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   };
 
   const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0
-    && (!isParametric || (Boolean(parametricResult) && totalPrice > 0));
+    && canonicalVariantReady && !canonicalPricing.isLoading && Boolean(canonicalSnapshot)
+    && totalPrice > 0 && (!isParametric || Boolean(parametricResult));
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -1233,45 +1114,19 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
-            {/* Linhas de Preço (Variações) do produto */}
-            {mode !== 'cutting' && priceLines.length > 0 && (
-              <div className="space-y-1.5 rounded-md border border-primary/30 bg-primary/5 p-3">
-                <label className="text-xs font-medium text-foreground">
-                  Variação / Linha de preço <span className="text-destructive">*</span>
-                </label>
-                <Select value={selectedPriceLineId} onValueChange={setSelectedPriceLineId}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Escolha a variação..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {priceLines.map((pl) => (
-                      <SelectItem key={pl.id} value={pl.id}>
-                        <div className="flex items-center justify-between gap-4 w-full">
-                          <span>{pl.description}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {formatCurrency(Number(pl.price))}/{formatUnitLabel(pl.unit)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedPriceLine && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Preço aplicado: <strong>{formatCurrency(Number(selectedPriceLine.price))}</strong> por{' '}
-                    {formatUnitLabel(selectedPriceLine.unit)}
-                    {selectedPriceLine.cost != null && Number(selectedPriceLine.cost) > 0 && (
-                      <> · Margem: {(((Number(selectedPriceLine.price) - Number(selectedPriceLine.cost)) / Number(selectedPriceLine.price)) * 100).toFixed(1)}%</>
-                    )}
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Espessura/Cor do vidro e Cor do perfil — ocultos no modo Plano de Corte */}
             {mode !== 'cutting' && (
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {glassTypeOptions.length > 0 && <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Tipo do vidro</label>
+                <Select value={selectedGlassType} onValueChange={(v) => { setSelectedGlassType(v); setSelectedGlassThickness(''); setSelectedGlassColor(''); setHasGlass(true); }}>
+                  <SelectTrigger className="bg-background h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {glassTypeOptions.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Espessura do vidro</label>
                 <Select
@@ -1282,7 +1137,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg z-50">
-                    {(glassThicknessOptions.length > 0 ? glassThicknessOptions : defaultGlassThicknessOptions).map((t) => (
+                    {glassThicknessOptions.map((t) => (
                       <SelectItem key={String(t)} value={String(t)}>{t}mm</SelectItem>
                     ))}
                   </SelectContent>
@@ -1299,33 +1154,22 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg z-50">
-                    {(glassColorOptions.length > 0 ? glassColorOptions : defaultGlassColorOptions).map((c) => {
-                      const stockOpt = glassStock.findMatch(selectedGlassThickness, c);
+                    {glassColorOptions.map((c) => {
                       return (
                         <SelectItem key={c} value={c}>
-                          <div className="flex items-center justify-between gap-4 w-full">
-                            <span>{c}</span>
-                            {stockOpt && stockOpt.salePricePerSqm > 0 && (
-                              <span className="text-muted-foreground text-xs">{formatCurrency(stockOpt.salePricePerSqm)}/m²</span>
-                            )}
-                          </div>
+                          <span>{c}</span>
                         </SelectItem>
                       );
                     })}
                   </SelectContent>
                 </Select>
-                {stockGlassMatch && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Estoque: <span className="font-medium">{stockGlassMatch.displayName}</span> · {formatCurrency(stockGlassMatch.salePricePerSqm)}/m²
-                  </p>
-                )}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Cor do perfil</label>
                 <div className="space-y-2">
                   {hasProfileColorPrices ? (
-                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                    <Select value={selectedAluminumColor} onValueChange={(value) => { setSelectedAluminumColor(value); setSelectedProfileFinish(''); }}>
                       <SelectTrigger className="bg-background h-10">
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
@@ -1333,69 +1177,45 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                         {profileAvailableColors.map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
-                        <SelectItem value="Outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : productUsesAluminum && hasAluminumPrices ? (
-                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                      <SelectTrigger className="bg-background h-10">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg z-50">
-                        {aluminumPriceOptions?.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <div className="flex items-center justify-between gap-4 w-full">
-                              <span>{opt.label}</span>
-                              <span className="text-muted-foreground text-xs">
-                                {formatCurrency(opt.pricePerSqm)}/m²
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="Outros">Outros</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                      <SelectTrigger className="bg-background h-10">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg z-50">
-                        {defaultAluminumColors.map((color) => (
-                          <SelectItem key={color} value={color}>{color}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-
-                  {selectedAluminumColor === 'Outros' && (
-                    <Input
-                      placeholder="Digite a cor..."
-                      value={customAluminumColor}
-                      onChange={(e) => setCustomAluminumColor(e.target.value)}
-                      className="bg-background h-10"
-                    />
+                    <Input readOnly className="bg-muted" placeholder="Sem variações de perfil configuradas" />
                   )}
                 </div>
               </div>
+              {profileFinishOptions.length > 0 && <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Acabamento do perfil</label>
+                <Select value={selectedProfileFinish} onValueChange={setSelectedProfileFinish}>
+                  <SelectTrigger className="bg-background h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {profileFinishOptions.map(finish => <SelectItem key={finish} value={finish}>{finish}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>}
             </div>
             )}
 
-            {/* Valor R$ / m² — oculto no modo Plano de Corte */}
+            {/* Canonical price is resolved automatically; no manual quote price. */}
             {mode !== 'cutting' && (
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Valor R$ / m² <span className="text-destructive">*</span>
+                  Preço resolvido automaticamente
                 </label>
                 <Input
-                  type="number"
-                  value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
-                  onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
-                  placeholder="0.00"
-                  min={0}
-                  step="0.01"
-                  className="bg-background h-10 font-mono"
+                  value={canonicalSnapshot ? formatCurrency(canonicalSnapshot.totals.sale_price) : ''}
+                  placeholder={canonicalPricing.isLoading ? 'Calculando...' : 'Configure os preços em Meus Preços'}
+                  readOnly
+                  className="bg-muted h-10 font-mono"
                 />
+                {canonicalPricing.error && <p className="text-xs text-destructive">{describePricingError(canonicalPricing.error)}</p>}
+                {canonicalSnapshot && <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs sm:grid-cols-4">
+                  <div><span className="text-muted-foreground">Custo</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
+                  <div><span className="text-muted-foreground">Venda</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
+                  <div><span className="text-muted-foreground">Lucro</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
+                  <div><span className="text-muted-foreground">Margem</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
+                </div>}
+                {canonicalSnapshot?.warnings.map(warning => <p key={`${warning.code}-${warning.item_name}`} className="flex items-center gap-1 text-xs text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />{warning.item_name}: necessário {warning.required}, disponível {warning.available}. O orçamento não é bloqueado.</p>)}
               </div>
             )}
 
@@ -1602,15 +1422,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="rounded-md bg-muted/50 p-2">
                       <span className="text-muted-foreground">Custo</span>
-                      <p className="font-semibold">{formatCurrency(parametricResult.totals.cost)}</p>
+                      <p className="font-semibold">{canonicalSnapshot ? formatCurrency(canonicalSnapshot.totals.cost) : '—'}</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-2">
                       <span className="text-muted-foreground">Venda BOM</span>
-                      <p className="font-semibold">{formatCurrency(parametricResult.totals.sale_price)}</p>
+                      <p className="font-semibold">{canonicalSnapshot ? formatCurrency(canonicalSnapshot.totals.sale_price) : '—'}</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-2">
-                      <span className="text-muted-foreground">Margem</span>
-                      <p className="font-semibold">{formatCurrency(parametricResult.totals.margin)}</p>
+                      <span className="text-muted-foreground">Lucro</span>
+                      <p className="font-semibold">{canonicalSnapshot ? formatCurrency(canonicalSnapshot.totals.profit) : '—'}</p>
                     </div>
                   </div>
 
@@ -1622,12 +1442,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                           <span>{warning}</span>
                         </p>
                       ))}
-                      {!hasCompleteParametricPrice && (
-                        <p className="mt-2 font-medium">
-                          O orçamento usa o preço vigente do produto; o snapshot registra esse fallback explicitamente.
-                          Se ele estiver zerado, informe o total manualmente antes de adicionar.
-                        </p>
-                      )}
                     </div>
                   )}
                 </>
@@ -1659,7 +1473,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   <span>{area.toFixed(2)} m²</span>
                   <span className="opacity-70">×</span>
                   <span>{quantity} un</span>
-                  {compositionPricing.isReady && (
+                  {canonicalSnapshot && (
                     <Badge variant="outline" className="ml-2 text-[10px] bg-white/15 border-white/30 text-primary-foreground">
                       <Sparkles className="w-3 h-3 mr-1" />
                       Composição
@@ -1670,36 +1484,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
                   <div className="flex items-center gap-1.5 justify-end">
                     <span className="text-sm font-semibold opacity-90">R$</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      value={totalPrice.toFixed(2)}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        setManualTotalOverride(Number.isFinite(v) ? v : 0);
-                      }}
-                      className="h-8 w-28 text-right text-lg font-bold bg-white/15 border-white/30 text-primary-foreground placeholder:text-primary-foreground/60"
-                    />
-                    {isPriceOverridden && (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-primary-foreground hover:bg-white/20"
-                        title="Restaurar preço original"
-                        onClick={() => setManualTotalOverride(null)}
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <span className="text-lg font-bold">{totalPrice.toFixed(2)}</span>
                   </div>
-                  {isPriceOverridden && (
-                    <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-90">
-                      <AlertTriangle className="w-3 h-3" />
-                      <span>Preço alterado manualmente · original {formatCurrency(computedTotalPrice)}</span>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">

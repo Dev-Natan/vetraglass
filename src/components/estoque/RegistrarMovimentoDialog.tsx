@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -34,7 +34,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 interface StockItem {
   id: string;
   item_template_id: string;
+  company_item_id?: string | null;
   quantity: number;
+  company_item?: { id: string } | null;
   item_template?: {
     id: string;
     name: string;
@@ -80,8 +82,7 @@ export function RegistrarMovimentoDialog({
   tipo,
   stockItems,
 }: RegistrarMovimentoDialogProps) {
-  const { currentCompany, user } = useAuth();
-  const queryClient = useQueryClient();
+  const { currentCompany } = useAuth();
   const invalidateStock = useInvalidateStock();
   const { labels: itemTypeLabels } = useItemTypeLabels();
   const { data: productLinhas } = useCompanyLinhas();
@@ -309,34 +310,19 @@ export function RegistrarMovimentoDialog({
         throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity} — tentando ${qtd.toFixed(3)}`);
       }
 
-      const newQuantity = isEntrada
-        ? Number((stockItem.quantity + qtd).toFixed(4))
-        : Number((stockItem.quantity - qtd).toFixed(4));
-
-      const finalDescription = [computed.autoNote, observacao].filter(Boolean).join(' — ') || null;
-
-      const { error: movimentoError } = await supabase
-        .from('stock_movements')
-        .insert({
-          company_id: currentCompany.id,
-          item_template_id: stockItem.item_template_id,
-          type: isEntrada ? 'entrada' : 'saida',
-          category: motivo,
-          quantity: qtd,
-          description: finalDescription,
-          created_by: user?.id,
-        });
-
-      if (movimentoError) throw movimentoError;
-
-      const { error: stockError } = await supabase
-        .from('company_stock')
-        .update({ quantity: newQuantity })
-        .eq('id', selectedItem);
-
-      if (stockError) throw stockError;
-
-      return { newQuantity };
+      const companyItemId = stockItem.company_item_id ?? stockItem.company_item?.id;
+      if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
+      const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
+      const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
+      const { data, error } = await supabase.rpc('adjust_company_stock', {
+        _company_id: currentCompany.id,
+        _company_item_id: companyItemId,
+        _delta: isEntrada ? qtd : -qtd,
+        _reason: finalDescription,
+      });
+      if (error) throw error;
+      const result = data as { new_quantity?: number };
+      return { newQuantity: result.new_quantity ?? stockItem.quantity };
     },
     onSuccess: (data) => {
       invalidateStock();
