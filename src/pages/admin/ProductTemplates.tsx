@@ -90,6 +90,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VariablesTab } from "@/components/admin/product-templates/VariablesTab";
+import { EngineeringCenter } from "@/components/admin/product-templates/EngineeringCenter";
 import { CopyCompositionDialog } from "@/components/produtos/CopyCompositionDialog";
 
 
@@ -109,6 +110,8 @@ type ProductTemplate = {
   has_multiple_sides: boolean;
   has_cutting_plan: boolean;
   created_at: string;
+  composition_mode: "fixed" | "parametric";
+  publication_status: "draft" | "active" | "inactive";
 };
 
 type ProductTemplateItem = {
@@ -285,7 +288,7 @@ export default function ProductTemplates() {
 
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
-  const [dialogTab, setDialogTab] = useState<"dados" | "composicao" | "variaveis">("dados");
+  const [dialogTab, setDialogTab] = useState<"dados" | "composicao" | "engenharia" | "variaveis">("dados");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [selectedFormulaIndex, setSelectedFormulaIndex] = useState<number>(0);
   const [linhaFilter, setLinhaFilter] = useState<string>("__all__");
@@ -337,6 +340,8 @@ export default function ProductTemplates() {
     is_ready: false,
     has_multiple_sides: false,
     has_cutting_plan: true,
+    composition_mode: "fixed" as "fixed" | "parametric",
+    publication_status: "draft" as "draft" | "active" | "inactive",
     base_price: "",
     ncm: "",
     cest: "",
@@ -682,6 +687,8 @@ export default function ProductTemplates() {
       is_ready: false,
       has_multiple_sides: false,
       has_cutting_plan: true,
+      composition_mode: "fixed",
+      publication_status: "draft",
       base_price: "",
       ncm: "",
       cest: "",
@@ -709,6 +716,8 @@ export default function ProductTemplates() {
       is_ready: template.description?.includes("[PRONTO]") || false,
       has_multiple_sides: template.has_multiple_sides || false,
       has_cutting_plan: (template as any).has_cutting_plan ?? true,
+      composition_mode: template.composition_mode || "fixed",
+      publication_status: template.publication_status || (template.is_active ? "active" : "inactive"),
       base_price: (template as any).base_price?.toString() || "",
       ncm: (template as any).ncm || "",
       cest: (template as any).cest || "",
@@ -756,6 +765,8 @@ export default function ProductTemplates() {
         origem: data.origem || null,
         has_multiple_sides: data.has_multiple_sides,
         has_cutting_plan: data.has_cutting_plan,
+        composition_mode: data.composition_mode,
+        publication_status: data.publication_status,
       };
 
 
@@ -1377,6 +1388,12 @@ export default function ProductTemplates() {
                       {template.linha && (
                         <span className="text-[10px] text-muted-foreground truncate">{template.linha}</span>
                       )}
+                      <Badge variant={template.composition_mode === "parametric" ? "default" : "outline"} className="text-[9px] px-1 py-0">
+                        {template.composition_mode === "parametric" ? "PARAMETRIC" : "FIXED"}
+                      </Badge>
+                      <Badge variant={template.publication_status === "active" ? "default" : "secondary"} className="text-[9px] px-1 py-0 uppercase">
+                        {template.publication_status || (template.is_active ? "active" : "inactive")}
+                      </Badge>
                       {template.has_multiple_sides && (
                         <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 border-primary/30 text-primary">
                           2 Lados
@@ -1431,6 +1448,9 @@ export default function ProductTemplates() {
                               <span className="font-medium flex items-center gap-2">
                                 {template.name}
                                 {isReady && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                <Badge variant={template.composition_mode === "parametric" ? "default" : "outline"} className="text-[9px]">
+                                  {template.composition_mode === "parametric" ? "PARAMETRIC" : "FIXED"}
+                                </Badge>
                               </span>
                               {template.description && (
                                 <span className="text-xs text-muted-foreground truncate max-w-[300px]">
@@ -1455,7 +1475,7 @@ export default function ProductTemplates() {
                               />
 
                               <span className={cn("text-xs font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
-                                {template.is_active ? "Ativo" : "Inativo"}
+                                {(template.publication_status || (template.is_active ? "active" : "inactive")).toUpperCase()}
                               </span>
                             </div>
                           </TableCell>
@@ -1679,11 +1699,14 @@ export default function ProductTemplates() {
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
-            <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao" | "variaveis")} className="space-y-4">
-              <TabsList className="grid grid-cols-3 w-full">
+            <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao" | "engenharia" | "variaveis")} className="space-y-4">
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="dados">Dados</TabsTrigger>
                 <TabsTrigger value="composicao" disabled={!editingTemplate || !formData.has_cutting_plan}>
                   <Settings2 className="w-4 h-4 mr-2" /> Composição
+                </TabsTrigger>
+                <TabsTrigger value="engenharia" disabled={!editingTemplate || formData.composition_mode !== "parametric"}>
+                  <Ruler className="w-4 h-4 mr-2" /> Engenharia
                 </TabsTrigger>
                 <TabsTrigger value="variaveis" disabled={!editingTemplate}>
                   <Palette className="w-4 h-4 mr-2" /> Variáveis
@@ -1840,12 +1863,29 @@ export default function ProductTemplates() {
               </details>
 
               {/* Toggles */}
+              <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Modelo de composição</Label>
+                  <Select value={formData.composition_mode} onValueChange={(value: "fixed" | "parametric") => setFormData({ ...formData, composition_mode: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="fixed">FIXED — composição tradicional</SelectItem><SelectItem value="parametric">PARAMETRIC — motor de engenharia</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Publicação</Label>
+                  <Select value={formData.publication_status} onValueChange={(value: "draft" | "active" | "inactive") => setFormData({ ...formData, publication_status: value, is_active: value === "active" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="draft">DRAFT — somente SaaS Admin</SelectItem><SelectItem value="active">ACTIVE — disponível às empresas</SelectItem><SelectItem value="inactive">INACTIVE — somente históricos</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-6 pt-2 border-t">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_active"
                     checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked, publication_status: checked ? "active" : "inactive" })}
                   />
                   <Label htmlFor="is_active" className="text-sm">Produto ativo</Label>
                 </div>
@@ -2307,6 +2347,13 @@ export default function ProductTemplates() {
               </section>
             </div>
 
+              </TabsContent>
+
+
+              <TabsContent value="engenharia" className="mt-4">
+                {editingTemplate && (
+                  <EngineeringCenter productTemplateId={editingTemplate.id} line={editingTemplate.linha} />
+                )}
               </TabsContent>
 
 

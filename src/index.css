@@ -1,3 +1,6 @@
+/* Optimized font loading with display swap for faster rendering */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
 /* Hide Lovable badge */
 #lovable-badge,
 #lovable-badge-v2,
@@ -5,9 +8,6 @@
 a[href*="lovable.dev"][target="_blank"] {
   display: none !important;
 }
-
-/* Optimized font loading with display swap for faster rendering */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;

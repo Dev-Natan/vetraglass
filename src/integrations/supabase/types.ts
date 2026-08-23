@@ -1831,10 +1831,12 @@ export type Database = {
       }
       company_parametric_rule_overrides: {
         Row: {
+          change_reason: string | null
           company_id: string
           company_item_id: string | null
           condition_override: string | null
           created_at: string
+          created_by: string | null
           formula_override: string | null
           height_formula_override: string | null
           id: string
@@ -1845,13 +1847,16 @@ export type Database = {
           quantity_formula_override: string | null
           rule_id: string
           updated_at: string
+          updated_by: string | null
           width_formula_override: string | null
         }
         Insert: {
+          change_reason?: string | null
           company_id: string
           company_item_id?: string | null
           condition_override?: string | null
           created_at?: string
+          created_by?: string | null
           formula_override?: string | null
           height_formula_override?: string | null
           id?: string
@@ -1862,13 +1867,16 @@ export type Database = {
           quantity_formula_override?: string | null
           rule_id: string
           updated_at?: string
+          updated_by?: string | null
           width_formula_override?: string | null
         }
         Update: {
+          change_reason?: string | null
           company_id?: string
           company_item_id?: string | null
           condition_override?: string | null
           created_at?: string
+          created_by?: string | null
           formula_override?: string | null
           height_formula_override?: string | null
           id?: string
@@ -1879,6 +1887,7 @@ export type Database = {
           quantity_formula_override?: string | null
           rule_id?: string
           updated_at?: string
+          updated_by?: string | null
           width_formula_override?: string | null
         }
         Relationships: [
@@ -5481,8 +5490,10 @@ export type Database = {
         Row: {
           applies_to: string
           calculation_type: string
+          change_reason: string | null
           condition_expression: string | null
           created_at: string
+          created_by: string | null
           cut_angle: string | null
           cut_orientation: string | null
           formula: string | null
@@ -5501,6 +5512,7 @@ export type Database = {
           rule_key: string
           side: string
           sort_order: number
+          supersedes_rule_id: string | null
           unit: string
           updated_at: string
           validation_source: string | null
@@ -5510,8 +5522,10 @@ export type Database = {
         Insert: {
           applies_to?: string
           calculation_type?: string
+          change_reason?: string | null
           condition_expression?: string | null
           created_at?: string
+          created_by?: string | null
           cut_angle?: string | null
           cut_orientation?: string | null
           formula?: string | null
@@ -5530,6 +5544,7 @@ export type Database = {
           rule_key: string
           side?: string
           sort_order?: number
+          supersedes_rule_id?: string | null
           unit?: string
           updated_at?: string
           validation_source?: string | null
@@ -5539,8 +5554,10 @@ export type Database = {
         Update: {
           applies_to?: string
           calculation_type?: string
+          change_reason?: string | null
           condition_expression?: string | null
           created_at?: string
+          created_by?: string | null
           cut_angle?: string | null
           cut_orientation?: string | null
           formula?: string | null
@@ -5559,6 +5576,7 @@ export type Database = {
           rule_key?: string
           side?: string
           sort_order?: number
+          supersedes_rule_id?: string | null
           unit?: string
           updated_at?: string
           validation_source?: string | null
@@ -5578,6 +5596,13 @@ export type Database = {
             columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_parametric_rules_supersedes_rule_id_fkey"
+            columns: ["supersedes_rule_id"]
+            isOneToOne: false
+            referencedRelation: "product_parametric_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -5719,6 +5744,7 @@ export type Database = {
           ncm: string | null
           origem: string | null
           parent_template_id: string | null
+          publication_status: string
           reforco: string | null
           updated_at: string
         }
@@ -5757,6 +5783,7 @@ export type Database = {
           ncm?: string | null
           origem?: string | null
           parent_template_id?: string | null
+          publication_status?: string
           reforco?: string | null
           updated_at?: string
         }
@@ -5795,6 +5822,7 @@ export type Database = {
           ncm?: string | null
           origem?: string | null
           parent_template_id?: string | null
+          publication_status?: string
           reforco?: string | null
           updated_at?: string
         }
@@ -5818,7 +5846,9 @@ export type Database = {
       product_variant_definitions: {
         Row: {
           allowed_values: Json
+          change_reason: string | null
           created_at: string
+          created_by: string | null
           default_value: Json | null
           id: string
           input_type: string
@@ -5827,11 +5857,14 @@ export type Database = {
           product_template_id: string
           sort_order: number
           updated_at: string
+          updated_by: string | null
           variant_key: string
         }
         Insert: {
           allowed_values?: Json
+          change_reason?: string | null
           created_at?: string
+          created_by?: string | null
           default_value?: Json | null
           id?: string
           input_type: string
@@ -5840,11 +5873,14 @@ export type Database = {
           product_template_id: string
           sort_order?: number
           updated_at?: string
+          updated_by?: string | null
           variant_key: string
         }
         Update: {
           allowed_values?: Json
+          change_reason?: string | null
           created_at?: string
+          created_by?: string | null
           default_value?: Json | null
           id?: string
           input_type?: string
@@ -5853,6 +5889,7 @@ export type Database = {
           product_template_id?: string
           sort_order?: number
           updated_at?: string
+          updated_by?: string | null
           variant_key?: string
         }
         Relationships: [
@@ -7869,6 +7906,16 @@ export type Database = {
         }
         Returns: Json
       }
+      create_product_parametric_rule_version: {
+        Args: {
+          _change_reason: string
+          _confirm_validated?: boolean
+          _product_template_id: string
+          _rule: Json
+          _source_rule_id: string | null
+        }
+        Returns: Json
+      }
       create_company_and_assign_admin: {
         Args: {
           _address?: string
@@ -8198,6 +8245,7 @@ export type Database = {
           ncm: string | null
           origem: string | null
           parent_template_id: string | null
+          publication_status: string
           reforco: string | null
           updated_at: string
         }[]
@@ -8207,6 +8255,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      set_product_parametric_rule_active: {
+        Args: {
+          _change_reason: string
+          _is_active: boolean
+          _rule_id: string
+        }
+        Returns: Json
       }
       list_saas_admins: {
         Args: never

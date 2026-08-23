@@ -68,7 +68,7 @@ function applyOverride(rule: RuleRow, override: OverrideRow | undefined) {
 }
 
 async function loadResolvedRules(
-  companyId: string,
+  companyId: string | undefined,
   productTemplateId: string,
 ): Promise<ResolvedParametricRule[]> {
   const { data: rules, error: rulesError } = await supabase
@@ -84,20 +84,24 @@ async function loadResolvedRules(
   const ruleIds = rules.map((rule) => rule.id);
   const templateIds = [...new Set(rules.map((rule) => rule.item_template_id).filter(Boolean))] as string[];
   const [overridesResult, companyItemsResult, templatesResult, pricesResult] = await Promise.all([
-    supabase
-      .from('company_parametric_rule_overrides')
-      .select('*')
-      .eq('company_id', companyId)
-      .in('rule_id', ruleIds),
-    supabase
-      .from('company_items')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('is_active', true),
+    companyId
+      ? supabase
+          .from('company_parametric_rule_overrides')
+          .select('*')
+          .eq('company_id', companyId)
+          .in('rule_id', ruleIds)
+      : Promise.resolve({ data: [] as OverrideRow[], error: null }),
+    companyId
+      ? supabase
+          .from('company_items')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+      : Promise.resolve({ data: [] as CompanyItemRow[], error: null }),
     templateIds.length
       ? supabase.from('item_templates').select('*').in('id', templateIds)
       : Promise.resolve({ data: [] as ItemTemplateRow[], error: null }),
-    templateIds.length
+    companyId && templateIds.length
       ? supabase
           .from('company_item_prices')
           .select('*')
@@ -169,8 +173,8 @@ export function useParametricEngineering(options: UseParametricEngineeringOption
       options.companyId,
       options.productTemplateId,
     ],
-    queryFn: () => loadResolvedRules(options.companyId!, options.productTemplateId!),
-    enabled: Boolean(options.enabled && options.companyId && options.productTemplateId),
+    queryFn: () => loadResolvedRules(options.companyId, options.productTemplateId!),
+    enabled: Boolean(options.enabled && options.productTemplateId),
     staleTime: 30_000,
   });
 
