@@ -7,6 +7,7 @@ import {
   type ParametricEngineInputs,
   type ParametricMaterialType,
   type ResolvedParametricRule,
+  type FulfillmentMode,
 } from '@/utils/parametricEngineeringEngine';
 
 type RuleRow = Tables<'product_parametric_rules'>;
@@ -19,38 +20,15 @@ interface UseParametricEngineeringOptions extends ParametricEngineInputs {
   companyId?: string;
   productTemplateId?: string | null;
   enabled?: boolean;
+  fulfillmentMode: FulfillmentMode;
 }
 
-const positive = (...values: Array<number | null | undefined>): number | null => {
-  const match = values.find((value) => typeof value === 'number' && value > 0);
-  return match ?? null;
-};
-
 function resolveUnitPrices(
-  type: ParametricMaterialType,
-  item: CompanyItemRow | undefined,
   price: CompanyItemPriceRow | undefined,
 ): { cost: number | null; salePrice: number | null } {
-  if (type === 'profile') {
-    const barMeters = Number(item?.bar_length_mm ?? 0) / 1000;
-    return {
-      cost: positive(
-        price?.cost,
-        item?.cost_per_meter,
-        barMeters > 0 ? Number(item?.cost_per_bar ?? 0) / barMeters : null,
-        item?.cost,
-      ),
-      salePrice: positive(
-        price?.price,
-        item?.sale_price_per_meter,
-        barMeters > 0 ? Number(item?.sale_price_per_bar ?? 0) / barMeters : null,
-        item?.sale_price,
-      ),
-    };
-  }
   return {
-    cost: positive(price?.cost, item?.cost, item?.cost_per_meter, item?.preco_unitario),
-    salePrice: positive(price?.price, item?.sale_price, item?.preco_unitario, item?.sale_price_per_meter),
+    cost: price ? Number(price.cost ?? 0) : null,
+    salePrice: price ? Number(price.price) : null,
   };
 }
 
@@ -132,7 +110,8 @@ async function loadResolvedRules(
         : undefined;
     const template = rule.item_template_id ? templates.get(rule.item_template_id) : undefined;
     const itemPrice = rule.item_template_id ? prices.get(rule.item_template_id) : undefined;
-    const unitPrices = resolveUnitPrices(rule.material_type as ParametricMaterialType, companyItem, itemPrice);
+    const unitPrices = resolveUnitPrices(itemPrice);
+    const technicalRule = rule as RuleRow & Record<string, unknown>;
 
     return [{
       id: rule.id,
@@ -145,6 +124,8 @@ async function loadResolvedRules(
       formula: resolved.formula,
       width_formula: resolved.widthFormula,
       height_formula: resolved.heightFormula,
+      piece_width_formula: (technicalRule.piece_width_formula as string | null) ?? null,
+      piece_height_formula: (technicalRule.piece_height_formula as string | null) ?? null,
       quantity_formula: resolved.quantityFormula,
       pieces_formula: resolved.piecesFormula,
       pieces_quantity: resolved.piecesQuantity,
@@ -159,6 +140,15 @@ async function loadResolvedRules(
       version: rule.version,
       is_validated: rule.is_validated,
       validation_source: rule.validation_source,
+      component_role: (technicalRule.component_role as string | null) ?? null,
+      technical_status: ((technicalRule.technical_status as ResolvedParametricRule['technical_status'])
+        ?? (rule.is_validated ? 'VALIDATED' : 'ESTIMATED')),
+      source_type: (technicalRule.source_type as string | null) ?? null,
+      source_name: (technicalRule.source_name as string | null) ?? null,
+      source_page: (technicalRule.source_page as string | null) ?? null,
+      source_reference: (technicalRule.source_reference as string | null) ?? null,
+      notes: (technicalRule.notes as string | null) ?? null,
+      supply_mode: (technicalRule.supply_mode as ResolvedParametricRule['supply_mode']) ?? null,
       source: override ? 'company_override' : 'global',
       cost_per_unit: unitPrices.cost,
       sale_price_per_unit: unitPrices.salePrice,
@@ -193,7 +183,7 @@ export function useParametricEngineering(options: UseParametricEngineeringOption
           profile_color: options.profile_color,
           glass_color: options.glass_color,
           variants: options.variants,
-        }, query.data),
+        }, query.data, options.fulfillmentMode),
         calculationError: null,
       };
     } catch (error) {
@@ -212,6 +202,7 @@ export function useParametricEngineering(options: UseParametricEngineeringOption
     options.profile_color,
     options.glass_color,
     options.variants,
+    options.fulfillmentMode,
   ]);
 
   return { ...query, ...calculation, rules: query.data ?? [] };

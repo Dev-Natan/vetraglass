@@ -112,6 +112,9 @@ type ProductTemplate = {
   created_at: string;
   composition_mode: "fixed" | "parametric";
   publication_status: "draft" | "active" | "inactive";
+  fulfillment_mode: "IMMEDIATE" | "PRODUCTION" | "SERVICE";
+  installation_gap_width_mm: number;
+  installation_gap_height_mm: number;
 };
 
 type ProductTemplateItem = {
@@ -187,7 +190,6 @@ type ItemTemplate = {
   unit: string;
   linha: string | null;
   image_url: string | null;
-  default_formulas: DefaultFormula[] | null;
 };
 
 type CompositionDraft = {
@@ -342,6 +344,9 @@ export default function ProductTemplates() {
     has_cutting_plan: true,
     composition_mode: "fixed" as "fixed" | "parametric",
     publication_status: "draft" as "draft" | "active" | "inactive",
+    fulfillment_mode: "PRODUCTION" as "IMMEDIATE" | "PRODUCTION" | "SERVICE",
+    installation_gap_width_mm: "",
+    installation_gap_height_mm: "",
     base_price: "",
     ncm: "",
     cest: "",
@@ -392,7 +397,7 @@ export default function ProductTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("item_templates")
-        .select("id, name, type, unit, linha, image_url, default_formulas")
+        .select("id, name, type, unit, linha, image_url")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -483,12 +488,7 @@ export default function ProductTemplates() {
   ]);
 
   // Lista de fórmulas pré-cadastradas do item selecionado
-  const selectedItemFormulas = useMemo(() => {
-    if (!selectedItemToAdd || !itemTemplates) return [] as any[];
-    const it = itemTemplates.find((i) => i.id === selectedItemToAdd);
-    const raw = Array.isArray((it as any)?.default_formulas) ? (it as any).default_formulas : [];
-    return raw.filter((f: any) => f && typeof f === 'object' && String(f.formula || '').trim());
-  }, [selectedItemToAdd, itemTemplates]);
+  const selectedItemFormulas = useMemo(() => [] as DefaultFormula[], []);
 
   /** Aplica uma entrada de fórmula pré-cadastrada aos campos do form. */
   const applyFormulaEntry = (entry: any) => {
@@ -689,6 +689,9 @@ export default function ProductTemplates() {
       has_cutting_plan: true,
       composition_mode: "fixed",
       publication_status: "draft",
+      fulfillment_mode: "PRODUCTION",
+      installation_gap_width_mm: "",
+      installation_gap_height_mm: "",
       base_price: "",
       ncm: "",
       cest: "",
@@ -718,6 +721,9 @@ export default function ProductTemplates() {
       has_cutting_plan: (template as any).has_cutting_plan ?? true,
       composition_mode: template.composition_mode || "fixed",
       publication_status: template.publication_status || (template.is_active ? "active" : "inactive"),
+      fulfillment_mode: template.fulfillment_mode || "PRODUCTION",
+      installation_gap_width_mm: template.installation_gap_width_mm?.toString() || "",
+      installation_gap_height_mm: template.installation_gap_height_mm?.toString() || "",
       base_price: (template as any).base_price?.toString() || "",
       ncm: (template as any).ncm || "",
       cest: (template as any).cest || "",
@@ -767,6 +773,9 @@ export default function ProductTemplates() {
         has_cutting_plan: data.has_cutting_plan,
         composition_mode: data.composition_mode,
         publication_status: data.publication_status,
+        fulfillment_mode: data.fulfillment_mode,
+        installation_gap_width_mm: data.installation_gap_width_mm ? parseFloat(data.installation_gap_width_mm) : 0,
+        installation_gap_height_mm: data.installation_gap_height_mm ? parseFloat(data.installation_gap_height_mm) : 0,
       };
 
 
@@ -1877,6 +1886,17 @@ export default function ProductTemplates() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="draft">DRAFT — somente SaaS Admin</SelectItem><SelectItem value="active">ACTIVE — disponível às empresas</SelectItem><SelectItem value="inactive">INACTIVE — somente históricos</SelectItem></SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Atendimento canônico</Label>
+                  <Select value={formData.fulfillment_mode} onValueChange={(value: "IMMEDIATE" | "PRODUCTION" | "SERVICE") => setFormData({ ...formData, fulfillment_mode: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="IMMEDIATE">IMMEDIATE — baixa imediata</SelectItem><SelectItem value="PRODUCTION">PRODUCTION — gera OS e materiais</SelectItem><SelectItem value="SERVICE">SERVICE — gera OS sem materiais</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5"><Label>Folga largura (mm)</Label><Input type="number" min="0" step="0.01" value={formData.installation_gap_width_mm} onChange={(event) => setFormData({ ...formData, installation_gap_width_mm: event.target.value })} /></div>
+                  <div className="space-y-1.5"><Label>Folga altura (mm)</Label><Input type="number" min="0" step="0.01" value={formData.installation_gap_height_mm} onChange={(event) => setFormData({ ...formData, installation_gap_height_mm: event.target.value })} /></div>
                 </div>
               </div>
 

@@ -3904,6 +3904,8 @@ export type Database = {
           quantity_calculated: number
           quote_item_id: string | null
           released_at: string | null
+          snapshot_key: string | null
+          snapshot_payload: Json | null
           status: string
           stock_movement_id: string | null
           stock_reservation_id: string | null
@@ -3929,6 +3931,8 @@ export type Database = {
           quantity_calculated?: number
           quote_item_id?: string | null
           released_at?: string | null
+          snapshot_key?: string | null
+          snapshot_payload?: Json | null
           status?: string
           stock_movement_id?: string | null
           stock_reservation_id?: string | null
@@ -3954,6 +3958,8 @@ export type Database = {
           quantity_calculated?: number
           quote_item_id?: string | null
           released_at?: string | null
+          snapshot_key?: string | null
+          snapshot_payload?: Json | null
           status?: string
           stock_movement_id?: string | null
           stock_reservation_id?: string | null
@@ -4562,7 +4568,7 @@ export type Database = {
           paid_amount: number
           pending_amount: number
           priority: string | null
-          quote_id: string
+          quote_id: string | null
           sale_id: string | null
           stages: Json | null
           status: string
@@ -4588,7 +4594,7 @@ export type Database = {
           paid_amount?: number
           pending_amount?: number
           priority?: string | null
-          quote_id: string
+          quote_id?: string | null
           sale_id?: string | null
           stages?: Json | null
           status?: string
@@ -4614,7 +4620,7 @@ export type Database = {
           paid_amount?: number
           pending_amount?: number
           priority?: string | null
-          quote_id?: string
+          quote_id?: string | null
           sale_id?: string | null
           stages?: Json | null
           status?: string
@@ -4658,6 +4664,7 @@ export type Database = {
           completed_by: string | null
           created_at: string
           cuts_data: Json
+          engineering_snapshot: Json | null
           glass_cuts_data: Json | null
           id: string
           item_status: Json | null
@@ -4667,6 +4674,8 @@ export type Database = {
           product_template_id: string | null
           quantity: number
           quote_item_id: string | null
+          sale_item_id: string | null
+          snapshot_version: number | null
           status: string
           vao_height: number
           vao_height_b: number | null
@@ -4678,6 +4687,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           cuts_data?: Json
+          engineering_snapshot?: Json | null
           glass_cuts_data?: Json | null
           id?: string
           item_status?: Json | null
@@ -4687,6 +4697,8 @@ export type Database = {
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
+          sale_item_id?: string | null
+          snapshot_version?: number | null
           status?: string
           vao_height: number
           vao_height_b?: number | null
@@ -4698,6 +4710,7 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           cuts_data?: Json
+          engineering_snapshot?: Json | null
           glass_cuts_data?: Json | null
           id?: string
           item_status?: Json | null
@@ -4707,6 +4720,8 @@ export type Database = {
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
+          sale_item_id?: string | null
+          snapshot_version?: number | null
           status?: string
           vao_height?: number
           vao_height_b?: number | null
@@ -4740,6 +4755,13 @@ export type Database = {
             columns: ["quote_item_id"]
             isOneToOne: false
             referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_cutting_plan_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
             referencedColumns: ["id"]
           },
         ]
@@ -4778,6 +4800,147 @@ export type Database = {
             columns: ["os_item_id"]
             isOneToOne: false
             referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_glass_pieces: {
+        Row: {
+          area_m2: number | null
+          color: string | null
+          company_id: string
+          company_item_id: string | null
+          created_at: string
+          height_mm: number
+          id: string
+          item_template_id: string | null
+          ordem_servico_id: string
+          os_glass_project_id: string | null
+          os_item_id: string
+          piece_code: string
+          piece_role: string | null
+          quantity: number
+          quote_item_id: string | null
+          received_quantity: number
+          sale_item_id: string | null
+          snapshot_key: string
+          snapshot_payload: Json
+          snapshot_version: number
+          status: string
+          supply_mode: string
+          thickness_mm: number | null
+          updated_at: string
+          width_mm: number
+        }
+        Insert: {
+          area_m2?: number | null
+          color?: string | null
+          company_id: string
+          company_item_id?: string | null
+          created_at?: string
+          height_mm: number
+          id?: string
+          item_template_id?: string | null
+          ordem_servico_id: string
+          os_glass_project_id?: string | null
+          os_item_id: string
+          piece_code: string
+          piece_role?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          received_quantity?: number
+          sale_item_id?: string | null
+          snapshot_key: string
+          snapshot_payload: Json
+          snapshot_version?: number
+          status?: string
+          supply_mode: string
+          thickness_mm?: number | null
+          updated_at?: string
+          width_mm: number
+        }
+        Update: {
+          area_m2?: number | null
+          color?: string | null
+          company_id?: string
+          company_item_id?: string | null
+          created_at?: string
+          height_mm?: number
+          id?: string
+          item_template_id?: string | null
+          ordem_servico_id?: string
+          os_glass_project_id?: string | null
+          os_item_id?: string
+          piece_code?: string
+          piece_role?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          received_quantity?: number
+          sale_item_id?: string | null
+          snapshot_key?: string
+          snapshot_payload?: Json
+          snapshot_version?: number
+          status?: string
+          supply_mode?: string
+          thickness_mm?: number | null
+          updated_at?: string
+          width_mm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_glass_pieces_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_os_glass_project_id_fkey"
+            columns: ["os_glass_project_id"]
+            isOneToOne: false
+            referencedRelation: "os_glass_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_pieces_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
             referencedColumns: ["id"]
           },
         ]
@@ -4915,6 +5078,8 @@ export type Database = {
           altura_venda_b: number | null
           altura_venda_c: number | null
           created_at: string
+          engineering_snapshot: Json | null
+          fulfillment_mode: string
           height_production: number
           height_production_b: number | null
           height_sold: number
@@ -4933,6 +5098,8 @@ export type Database = {
           quantity: number
           quote_item_id: string | null
           recalculation_required: boolean | null
+          sale_item_id: string | null
+          snapshot_version: number | null
           technical_notes: string | null
           updated_at: string
           width_production: number
@@ -4948,6 +5115,8 @@ export type Database = {
           altura_venda_b?: number | null
           altura_venda_c?: number | null
           created_at?: string
+          engineering_snapshot?: Json | null
+          fulfillment_mode?: string
           height_production: number
           height_production_b?: number | null
           height_sold: number
@@ -4966,6 +5135,8 @@ export type Database = {
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
+          sale_item_id?: string | null
+          snapshot_version?: number | null
           technical_notes?: string | null
           updated_at?: string
           width_production: number
@@ -4981,6 +5152,8 @@ export type Database = {
           altura_venda_b?: number | null
           altura_venda_c?: number | null
           created_at?: string
+          engineering_snapshot?: Json | null
+          fulfillment_mode?: string
           height_production?: number
           height_production_b?: number | null
           height_sold?: number
@@ -4999,6 +5172,8 @@ export type Database = {
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
+          sale_item_id?: string | null
+          snapshot_version?: number | null
           technical_notes?: string | null
           updated_at?: string
           width_production?: number
@@ -5021,12 +5196,20 @@ export type Database = {
             referencedRelation: "quote_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "os_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       os_materials: {
         Row: {
           bar_length_mm: number | null
           bars_needed: number | null
+          company_item_id: string | null
           created_at: string
           cut_length_mm: number | null
           id: string
@@ -5039,6 +5222,9 @@ export type Database = {
           pieces_count: number
           procurement_status: string | null
           purchase_order_item_id: string | null
+          required_quantity: number | null
+          snapshot_key: string | null
+          snapshot_payload: Json | null
           total_length_mm: number | null
           unit: string | null
           vao_height_b: number | null
@@ -5049,6 +5235,7 @@ export type Database = {
         Insert: {
           bar_length_mm?: number | null
           bars_needed?: number | null
+          company_item_id?: string | null
           created_at?: string
           cut_length_mm?: number | null
           id?: string
@@ -5061,6 +5248,9 @@ export type Database = {
           pieces_count?: number
           procurement_status?: string | null
           purchase_order_item_id?: string | null
+          required_quantity?: number | null
+          snapshot_key?: string | null
+          snapshot_payload?: Json | null
           total_length_mm?: number | null
           unit?: string | null
           vao_height_b?: number | null
@@ -5071,6 +5261,7 @@ export type Database = {
         Update: {
           bar_length_mm?: number | null
           bars_needed?: number | null
+          company_item_id?: string | null
           created_at?: string
           cut_length_mm?: number | null
           id?: string
@@ -5083,6 +5274,9 @@ export type Database = {
           pieces_count?: number
           procurement_status?: string | null
           purchase_order_item_id?: string | null
+          required_quantity?: number | null
+          snapshot_key?: string | null
+          snapshot_payload?: Json | null
           total_length_mm?: number | null
           unit?: string | null
           vao_height_b?: number | null
@@ -5091,6 +5285,13 @@ export type Database = {
           waste_percent?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "os_materials_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "os_materials_item_template_id_fkey"
             columns: ["item_template_id"]
@@ -5491,6 +5692,7 @@ export type Database = {
           applies_to: string
           calculation_type: string
           change_reason: string | null
+          component_role: string | null
           condition_expression: string | null
           created_at: string
           created_by: string | null
@@ -5505,6 +5707,9 @@ export type Database = {
           item_template_id: string | null
           loss_percent: number
           material_type: string
+          notes: string | null
+          piece_height_formula: string | null
+          piece_width_formula: string | null
           pieces_formula: string | null
           pieces_quantity: number
           product_template_id: string
@@ -5512,7 +5717,13 @@ export type Database = {
           rule_key: string
           side: string
           sort_order: number
+          source_name: string | null
+          source_page: string | null
+          source_reference: string | null
+          source_type: string | null
           supersedes_rule_id: string | null
+          supply_mode: string | null
+          technical_status: string
           unit: string
           updated_at: string
           validation_source: string | null
@@ -5523,6 +5734,7 @@ export type Database = {
           applies_to?: string
           calculation_type?: string
           change_reason?: string | null
+          component_role?: string | null
           condition_expression?: string | null
           created_at?: string
           created_by?: string | null
@@ -5537,6 +5749,9 @@ export type Database = {
           item_template_id?: string | null
           loss_percent?: number
           material_type: string
+          notes?: string | null
+          piece_height_formula?: string | null
+          piece_width_formula?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id: string
@@ -5544,7 +5759,13 @@ export type Database = {
           rule_key: string
           side?: string
           sort_order?: number
+          source_name?: string | null
+          source_page?: string | null
+          source_reference?: string | null
+          source_type?: string | null
           supersedes_rule_id?: string | null
+          supply_mode?: string | null
+          technical_status?: string
           unit?: string
           updated_at?: string
           validation_source?: string | null
@@ -5555,6 +5776,7 @@ export type Database = {
           applies_to?: string
           calculation_type?: string
           change_reason?: string | null
+          component_role?: string | null
           condition_expression?: string | null
           created_at?: string
           created_by?: string | null
@@ -5569,6 +5791,9 @@ export type Database = {
           item_template_id?: string | null
           loss_percent?: number
           material_type?: string
+          notes?: string | null
+          piece_height_formula?: string | null
+          piece_width_formula?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id?: string
@@ -5576,7 +5801,13 @@ export type Database = {
           rule_key?: string
           side?: string
           sort_order?: number
+          source_name?: string | null
+          source_page?: string | null
+          source_reference?: string | null
+          source_type?: string | null
           supersedes_rule_id?: string | null
+          supply_mode?: string | null
+          technical_status?: string
           unit?: string
           updated_at?: string
           validation_source?: string | null
@@ -5612,6 +5843,8 @@ export type Database = {
           applies_to: string | null
           calculation_type: string | null
           company_id: string | null
+          component_role: string | null
+          condition_expression: string | null
           created_at: string
           cut_angle: number
           cut_angle_end: number | null
@@ -5623,18 +5856,29 @@ export type Database = {
           loss_percent: number | null
           notes: string | null
           parent_item_id: string | null
+          piece_height_formula: string | null
+          piece_width_formula: string | null
           pieces_formula: string | null
           pieces_quantity: number
           product_template_id: string
           quantity_formula: string
           section: string | null
           side: string | null
+          source_name: string | null
+          source_page: string | null
+          source_reference: string | null
+          source_type: string | null
+          supply_mode: string | null
+          technical_notes: string | null
+          technical_status: string
           width_formula: string | null
         }
         Insert: {
           applies_to?: string | null
           calculation_type?: string | null
           company_id?: string | null
+          component_role?: string | null
+          condition_expression?: string | null
           created_at?: string
           cut_angle?: number
           cut_angle_end?: number | null
@@ -5646,18 +5890,29 @@ export type Database = {
           loss_percent?: number | null
           notes?: string | null
           parent_item_id?: string | null
+          piece_height_formula?: string | null
+          piece_width_formula?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id: string
           quantity_formula?: string
           section?: string | null
           side?: string | null
+          source_name?: string | null
+          source_page?: string | null
+          source_reference?: string | null
+          source_type?: string | null
+          supply_mode?: string | null
+          technical_notes?: string | null
+          technical_status?: string
           width_formula?: string | null
         }
         Update: {
           applies_to?: string | null
           calculation_type?: string | null
           company_id?: string | null
+          component_role?: string | null
+          condition_expression?: string | null
           created_at?: string
           cut_angle?: number
           cut_angle_end?: number | null
@@ -5669,12 +5924,21 @@ export type Database = {
           loss_percent?: number | null
           notes?: string | null
           parent_item_id?: string | null
+          piece_height_formula?: string | null
+          piece_width_formula?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id?: string
           quantity_formula?: string
           section?: string | null
           side?: string | null
+          source_name?: string | null
+          source_page?: string | null
+          source_reference?: string | null
+          source_type?: string | null
+          supply_mode?: string | null
+          technical_notes?: string | null
+          technical_status?: string
           width_formula?: string | null
         }
         Relationships: [
@@ -5730,10 +5994,13 @@ export type Database = {
           default_panels_count: number | null
           default_sides_count: number | null
           description: string | null
+          fulfillment_mode: string
           has_cutting_plan: boolean
           has_multiple_sides: boolean | null
           id: string
           image_url: string | null
+          installation_gap_height_mm: number
+          installation_gap_width_mm: number
           is_active: boolean
           linha: string | null
           max_height: number | null
@@ -5769,10 +6036,13 @@ export type Database = {
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          fulfillment_mode?: string
           has_cutting_plan?: boolean
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
+          installation_gap_height_mm?: number
+          installation_gap_width_mm?: number
           is_active?: boolean
           linha?: string | null
           max_height?: number | null
@@ -5808,10 +6078,13 @@ export type Database = {
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          fulfillment_mode?: string
           has_cutting_plan?: boolean
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
+          installation_gap_height_mm?: number
+          installation_gap_width_mm?: number
           is_active?: boolean
           linha?: string | null
           max_height?: number | null
@@ -5928,6 +6201,61 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      purchase_order_item_glass_pieces: {
+        Row: {
+          allocated_quantity: number
+          company_id: string
+          created_at: string
+          id: string
+          os_glass_piece_id: string
+          purchase_order_item_id: string
+          received_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          allocated_quantity: number
+          company_id: string
+          created_at?: string
+          id?: string
+          os_glass_piece_id: string
+          purchase_order_item_id: string
+          received_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          allocated_quantity?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          os_glass_piece_id?: string
+          purchase_order_item_id?: string
+          received_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_item_glass_pieces_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_item_glass_pieces_os_glass_piece_id_fkey"
+            columns: ["os_glass_piece_id"]
+            isOneToOne: false
+            referencedRelation: "os_glass_pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_item_glass_pieces_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_items: {
         Row: {
@@ -6194,6 +6522,7 @@ export type Database = {
           created_at: string
           description: string
           excluded_optional_ids: Json | null
+          fulfillment_mode: string | null
           glass_color: string | null
           glass_thickness: string | null
           glasses_count: number | null
@@ -6206,12 +6535,19 @@ export type Database = {
           item_type: string | null
           leaves_count: number | null
           notes: string | null
+          opening_height: number | null
+          opening_height_b: number | null
+          opening_height_c: number | null
+          opening_width: number | null
+          opening_width_b: number | null
+          opening_width_c: number | null
           panels_count: number | null
           parametric_snapshot_version: number | null
           product_template_id: string | null
           quantity: number
           quote_id: string
           sides_count: number | null
+          snapshot_version: number | null
           total_price: number
           unit: string | null
           unit_price: number
@@ -6228,6 +6564,7 @@ export type Database = {
           created_at?: string
           description: string
           excluded_optional_ids?: Json | null
+          fulfillment_mode?: string | null
           glass_color?: string | null
           glass_thickness?: string | null
           glasses_count?: number | null
@@ -6240,12 +6577,19 @@ export type Database = {
           item_type?: string | null
           leaves_count?: number | null
           notes?: string | null
+          opening_height?: number | null
+          opening_height_b?: number | null
+          opening_height_c?: number | null
+          opening_width?: number | null
+          opening_width_b?: number | null
+          opening_width_c?: number | null
           panels_count?: number | null
           parametric_snapshot_version?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id: string
           sides_count?: number | null
+          snapshot_version?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
@@ -6262,6 +6606,7 @@ export type Database = {
           created_at?: string
           description?: string
           excluded_optional_ids?: Json | null
+          fulfillment_mode?: string | null
           glass_color?: string | null
           glass_thickness?: string | null
           glasses_count?: number | null
@@ -6274,12 +6619,19 @@ export type Database = {
           item_type?: string | null
           leaves_count?: number | null
           notes?: string | null
+          opening_height?: number | null
+          opening_height_b?: number | null
+          opening_height_c?: number | null
+          opening_width?: number | null
+          opening_width_b?: number | null
+          opening_width_c?: number | null
           panels_count?: number | null
           parametric_snapshot_version?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id?: string
           sides_count?: number | null
+          snapshot_version?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
@@ -6656,45 +7008,63 @@ export type Database = {
       sale_items: {
         Row: {
           company_product_id: string | null
+          composition_mode: string | null
           created_at: string
+          engineering_snapshot: Json | null
+          fulfillment_mode: string
           height: number | null
           id: string
           item_name: string
           item_template_id: string | null
           item_unit: string
           notes: string | null
+          product_template_id: string | null
           quantity: number
           sale_id: string
+          snapshot_version: number | null
+          source_quote_item_id: string | null
           total_price: number
           unit_price: number
           width: number | null
         }
         Insert: {
           company_product_id?: string | null
+          composition_mode?: string | null
           created_at?: string
+          engineering_snapshot?: Json | null
+          fulfillment_mode?: string
           height?: number | null
           id?: string
           item_name: string
           item_template_id?: string | null
           item_unit: string
           notes?: string | null
+          product_template_id?: string | null
           quantity?: number
           sale_id: string
+          snapshot_version?: number | null
+          source_quote_item_id?: string | null
           total_price?: number
           unit_price?: number
           width?: number | null
         }
         Update: {
           company_product_id?: string | null
+          composition_mode?: string | null
           created_at?: string
+          engineering_snapshot?: Json | null
+          fulfillment_mode?: string
           height?: number | null
           id?: string
           item_name?: string
           item_template_id?: string | null
           item_unit?: string
           notes?: string | null
+          product_template_id?: string | null
           quantity?: number
           sale_id?: string
+          snapshot_version?: number | null
+          source_quote_item_id?: string | null
           total_price?: number
           unit_price?: number
           width?: number | null
@@ -6715,10 +7085,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sale_items_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sale_items_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_source_quote_item_id_fkey"
+            columns: ["source_quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
             referencedColumns: ["id"]
           },
         ]
@@ -6792,6 +7176,7 @@ export type Database = {
           id: string
           installments_count: number | null
           notes: string | null
+          operation_key: string | null
           ordem_servico_id: string | null
           paid_amount: number | null
           parent_sale_id: string | null
@@ -6819,6 +7204,7 @@ export type Database = {
           id?: string
           installments_count?: number | null
           notes?: string | null
+          operation_key?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number | null
           parent_sale_id?: string | null
@@ -6846,6 +7232,7 @@ export type Database = {
           id?: string
           installments_count?: number | null
           notes?: string | null
+          operation_key?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number | null
           parent_sale_id?: string | null
@@ -7816,6 +8203,18 @@ export type Database = {
         }
         Returns: Json
       }
+      build_fixed_engineering_snapshot: {
+        Args: {
+          _company_id: string
+          _height: number
+          _opening_height?: number
+          _opening_width?: number
+          _product_template_id: string
+          _quantity: number
+          _width: number
+        }
+        Returns: Json
+      }
       bulk_adjust_item_cost: {
         Args: {
           p_company_id: string
@@ -7903,16 +8302,6 @@ export type Database = {
           _cancelled_consumption_ids?: string[]
           _lines: Json
           _ordem_servico_id: string
-        }
-        Returns: Json
-      }
-      create_product_parametric_rule_version: {
-        Args: {
-          _change_reason: string
-          _confirm_validated?: boolean
-          _product_template_id: string
-          _rule: Json
-          _source_rule_id: string | null
         }
         Returns: Json
       }
@@ -8006,6 +8395,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_dedicated_glass_purchase_order: {
+        Args: {
+          _expected_delivery?: string
+          _lines: Json
+          _notes?: string
+          _ordem_servico_id: string
+          _supplier_name: string
+        }
+        Returns: Json
+      }
       create_default_payment_options: {
         Args: { _company_id: string }
         Returns: undefined
@@ -8017,6 +8416,80 @@ export type Database = {
       create_default_permissions: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      create_direct_sale_transactional: {
+        Args: {
+          _cash_register_id: string
+          _company_id: string
+          _customer_name: string
+          _discount_amount: number
+          _discount_percent: number
+          _items: Json
+          _notes?: string
+          _operation_key: string
+          _payment: Json
+          _quote_id?: string
+          _subtotal: number
+          _total: number
+        }
+        Returns: Json
+      }
+      create_product_parametric_rule_version: {
+        Args: {
+          _change_reason: string
+          _confirm_validated?: boolean
+          _product_template_id: string
+          _rule: Json
+          _source_rule_id: string
+        }
+        Returns: {
+          applies_to: string
+          calculation_type: string
+          change_reason: string | null
+          component_role: string | null
+          condition_expression: string | null
+          created_at: string
+          created_by: string | null
+          cut_angle: string | null
+          cut_orientation: string | null
+          formula: string | null
+          group_name: string
+          height_formula: string | null
+          id: string
+          is_active: boolean
+          is_validated: boolean
+          item_template_id: string | null
+          loss_percent: number
+          material_type: string
+          notes: string | null
+          piece_height_formula: string | null
+          piece_width_formula: string | null
+          pieces_formula: string | null
+          pieces_quantity: number
+          product_template_id: string
+          quantity_formula: string | null
+          rule_key: string
+          side: string
+          sort_order: number
+          source_name: string | null
+          source_page: string | null
+          source_reference: string | null
+          source_type: string | null
+          supersedes_rule_id: string | null
+          supply_mode: string | null
+          technical_status: string
+          unit: string
+          updated_at: string
+          validation_source: string | null
+          version: number
+          width_formula: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "product_parametric_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       deactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
@@ -8231,10 +8704,13 @@ export type Database = {
           default_panels_count: number | null
           default_sides_count: number | null
           description: string | null
+          fulfillment_mode: string
           has_cutting_plan: boolean
           has_multiple_sides: boolean | null
           id: string
           image_url: string | null
+          installation_gap_height_mm: number
+          installation_gap_width_mm: number
           is_active: boolean
           linha: string | null
           max_height: number | null
@@ -8255,14 +8731,6 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
-      }
-      set_product_parametric_rule_active: {
-        Args: {
-          _change_reason: string
-          _is_active: boolean
-          _rule_id: string
-        }
-        Returns: Json
       }
       list_saas_admins: {
         Args: never
@@ -8336,8 +8804,45 @@ export type Database = {
         Args: { p_formula: string; p_height: number; p_width: number }
         Returns: number
       }
+      phase3c_build_fixed_snapshot: {
+        Args: {
+          _company_id: string
+          _height: number
+          _opening_height?: number
+          _opening_width?: number
+          _product_template_id: string
+          _quantity: number
+          _width: number
+        }
+        Returns: Json
+      }
+      phase3c_fulfill_sale: {
+        Args: {
+          _estimated_end?: string
+          _notes?: string
+          _priority?: string
+          _sale_id: string
+        }
+        Returns: Json
+      }
+      phase3c_validate_engineering_snapshot: {
+        Args: { _expected_fulfillment?: string; _snapshot: Json }
+        Returns: boolean
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      rebuild_os_documents_from_snapshot: {
+        Args: { _ordem_servico_id: string; _os_item_id?: string }
+        Returns: Json
+      }
+      receive_dedicated_glass_pieces: {
+        Args: {
+          _purchase_order_id: string
+          _receipts: Json
+          _total_actual?: number
+        }
         Returns: Json
       }
       receive_purchase_order_items: {
@@ -8505,6 +9010,57 @@ export type Database = {
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      set_product_parametric_rule_active: {
+        Args: { _change_reason: string; _is_active: boolean; _rule_id: string }
+        Returns: {
+          applies_to: string
+          calculation_type: string
+          change_reason: string | null
+          component_role: string | null
+          condition_expression: string | null
+          created_at: string
+          created_by: string | null
+          cut_angle: string | null
+          cut_orientation: string | null
+          formula: string | null
+          group_name: string
+          height_formula: string | null
+          id: string
+          is_active: boolean
+          is_validated: boolean
+          item_template_id: string | null
+          loss_percent: number
+          material_type: string
+          notes: string | null
+          piece_height_formula: string | null
+          piece_width_formula: string | null
+          pieces_formula: string | null
+          pieces_quantity: number
+          product_template_id: string
+          quantity_formula: string | null
+          rule_key: string
+          side: string
+          sort_order: number
+          source_name: string | null
+          source_page: string | null
+          source_reference: string | null
+          source_type: string | null
+          supersedes_rule_id: string | null
+          supply_mode: string | null
+          technical_status: string
+          unit: string
+          updated_at: string
+          validation_source: string | null
+          version: number
+          width_formula: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "product_parametric_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       start_os_production: {
         Args: { _ordem_servico_id: string }

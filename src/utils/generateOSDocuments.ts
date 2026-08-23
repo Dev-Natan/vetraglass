@@ -657,31 +657,12 @@ export async function regenerateOSDocuments(
   osItemId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Delete existing documents for the scope
-    const deleteQueries = [
-      supabase.from('os_materials').delete().eq('ordem_servico_id', ordemServicoId),
-      supabase.from('os_cutting_plan').delete().eq('ordem_servico_id', ordemServicoId),
-      supabase.from('os_glass_projects').delete().eq('ordem_servico_id', ordemServicoId),
-    ];
-    
-    if (osItemId) {
-      deleteQueries.forEach(q => q.eq('os_item_id', osItemId));
-    }
-
-    await Promise.all(deleteQueries);
-
-    // Fetch OS items
-    let query = supabase.from('os_items').select('*').eq('os_id', ordemServicoId);
-    if (osItemId) {
-      query = query.eq('id', osItemId);
-    }
-    const { data: osItems, error } = await query;
+    const { error } = await supabase.rpc('rebuild_os_documents_from_snapshot', {
+      _ordem_servico_id: ordemServicoId,
+      _os_item_id: osItemId ?? null,
+    });
     if (error) throw error;
-
-    // Fetch company_id from OS
-    const { data: os } = await supabase.from('ordens_servico').select('company_id').eq('id', ordemServicoId).single();
-
-    return generateOSDocuments(ordemServicoId, (osItems || []) as any[], os?.company_id);
+    return { success: true };
   } catch (error) {
     console.error('Error regenerating OS documents:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };

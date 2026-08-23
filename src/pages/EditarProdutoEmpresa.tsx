@@ -368,7 +368,7 @@ export default function EditarProdutoEmpresa() {
       if (!id) throw new Error('Produto inválido');
       const { data: sourceItems, error: srcErr } = await supabase
         .from('company_product_items')
-        .select('*')
+        .select('id, name, type, unit, linha, image_url, is_active, company_id, bar_length_mm')
         .eq('company_product_id', sourceProductId)
         .order('sort_order', { ascending: true });
       if (srcErr) throw srcErr;
@@ -777,11 +777,7 @@ export default function EditarProdutoEmpresa() {
   };
 
   /** Lista de fórmulas pré-cadastradas válidas do item atualmente selecionado. */
-  const selectedItemFormulas = useMemo(() => {
-    const item = availableItems?.find(i => i.id === selectedItemToAdd);
-    const arr = Array.isArray(item?.default_formulas) ? (item!.default_formulas as any[]) : [];
-    return arr.filter((f) => f && String(f.formula || '').trim());
-  }, [availableItems, selectedItemToAdd]);
+  const selectedItemFormulas = useMemo(() => [] as DefaultFormula[], []);
 
   /** Aplica uma entrada de fórmula ao formulário. */
   const applyFormulaEntry = (entry: any) => {
@@ -802,17 +798,6 @@ export default function EditarProdutoEmpresa() {
   const handleSelectItem = (itemId: string) => {
     setSelectedItemToAdd(itemId);
     setSelectedFormulaIndex(0);
-    const item = availableItems?.find(i => i.id === itemId);
-    const formulas = Array.isArray(item?.default_formulas) ? (item!.default_formulas as any[]) : [];
-    if (formulas.length === 0) return;
-    if (addItemSection === 'glass') {
-      const wf = formulas.find((f) => normalizePos(f.position) === 'Largura');
-      const hf = formulas.find((f) => normalizePos(f.position) === 'Altura');
-      if (wf) applyFormulaEntry(wf);
-      if (hf) applyFormulaEntry(hf);
-    } else {
-      applyFormulaEntry(formulas[0]);
-    }
   };
 
   // Linhas disponíveis derivadas dos itens carregados (apenas perfis/contramarco usam)

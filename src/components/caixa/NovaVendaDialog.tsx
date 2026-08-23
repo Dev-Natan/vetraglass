@@ -18,14 +18,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Package, ShoppingCart, FileText, Trash2, Minus,
-  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search, Settings2
+  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
 import { createUuid } from '@/utils/createUuid';
 import { InstallmentPaymentSheet, PaymentConfig } from './InstallmentPaymentSheet';
-import { ProductCompositionEditor } from './ProductCompositionEditor';
-import { buildCompositionFromFormula, SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
+import type { SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
+import { buildImmediateItemSnapshot, snapshotMaterials, type FulfillmentMode } from '@/utils/canonicalEngineeringSnapshot';
+import type { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 export interface VendaItem {
@@ -44,7 +45,8 @@ export interface VendaItem {
   isProduct?: boolean;
   isDefaultPrice?: boolean;
   composition?: SaleCompositionLine[];
-  compositionEdited?: boolean;
+  engineeringSnapshot?: Json;
+  fulfillmentMode?: FulfillmentMode;
 }
 
 interface ItemTemplate {
@@ -83,6 +85,8 @@ interface QuoteItem {
   height?: number | null;
   company_product_id?: string | null;
   product_template_id?: string | null;
+  composition_snapshot?: Json | null;
+  fulfillment_mode?: FulfillmentMode | null;
 }
 
 type VendaMode = 'orcamento' | 'avulsa';
@@ -357,14 +361,12 @@ export function NovaVendaDialog({
     
     // Calculate based on unit type
     let totalPrice = selectedMaterial.price * quantity;
-    let unitPriceDisplay = selectedMaterial.price;
     
     if (selectedMaterial.type === 'profile') {
       // Profile: price is per bar (6000mm), calculate proportionally
       if (width > 0) {
         const pricePerMm = selectedMaterial.price / PROFILE_BAR_LENGTH_MM;
         totalPrice = pricePerMm * width * quantity;
-        unitPriceDisplay = selectedMaterial.price; // Keep bar price for display
       }
     } else if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {
       // Glass/other m² items: calculate area
@@ -383,7 +385,7 @@ export function NovaVendaDialog({
       unit: selectedMaterial.unit,
       type: selectedMaterial.type,
       quantity,
-      unitPrice: unitPriceDisplay,
+      unitPrice: Number((totalPrice / quantity).toFixed(2)),
       totalPrice,
       width: width > 0 ? width : undefined,
       height: selectedMaterial.type !== 'profile' && height > 0 ? height : undefined,
@@ -393,8 +395,28 @@ export function NovaVendaDialog({
   };
   
   // Finalize adding item to sale
-  const finalizeAddItem = (item: VendaItem) => {
-    setItems(prev => [...prev, item]);
+  const finalizeAddItem = async (item: VendaItem) => {
+    if (!currentCompany?.id || !item.itemTemplateId) {
+      toast.error('MISSING_COMPANY_ITEM');
+      return;
+    }
+    try {
+      const snapshot = await buildImmediateItemSnapshot({
+        companyId: currentCompany.id,
+        itemTemplateId: item.itemTemplateId,
+        quantity: item.quantity,
+        width: item.width,
+        height: item.height,
+      });
+      setItems(prev => [...prev, {
+        ...item,
+        engineeringSnapshot: snapshot as unknown as Json,
+        fulfillmentMode: snapshot.fulfillment_mode,
+      }]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'INVALID_ENGINEERING_RULE');
+      return;
+    }
     setSelectedMaterial(null);
     setSelectedLinha(null);
     setPendingItem(null);
@@ -402,7 +424,7 @@ export function NovaVendaDialog({
     setViewMode('main');
   };
   
-  const addMaterialWithDimensions = () => {
+  const addMaterialWithDimensions = async () => {
     if (!selectedMaterial) return;
     
     const newItem = createVendaItem();
@@ -432,7 +454,7 @@ export function NovaVendaDialog({
       }
       
       // Item is in stock, add directly
-      finalizeAddItem(newItem);
+      await finalizeAddItem(newItem);
     }
   };
   
@@ -441,13 +463,13 @@ export function NovaVendaDialog({
     if (!selectedMaterial || !pendingItem) return;
     
     await addItemToStock(selectedMaterial.id, quantity);
-    finalizeAddItem(pendingItem);
+    await finalizeAddItem(pendingItem);
   };
   
   // Handle stock dialog skip
   const handleStockDialogSkip = () => {
     if (pendingItem) {
-      finalizeAddItem(pendingItem);
+      void finalizeAddItem(pendingItem);
     }
   };
 
@@ -468,6 +490,8 @@ export function NovaVendaDialog({
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
+    composition_snapshot?: Json;
+    fulfillment_mode?: FulfillmentMode;
   }) => {
     const itemId = createUuid();
     const newItem: VendaItem = {
@@ -483,47 +507,48 @@ export function NovaVendaDialog({
       height: product.height,
       isProduct: true,
       composition: [],
+      engineeringSnapshot: product.composition_snapshot,
+      fulfillmentMode: product.fulfillment_mode,
     };
     setItems(prev => [...prev, newItem]);
     setViewMode('main');
 
-    // Pre-fill composition from the product formula in background
-    if (currentCompany?.id) {
-      buildCompositionFromFormula({
-        companyId: currentCompany.id,
-        companyProductId: product.company_product_id,
-        productTemplateId: product.product_template_id,
-        width: product.width,
-        height: product.height,
-        quantity: product.quantity,
-      })
-        .then((lines) => {
-          setItems((prev) =>
-            prev.map((it) => (it.id === itemId ? { ...it, composition: lines } : it)),
-          );
-        })
-        .catch((err) => {
-          console.error('Falha ao gerar composição automática:', err);
-        });
+    if (product.composition_snapshot) {
+      const lines = snapshotMaterials(product.composition_snapshot).map((material, index) => {
+        const row = material as Record<string, Json>;
+        return {
+          id: String(row.key || row.source_rule_id || index),
+          companyItemId: typeof row.company_item_id === 'string' ? row.company_item_id : null,
+          itemTemplateId: typeof row.item_template_id === 'string' ? row.item_template_id : null,
+          itemName: String(row.item_name || 'Material'),
+          unit: String(row.unit || 'un'),
+          itemType: typeof row.material_type === 'string' ? row.material_type : undefined,
+          quantity: Number(row.quantity || 0),
+          source: 'formula' as const,
+        };
+      });
+      setItems((prev) => prev.map((it) => it.id === itemId ? { ...it, composition: lines } : it));
+    } else if (currentCompany?.id) {
+      void supabase.rpc('build_fixed_engineering_snapshot', {
+        _company_id: currentCompany.id,
+        _product_template_id: product.product_template_id,
+        _width: product.width,
+        _height: product.height,
+        _quantity: product.quantity,
+        _opening_width: product.width,
+        _opening_height: product.height,
+      }).then(({ data, error }) => {
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        setItems((prev) => prev.map((it) => it.id === itemId ? {
+          ...it,
+          engineeringSnapshot: data,
+          fulfillmentMode: product.fulfillment_mode || 'PRODUCTION',
+        } : it));
+      });
     }
-  };
-
-  const [compositionEditorItemId, setCompositionEditorItemId] = useState<string | null>(null);
-  const compositionEditorItem = useMemo(
-    () => items.find((i) => i.id === compositionEditorItemId) || null,
-    [items, compositionEditorItemId],
-  );
-
-  const handleCompositionSave = (lines: SaleCompositionLine[]) => {
-    if (!compositionEditorItemId) return;
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === compositionEditorItemId
-          ? { ...it, composition: lines, compositionEdited: true }
-          : it,
-      ),
-    );
-    setCompositionEditorItemId(null);
   };
 
   // Select quote and load items (orcamento mode)
@@ -570,6 +595,8 @@ export function NovaVendaDialog({
         width: qi.width || undefined,
         height: qi.height || undefined,
         isProduct: !!(qi.company_product_id || qi.product_template_id),
+        engineeringSnapshot: qi.composition_snapshot || undefined,
+        fulfillmentMode: qi.fulfillment_mode || undefined,
       };
     });
 
@@ -634,6 +661,10 @@ export function NovaVendaDialog({
   const handleConfirm = async () => {
     if (!paymentConfig) {
       toast.error('Configure o pagamento antes de finalizar');
+      return;
+    }
+    if (items.some((item) => !item.engineeringSnapshot || !item.fulfillmentMode)) {
+      toast.error('SNAPSHOT_MISSING');
       return;
     }
     await autoCreateClientIfNeeded();
@@ -817,9 +848,6 @@ export function NovaVendaDialog({
                                   {item.isProduct && (
                                     <Badge variant="secondary" className="text-[10px] h-4">Produto</Badge>
                                   )}
-                                  {item.isProduct && item.compositionEdited && (
-                                    <Badge variant="default" className="text-[10px] h-4">Composição manual</Badge>
-                                  )}
                                   {item.isDefaultPrice && (
                                     <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
                                   )}
@@ -847,17 +875,6 @@ export function NovaVendaDialog({
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                {item.isProduct && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 gap-1 text-xs"
-                                    onClick={() => setCompositionEditorItemId(item.id)}
-                                  >
-                                    <Settings2 className="h-3 w-3" />
-                                    Composição
-                                  </Button>
-                                )}
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="outline"
@@ -1471,16 +1488,6 @@ export function NovaVendaDialog({
         isLoading={isAddingStock}
       />
 
-      {/* Product composition editor */}
-      {compositionEditorItem && (
-        <ProductCompositionEditor
-          open={!!compositionEditorItemId}
-          onOpenChange={(o) => { if (!o) setCompositionEditorItemId(null); }}
-          productName={compositionEditorItem.name}
-          initialLines={compositionEditorItem.composition || []}
-          onSave={handleCompositionSave}
-        />
-      )}
     </Dialog>
   );
 }

@@ -67,6 +67,9 @@ interface ProductTemplateRef {
   default_panels_count?: number | null;
   default_sides_count?: number | null;
   composition_mode?: string | null;
+  fulfillment_mode?: 'IMMEDIATE' | 'PRODUCTION' | 'SERVICE' | null;
+  installation_gap_width_mm?: number | null;
+  installation_gap_height_mm?: number | null;
 }
 
 interface AddProductPanelProps {
@@ -114,6 +117,7 @@ interface AddProductPanelProps {
     }>;
     composition_mode?: 'fixed' | 'parametric';
     composition_snapshot?: Json;
+    fulfillment_mode?: 'IMMEDIATE' | 'PRODUCTION' | 'SERVICE';
   }) => void;
   onCancel: () => void;
   mode?: 'quote' | 'cutting';
@@ -205,7 +209,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           product_template:product_templates (
             id, name, description, category, linha, image_url, has_multiple_sides, has_cutting_plan,
             default_leaves_count, default_glasses_count, default_panels_count, default_sides_count,
-            composition_mode
+            composition_mode, fulfillment_mode,
+            installation_gap_width_mm, installation_gap_height_mm
           )
         `)
         .eq('company_id', currentCompany.id)
@@ -238,7 +243,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           default_glasses_count,
           default_panels_count,
           default_sides_count
-          ,composition_mode
+          ,composition_mode, fulfillment_mode,
+          installation_gap_width_mm, installation_gap_height_mm
         `)
         .eq('is_active', true)
         .order('name');
@@ -282,6 +288,9 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         panels_count: cp.panels_count || template?.default_panels_count || 1,
         sides_count: cp.sides_count || template?.default_sides_count || 1,
         composition_mode: template?.composition_mode || 'fixed',
+        fulfillment_mode: template?.fulfillment_mode || 'PRODUCTION',
+        installation_gap_width_mm: Number(template?.installation_gap_width_mm || 0),
+        installation_gap_height_mm: Number(template?.installation_gap_height_mm || 0),
       };
     });
 
@@ -313,6 +322,9 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         panels_count: template.default_panels_count || 1,
         sides_count: template.default_sides_count || 1,
         composition_mode: template.composition_mode || 'fixed',
+        fulfillment_mode: template.fulfillment_mode || 'PRODUCTION',
+        installation_gap_width_mm: Number(template.installation_gap_width_mm || 0),
+        installation_gap_height_mm: Number(template.installation_gap_height_mm || 0),
       }));
 
     return [...companyCatalog, ...templateCatalog];
@@ -633,12 +645,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     productTemplateId: selectedProductTemplateId,
     width_mm: width,
     height_mm: height,
+    opening_width_mm: useVao ? vaoWidth : width + Number(selectedProduct?.installation_gap_width_mm || 0),
+    opening_height_mm: useVao ? vaoHeight : height + Number(selectedProduct?.installation_gap_height_mm || 0),
     quantity: quantity || 1,
     line: selectedProduct?.linha || null,
     glass: selectedGlassPrice?.glass_type || null,
     profile_color: selectedAluminumColor || customAluminumColor || null,
     glass_color: selectedGlassPrice?.glass_color || selectedGlassColor || null,
     variants: parametricVariants,
+    fulfillmentMode: selectedProduct?.fulfillment_mode || 'PRODUCTION',
     enabled: isParametric && mode === 'quote',
   });
   const parametricResult = parametricEngineering.result;
@@ -767,6 +782,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       notes: notes.trim() || undefined,
       components: components.length > 0 ? components : undefined,
       composition_mode: isParametric ? 'parametric' : 'fixed',
+      fulfillment_mode: selectedProduct.fulfillment_mode || 'PRODUCTION',
       composition_snapshot: parametricResult ? ({
         ...parametricResult,
         pricing_source: hasCompleteParametricPrice

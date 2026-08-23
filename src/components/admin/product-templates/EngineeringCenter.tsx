@@ -15,6 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  buildEngineeringFormula,
+  EngineeringFormulaTarget,
+  EngineeringFormulaVariable,
+  suggestCalibratedFormula,
+} from '@/utils/engineeringFormulaBuilder';
 
 type RuleRow = {
   id: string;
@@ -37,6 +43,12 @@ type RuleRow = {
   is_active: boolean;
   is_validated: boolean;
   validation_source: string | null;
+  technical_status: string;
+  source_type: string | null;
+  source_name: string | null;
+  source_page: string | null;
+  source_reference: string | null;
+  supply_mode: string | null;
   change_reason: string | null;
   created_at: string;
   item_template: { id: string; name: string; type: string; unit: string } | null;
@@ -72,6 +84,12 @@ type RuleDraft = {
   is_active: boolean;
   is_validated: boolean;
   validation_source: string;
+  technical_status: 'ESTIMATED' | 'VALIDATED' | 'REJECTED';
+  source_type: string;
+  source_name: string;
+  source_page: string;
+  source_reference: string;
+  supply_mode: '' | 'INTERNAL_STOCK' | 'DEDICATED_PURCHASE';
   change_reason: string;
 };
 
@@ -81,6 +99,8 @@ const emptyRule: RuleDraft = {
   pieces_formula: '', pieces_quantity: '1', condition_expression: '', unit: 'un',
   cut_orientation: '', cut_angle: '90', is_active: true, is_validated: false,
   validation_source: '', change_reason: '',
+  technical_status: 'ESTIMATED', source_type: '', source_name: '', source_page: '',
+  source_reference: '', supply_mode: '',
 };
 
 const money = (value: number) => new Intl.NumberFormat('pt-BR', {
@@ -123,6 +143,12 @@ export function EngineeringCenter({ productTemplateId, line }: Props) {
   const [quantity, setQuantity] = useState(1);
   const [glass, setGlass] = useState('Incolor');
   const [calculationRequested, setCalculationRequested] = useState(false);
+  const [builderTarget, setBuilderTarget] = useState<EngineeringFormulaTarget>('width_formula');
+  const [builderVariable, setBuilderVariable] = useState<EngineeringFormulaVariable>('L');
+  const [builderAdjustment, setBuilderAdjustment] = useState(0);
+  const [builderDivisor, setBuilderDivisor] = useState(1);
+  const [calibrationReference, setCalibrationReference] = useState(0);
+  const [calibrationMeasured, setCalibrationMeasured] = useState(0);
 
   const rulesQuery = useQuery({
     queryKey: ['saas-engineering-rules', productTemplateId],
@@ -255,9 +281,46 @@ export function EngineeringCenter({ productTemplateId, line }: Props) {
       is_active: rule.is_active,
       is_validated: rule.is_validated,
       validation_source: rule.validation_source ?? '',
+      technical_status: rule.technical_status === 'VALIDATED' || rule.technical_status === 'REJECTED' ? rule.technical_status : 'ESTIMATED',
+      source_type: rule.source_type ?? '',
+      source_name: rule.source_name ?? '',
+      source_page: rule.source_page ?? '',
+      source_reference: rule.source_reference ?? '',
+      supply_mode: rule.supply_mode === 'INTERNAL_STOCK' || rule.supply_mode === 'DEDICATED_PURCHASE' ? rule.supply_mode : '',
       change_reason: '',
     } : emptyRule);
     setRuleDialogOpen(true);
+  };
+
+  const applyVisualFormula = () => {
+    try {
+      const formula = buildEngineeringFormula(builderVariable, builderAdjustment, builderDivisor);
+      setRuleDraft((current) => ({ ...current, [builderTarget]: formula }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível montar a fórmula.');
+    }
+  };
+
+  const applyCalibrationSuggestion = () => {
+    try {
+      const suggestion = suggestCalibratedFormula({
+        variable: builderVariable === 'A' ? 'A' : 'L',
+        referenceDimensionMm: calibrationReference,
+        measuredCutMm: calibrationMeasured,
+        divisor: builderDivisor,
+      });
+      setRuleDraft((current) => ({
+        ...current,
+        [builderTarget]: suggestion.formula,
+        is_validated: false,
+        technical_status: suggestion.technicalStatus,
+        validation_source: '',
+      }));
+      setValidatedConfirmation(false);
+      toast.info(`Sugestão aplicada como ESTIMATED (ajuste ${suggestion.adjustmentMm} mm).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Calibração inválida.');
+    }
   };
 
   const saveRule = useMutation({
@@ -273,6 +336,12 @@ export function EngineeringCenter({ productTemplateId, line }: Props) {
         condition_expression: ruleDraft.condition_expression || null,
         cut_orientation: ruleDraft.cut_orientation || null,
         validation_source: ruleDraft.validation_source || null,
+        technical_status: ruleDraft.is_validated ? 'VALIDATED' : ruleDraft.technical_status,
+        source_type: ruleDraft.source_type || null,
+        source_name: ruleDraft.source_name || null,
+        source_page: ruleDraft.source_page || null,
+        source_reference: ruleDraft.source_reference || null,
+        supply_mode: ruleDraft.supply_mode || null,
       };
       const { error } = await supabase.rpc('create_product_parametric_rule_version', {
         _source_rule_id: sourceRule?.id ?? null,
@@ -455,7 +524,12 @@ export function EngineeringCenter({ productTemplateId, line }: Props) {
         <div><Label>Peças fixas</Label><Input type="number" min={1} value={ruleDraft.pieces_quantity} onChange={(event) => setRuleDraft({ ...ruleDraft, pieces_quantity: event.target.value })} /></div><div><Label>Fórmula de peças</Label><Input className="font-mono" value={ruleDraft.pieces_formula} onChange={(event) => setRuleDraft({ ...ruleDraft, pieces_formula: event.target.value })} /></div>
         <div><Label>Condição</Label><Input className="font-mono" value={ruleDraft.condition_expression} onChange={(event) => setRuleDraft({ ...ruleDraft, condition_expression: event.target.value })} /></div><div><Label>Unidade</Label><Input value={ruleDraft.unit} onChange={(event) => setRuleDraft({ ...ruleDraft, unit: event.target.value })} /></div>
         <div><Label>Orientação</Label><Input value={ruleDraft.cut_orientation} onChange={(event) => setRuleDraft({ ...ruleDraft, cut_orientation: event.target.value })} /></div><div><Label>Ângulo</Label><Input value={ruleDraft.cut_angle} onChange={(event) => setRuleDraft({ ...ruleDraft, cut_angle: event.target.value })} /></div>
-        <div className="flex items-center justify-between rounded-md border p-3"><Label>Nova versão ativa</Label><Switch checked={ruleDraft.is_active} onCheckedChange={(value) => setRuleDraft({ ...ruleDraft, is_active: value })} /></div><div className="flex items-center justify-between rounded-md border p-3"><Label>VALIDATED</Label><Switch checked={ruleDraft.is_validated} onCheckedChange={(value) => { setRuleDraft({ ...ruleDraft, is_validated: value }); setValidatedConfirmation(false); }} /></div>
+        <div className="md:col-span-2 space-y-3 rounded-md border p-3"><div><Label>Construtor visual de fórmula</Label><p className="text-xs text-muted-foreground">Gera uma expressão segura usando as variáveis canônicas L, A, Q e FOLHAS.</p></div><div className="grid gap-2 sm:grid-cols-4"><Select value={builderTarget} onValueChange={(value: EngineeringFormulaTarget) => setBuilderTarget(value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="formula">Fórmula geral</SelectItem><SelectItem value="quantity_formula">Quantidade</SelectItem><SelectItem value="width_formula">Largura</SelectItem><SelectItem value="height_formula">Altura</SelectItem><SelectItem value="pieces_formula">Peças</SelectItem></SelectContent></Select><Select value={builderVariable} onValueChange={(value: EngineeringFormulaVariable) => setBuilderVariable(value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{(['L','A','Q','FOLHAS'] as const).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select><Input type="number" value={builderAdjustment} onChange={(event) => setBuilderAdjustment(Number(event.target.value))} placeholder="Somar/subtrair" /><Input type="number" min="0.0001" value={builderDivisor} onChange={(event) => setBuilderDivisor(Number(event.target.value))} placeholder="Dividir por" /></div><Button type="button" variant="secondary" onClick={applyVisualFormula}>Aplicar fórmula</Button></div>
+        <div className="md:col-span-2 space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3"><div><Label>Calibração assistida</Label><p className="text-xs text-muted-foreground">A sugestão nunca valida a regra automaticamente: o resultado permanece ESTIMATED até confirmação técnica com fonte.</p></div><div className="grid gap-2 sm:grid-cols-2"><Input type="number" value={calibrationReference} onChange={(event) => setCalibrationReference(Number(event.target.value))} placeholder="Dimensão de referência (mm)" /><Input type="number" value={calibrationMeasured} onChange={(event) => setCalibrationMeasured(Number(event.target.value))} placeholder="Corte medido (mm)" /></div><Button type="button" variant="outline" onClick={applyCalibrationSuggestion} disabled={builderVariable !== 'L' && builderVariable !== 'A'}>Sugerir como ESTIMATED</Button></div>
+        <div><Label>Modo de suprimento</Label><Select value={ruleDraft.supply_mode || 'none'} onValueChange={(value) => setRuleDraft({ ...ruleDraft, supply_mode: value === 'none' ? '' : value as RuleDraft['supply_mode'] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Não aplicável</SelectItem><SelectItem value="INTERNAL_STOCK">Estoque interno</SelectItem><SelectItem value="DEDICATED_PURCHASE">Compra dedicada</SelectItem></SelectContent></Select></div><div><Label>Status técnico</Label><Input value={ruleDraft.is_validated ? 'VALIDATED' : ruleDraft.technical_status} disabled /></div>
+        <div className="flex items-center justify-between rounded-md border p-3"><Label>Nova versão ativa</Label><Switch checked={ruleDraft.is_active} onCheckedChange={(value) => setRuleDraft({ ...ruleDraft, is_active: value })} /></div><div className="flex items-center justify-between rounded-md border p-3"><Label>VALIDATED</Label><Switch checked={ruleDraft.is_validated} onCheckedChange={(value) => { setRuleDraft({ ...ruleDraft, is_validated: value, technical_status: value ? 'VALIDATED' : 'ESTIMATED' }); setValidatedConfirmation(false); }} /></div>
+        <div><Label>Tipo da fonte</Label><Input value={ruleDraft.source_type} onChange={(event) => setRuleDraft({ ...ruleDraft, source_type: event.target.value })} placeholder="manual, desenho, fabricante" /></div><div><Label>Nome da fonte</Label><Input value={ruleDraft.source_name} onChange={(event) => setRuleDraft({ ...ruleDraft, source_name: event.target.value })} /></div>
+        <div><Label>Página</Label><Input value={ruleDraft.source_page} onChange={(event) => setRuleDraft({ ...ruleDraft, source_page: event.target.value })} /></div><div><Label>Referência técnica</Label><Input value={ruleDraft.source_reference} onChange={(event) => setRuleDraft({ ...ruleDraft, source_reference: event.target.value })} /></div>
         <div className="md:col-span-2"><Label>Origem da validação</Label><Input value={ruleDraft.validation_source} onChange={(event) => setRuleDraft({ ...ruleDraft, validation_source: event.target.value })} placeholder="Documento técnico, plano de corte ou responsável" /></div>
         {ruleDraft.is_validated && <div className="md:col-span-2 flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3"><Checkbox id="validated-confirmation" checked={validatedConfirmation} onCheckedChange={(value) => setValidatedConfirmation(value === true)} /><Label htmlFor="validated-confirmation" className="leading-5">Confirmo explicitamente que esta fórmula possui evidência técnica real e pode ser marcada como VALIDATED.</Label></div>}
         <div className="md:col-span-2"><Label>Motivo da alteração</Label><Textarea value={ruleDraft.change_reason} onChange={(event) => setRuleDraft({ ...ruleDraft, change_reason: event.target.value })} /></div>

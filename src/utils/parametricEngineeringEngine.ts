@@ -29,6 +29,8 @@ export interface ParametricFormulaVariables {
 }
 
 export interface ParametricEngineInputs {
+  opening_width_mm?: number;
+  opening_height_mm?: number;
   width_mm: number;
   height_mm: number;
   quantity: number;
@@ -38,6 +40,8 @@ export interface ParametricEngineInputs {
   glass_color: string | null;
   variants: Record<string, string | number | boolean>;
 }
+
+export type FulfillmentMode = 'IMMEDIATE' | 'PRODUCTION' | 'SERVICE';
 
 export type ParametricMaterialType = 'profile' | 'glass' | 'accessory' | 'consumable' | 'service';
 
@@ -52,6 +56,8 @@ export interface ResolvedParametricRule {
   formula: string | null;
   width_formula: string | null;
   height_formula: string | null;
+  piece_width_formula: string | null;
+  piece_height_formula: string | null;
   quantity_formula: string | null;
   pieces_formula: string | null;
   pieces_quantity: number;
@@ -66,6 +72,14 @@ export interface ResolvedParametricRule {
   version: number;
   is_validated: boolean;
   validation_source: string | null;
+  component_role: string | null;
+  technical_status: 'ESTIMATED' | 'VALIDATED' | 'REJECTED';
+  source_type: string | null;
+  source_name: string | null;
+  source_page: string | null;
+  source_reference: string | null;
+  notes: string | null;
+  supply_mode: 'INTERNAL_STOCK' | 'DEDICATED_PURCHASE' | null;
   source: 'global' | 'company_override';
   cost_per_unit: number | null;
   sale_price_per_unit: number | null;
@@ -91,8 +105,9 @@ export interface ParametricMaterialResult {
 
 export interface ParametricEngineeringResult {
   composition_mode: 'parametric';
-  engine_version: 1;
-  snapshot_version: 1;
+  fulfillment_mode: FulfillmentMode;
+  engine_version: 2;
+  snapshot_version: 2;
   inputs: ParametricEngineInputs;
   rules: Array<{
     id: string;
@@ -106,6 +121,9 @@ export interface ParametricEngineeringResult {
     item_template_id: string | null;
     company_item_id: string | null;
     source_rule_id: string;
+    key: string;
+    piece_role: string | null;
+    supply_mode: 'INTERNAL_STOCK' | 'DEDICATED_PURCHASE';
   }>;
   cuts: Array<{
     item_template_id: string | null;
@@ -251,6 +269,7 @@ const roundQuantity = (value: number) => Math.round((value + Number.EPSILON) * 1
 export function calculateParametricEngineering(
   inputs: ParametricEngineInputs,
   rules: ResolvedParametricRule[],
+  fulfillmentMode: FulfillmentMode,
 ): ParametricEngineeringResult {
   if (inputs.width_mm <= 0 || inputs.height_mm <= 0 || inputs.quantity <= 0) {
     throw new ParametricFormulaError('INVALID_FORMULA', 'Largura, altura e quantidade devem ser positivas.');
@@ -284,11 +303,13 @@ export function calculateParametricEngineering(
       ? Math.max(0, evaluateParametricFormula(rule.quantity_formula, variables))
       : 1;
     const pieces = basePieces * dynamicPieces * formulaMultiplier * inputs.quantity;
-    const width = rule.width_formula
-      ? evaluateParametricFormula(rule.width_formula, variables)
+    const widthFormula = rule.piece_width_formula ?? rule.width_formula;
+    const heightFormula = rule.piece_height_formula ?? rule.height_formula;
+    const width = widthFormula
+      ? evaluateParametricFormula(widthFormula, variables)
       : null;
-    const height = rule.height_formula
-      ? evaluateParametricFormula(rule.height_formula, variables)
+    const height = heightFormula
+      ? evaluateParametricFormula(heightFormula, variables)
       : null;
     const fallback = rule.formula
       ? evaluateParametricFormula(rule.formula, variables)
@@ -351,9 +372,12 @@ export function calculateParametricEngineering(
     for (const piece of materialGlassPieces) {
       glassPieces.push({
         ...piece,
+        key: rule.id,
         item_template_id: rule.item_template_id,
         company_item_id: rule.company_item_id,
         source_rule_id: rule.id,
+        piece_role: rule.component_role,
+        supply_mode: rule.supply_mode ?? 'INTERNAL_STOCK',
       });
     }
 
@@ -366,6 +390,8 @@ export function calculateParametricEngineering(
       material_type: rule.material_type,
       width_formula: rule.width_formula,
       height_formula: rule.height_formula,
+      piece_width_formula: rule.piece_width_formula,
+      piece_height_formula: rule.piece_height_formula,
       quantity_formula: rule.quantity_formula,
       pieces_formula: rule.pieces_formula,
       pieces_quantity: rule.pieces_quantity,
@@ -375,6 +401,13 @@ export function calculateParametricEngineering(
       cut_angle: rule.cut_angle,
       is_optional: false,
       validated: rule.is_validated,
+      component_role: rule.component_role,
+      technical_status: rule.technical_status,
+      source_type: rule.source_type,
+      source_name: rule.source_name,
+      source_page: rule.source_page,
+      source_reference: rule.source_reference,
+      notes: rule.notes,
     });
   }
 
@@ -387,8 +420,9 @@ export function calculateParametricEngineering(
 
   return {
     composition_mode: 'parametric',
-    engine_version: 1,
-    snapshot_version: 1,
+    fulfillment_mode: fulfillmentMode,
+    engine_version: 2,
+    snapshot_version: 2,
     inputs: { ...inputs, variants: { ...inputs.variants } },
     rules: rules.map((rule) => ({
       id: rule.id,
