@@ -20,6 +20,21 @@ interface CNPJData {
   email: string;
 }
 
+type CNPJLookupPayload = Partial<{
+  razao_social: string;
+  nome_fantasia: string;
+  descricao_situacao_cadastral: string;
+  ddd_telefone_1: string;
+  logradouro: string;
+  numero: string | number;
+  complemento: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string | number;
+  email: string;
+}>;
+
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   document: z
@@ -84,7 +99,7 @@ export default function CompanySetup() {
     let cancelled = false;
     const controller = new AbortController();
 
-    const applyData = (data: any) => {
+    const applyData = (data: CNPJLookupPayload | null | undefined) => {
       if (cancelled || !data) return;
       const razaoSocial = data.razao_social || '';
       const nomeFantasia = data.nome_fantasia || '';
@@ -128,8 +143,8 @@ export default function CompanySetup() {
           setIsValidating(false);
           return;
         }
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         // fall through to edge function fallback
       }
 
@@ -215,7 +230,7 @@ export default function CompanySetup() {
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error validating CNPJ:', error);
       toast({
         title: "Erro na consulta",
@@ -290,32 +305,12 @@ export default function CompanySetup() {
         throw companyError;
       }
 
-      // Define período de teste (14 dias) para a nova empresa
-      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-      const newCompanyId = typeof companyData === 'string' ? companyData : (companyData as any)?.id ?? (companyData as any)?.company_id;
-      if (newCompanyId) {
-        await supabase
-          .from('companies')
-          .update({
-            subscription_status: 'trialing',
-            trial_ends_at: trialEndsAt
-          } as never)
-          .eq('id', newCompanyId);
-
-        // Registra assinatura inicial de trial para integração com painel admin
-        await supabase
-          .from('company_subscriptions')
-          .insert({
-            company_id: newCompanyId,
-            plan_name: 'trial',
-            plan_price: 0,
-            status: 'trial',
-            started_at: new Date().toISOString(),
-            expires_at: trialEndsAt,
-            notes: 'Teste grátis de 14 dias concedido no cadastro',
-          })
-          .catch(() => {});
+      if (!companyData?.id) {
+        throw new Error('ONBOARDING_INVALID_RESPONSE');
       }
+
+      // Keep the active company resolved immediately; the reload refreshes memberships.
+      setCurrentCompany(companyData);
 
       toast({
         title: "Empresa cadastrada com sucesso!",
@@ -324,11 +319,11 @@ export default function CompanySetup() {
 
       // Recarrega o app para sincronizar empresas no AuthContext e acessar o painel
       window.location.href = '/dashboard';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating company:', error);
       toast({
         title: "Erro ao criar empresa",
-        description: error.message || "Tente novamente.",
+        description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {
