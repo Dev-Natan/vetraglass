@@ -20,9 +20,8 @@ import { toast } from 'sonner';
 import { 
   Loader2, Plus, Pencil, Trash2, Search, Package, Upload, X, MoreVertical,
   Eye, EyeOff, Copy, DollarSign, Ruler, ImageUp, CheckCircle2, XCircle,
-  AlertCircle, AlertTriangle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight, ArrowLeft
+  AlertCircle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight, ArrowLeft
 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -131,13 +130,6 @@ export default function ItemTemplates() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
-  
-  const [forceDeleteDialog, setForceDeleteDialog] = useState<{
-    open: boolean;
-    itemId: string | null;
-    itemName: string;
-    errorMessage: string;
-  }>({ open: false, itemId: null, itemName: '', errorMessage: '' });
   
   const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [bulkUploadProgress, setBulkUploadProgress] = useState<{
@@ -381,35 +373,43 @@ export default function ItemTemplates() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ id, force = false }: { id: string; force?: boolean }) => {
-      const { data, error } = await supabase.functions.invoke('admin-delete-item-template', { body: { id, force } });
-      if (error) throw error;
-      if (!data?.success) {
-        if (data?.code === 'IN_USE' || data?.code === 'IN_STOCK' || data?.code === 'IN_PRICES') {
-          const err = new Error(data?.error || 'Item em uso');
-          (err as any).canForce = true;
-          throw err;
-        }
-        throw new Error(data?.error || 'Não foi possível excluir este item.');
+    mutationFn: async ({ id }: { id: string }) => {
+      const { data, error } = await supabase.rpc('delete_item_template_transactional', {
+        _item_template_id: id,
+      });
+      if (error) {
+        throw new Error(error.message?.includes('permission denied') ? 'UNAUTHORIZED' : 'DELETE_FAILED');
       }
-      return data;
+      const result = data as {
+        success?: boolean;
+        code?: string;
+        action?: 'deleted' | 'archived' | 'already_deleted';
+        message?: string;
+      } | null;
+      if (!result?.success) throw new Error(result?.code || 'DELETE_FAILED');
+      return result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['item-templates-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['item-templates-meta-all'] });
       queryClient.invalidateQueries({ queryKey: ['product-templates'] });
-      if (data?.removed) {
-        toast.success(`Item excluído! Removido de ${data.removed.products} produtos, ${data.removed.stock} estoques, ${data.removed.companyItems} itens de empresa.`);
+      if (data.action === 'archived') {
+        toast.warning(data.message || 'Item em uso: ele foi arquivado para preservar o histórico.');
+      } else if (data.action === 'already_deleted') {
+        toast.info('Este item já havia sido excluído.');
       } else {
         toast.success('Item excluído!');
       }
-      setForceDeleteDialog({ open: false, itemId: null, itemName: '', errorMessage: '' });
     },
     onError: (error: Error) => {
-      if ((error as any).canForce) {
-        setForceDeleteDialog(prev => ({ ...prev, open: true, errorMessage: error.message }));
-      } else {
-        toast.error('Erro ao excluir: ' + error.message);
-      }
+      const messages: Record<string, string> = {
+        UNAUTHORIZED: 'Acesso negado. Apenas o SaaS Admin pode excluir itens globais.',
+        ITEM_IN_USE: 'Este item possui histórico e não pode ser excluído.',
+        ITEM_HAS_COMPANY_LINKS: 'Este item está vinculado a empresas e não pode ser excluído.',
+        ITEM_HAS_ENGINEERING_REFERENCES: 'Este item está sendo usado na engenharia de produtos.',
+        DELETE_FAILED: 'Não foi possível excluir o item. Tente novamente.',
+      };
+      toast.error(messages[error.message] || messages.DELETE_FAILED);
     },
   });
 
@@ -656,10 +656,9 @@ export default function ItemTemplates() {
                 {item.is_active ? <><EyeOff className="w-4 h-4 mr-2" />Desativar</> : <><Eye className="w-4 h-4 mr-2" />Ativar</>}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => {
-                setForceDeleteDialog({ open: false, itemId: item.id, itemName: item.name, errorMessage: '' });
-                deleteMutation.mutate({ id: item.id, force: false });
-              }}><Trash2 className="w-4 h-4 mr-2" />Excluir</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate({ id: item.id })}>
+                <Trash2 className="w-4 h-4 mr-2" />Excluir
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -788,10 +787,9 @@ export default function ItemTemplates() {
               {item.is_active ? <><EyeOff className="w-4 h-4 mr-2" />Desativar</> : <><Eye className="w-4 h-4 mr-2" />Ativar</>}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={() => {
-              setForceDeleteDialog({ open: false, itemId: item.id, itemName: item.name, errorMessage: '' });
-              deleteMutation.mutate({ id: item.id, force: false });
-            }}><Trash2 className="w-4 h-4 mr-2" />Excluir</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate({ id: item.id })}>
+              <Trash2 className="w-4 h-4 mr-2" />Excluir
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
@@ -1380,10 +1378,9 @@ export default function ItemTemplates() {
                                       {item.is_active ? <><EyeOff className="w-4 h-4 mr-2" />Desativar</> : <><Eye className="w-4 h-4 mr-2" />Ativar</>}
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-destructive" onClick={() => {
-                                      setForceDeleteDialog({ open: false, itemId: item.id, itemName: item.name, errorMessage: '' });
-                                      deleteMutation.mutate({ id: item.id, force: false });
-                                    }}><Trash2 className="w-4 h-4 mr-2" />Excluir</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate({ id: item.id })}>
+                                      <Trash2 className="w-4 h-4 mr-2" />Excluir
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </td>
@@ -1430,27 +1427,6 @@ export default function ItemTemplates() {
         )}
       </div>
 
-      {/* Force Delete Dialog */}
-      <AlertDialog open={forceDeleteDialog.open} onOpenChange={(open) => setForceDeleteDialog(prev => ({ ...prev, open }))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Item em Uso</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p className="font-medium text-foreground">{forceDeleteDialog.itemName}</p>
-              <p className="text-sm">{forceDeleteDialog.errorMessage}</p>
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                <strong>Atenção:</strong> Forçar exclusão irá remover este item de todos os produtos, estoques e preços configurados. Esta ação não pode ser desfeita.
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setForceDeleteDialog({ open: false, itemId: null, itemName: '', errorMessage: '' })}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { if (forceDeleteDialog.itemId) deleteMutation.mutate({ id: forceDeleteDialog.itemId, force: true }); }} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Excluindo...</> : 'Forçar Exclusão'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AdminLayout>
   );
 }

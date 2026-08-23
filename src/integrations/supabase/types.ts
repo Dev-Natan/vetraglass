@@ -8258,6 +8258,10 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_item_template_transactional: {
+        Args: { _item_template_id: string }
+        Returns: Json
+      }
       check_employee_username_exists: {
         Args: { p_username: string }
         Returns: boolean
