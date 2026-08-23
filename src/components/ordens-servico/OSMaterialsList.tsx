@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
 import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
 import { osService } from '@/services/osService';
-import { useOSComposition } from '@/hooks/useOSComposition';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
@@ -76,14 +75,10 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     },
   });
 
-  // Dynamic fallback: derive from the effective product composition (respects
-  // company overrides + admin defaults) when the pre-generated snapshot is empty.
-  const { profiles: composedProfiles, isLoading: isComposedLoading } = useOSComposition(ordemServicoId);
-
   if (isLoading || isConsolidatedLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -91,132 +86,18 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
   const snapshotEmpty = !materials || materials.length === 0;
 
   if (snapshotEmpty) {
-    if (isComposedLoading) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-
-    if (!composedProfiles.length) {
-      return (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum perfil configurado na composição dos produtos.</p>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // Consolidate by profile name + bar length
-    const grouped = composedProfiles.reduce((acc, r) => {
-      const barLen = r.barLengthMm || 6000;
-      const key = `${r.itemName}|${barLen}`;
-      if (!acc[key]) {
-        acc[key] = {
-          itemName: r.itemName,
-          barLength: barLen,
-          totalLength: 0,
-          pieces: 0,
-          cuts: [] as Array<{ length: number; qty: number }>,
-        };
-      }
-      const len = r.calculatedLengthMm || 0;
-      if (len > 0) {
-        acc[key].totalLength += len * r.calculatedQty;
-        acc[key].pieces += r.calculatedQty;
-        const existing = acc[key].cuts.find((c) => c.length === len);
-        if (existing) existing.qty += r.calculatedQty;
-        else acc[key].cuts.push({ length: len, qty: r.calculatedQty });
-      }
-      return acc;
-    }, {} as Record<string, { itemName: string; barLength: number; totalLength: number; pieces: number; cuts: Array<{ length: number; qty: number }> }>);
-
-    const groups = Object.values(grouped);
-    const totalProfiles = groups.length;
-    const totalPieces = groups.reduce((s, g) => s + g.pieces, 0);
-    const totalLen = groups.reduce((s, g) => s + g.totalLength, 0);
-
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Resumo de Perfis (dinâmico)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{totalProfiles}</div>
-                <div className="text-sm text-muted-foreground">Tipos de Perfis</div>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{totalPieces}</div>
-                <div className="text-sm text-muted-foreground">Peças</div>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold">{formatMm(totalLen)}</div>
-                <div className="text-sm text-muted-foreground">Comprimento Total</div>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Valores calculados dinamicamente a partir da composição efetiva de cada produto
-              (herança: empresa &gt; padrão do administrador).
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Ruler className="w-5 h-5" />
-              Perfis de Alumínio
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Cortes</TableHead>
-                  <TableHead className="text-right">Peças</TableHead>
-                  <TableHead className="text-right">Comprimento</TableHead>
-                  <TableHead className="text-right">Barra</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groups.map((g, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{g.itemName}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {g.cuts.map((c, i) => (
-                          <Badge key={i} variant="secondary" className="font-mono text-[10px]">
-                            {c.qty}x {c.length}mm
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">{g.pieces}</TableCell>
-                    <TableCell className="text-right font-mono">{formatMm(g.totalLength)}</TableCell>
-                    <TableCell className="text-right font-mono text-muted-foreground">
-                      {formatMm(g.barLength)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-destructive/40">
+        <CardContent className="py-8 text-center text-muted-foreground">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+          <p className="font-medium text-foreground">Snapshot de materiais indisponível</p>
+          <p className="text-sm mt-1">
+            A composição histórica desta OS não pode ser recalculada pelo catálogo atual.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
-
-
   // Group by item type for individual view
   const profiles = materials.filter(m => m.item_type === 'profile');
   const totalBars = profiles.reduce((sum, p) => sum + (p.bars_needed || 0), 0);

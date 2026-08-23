@@ -9011,6 +9011,15 @@ export type Database = {
         Args: { _company_id: string; _item_id: string; _patch: Json }
         Returns: string
       }
+      save_quote_transactional: {
+        Args: {
+          _company_id: string
+          _items: Json
+          _quote: Json
+          _quote_id: string | null
+        }
+        Returns: Json
+      }
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined

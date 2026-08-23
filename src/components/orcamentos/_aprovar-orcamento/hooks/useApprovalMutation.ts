@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { parseAmount } from '../utils';
 import type { ApprovalQuote, ApprovalQuoteItem, ApprovalFormState } from '../types';
+import { operationalErrorMessage } from '@/utils/operationalError';
 
 interface Params {
   quote: ApprovalQuote | null;
@@ -22,8 +23,8 @@ interface ApprovalRpcResult {
   success: true;
   idempotent_replay: boolean;
   quote_id: string;
-  ordem_servico_id: string;
-  os_number: number;
+  ordem_servico_id: string | null;
+  os_number: number | null;
   quote_deposit_id: string | null;
   entry_receivable_id: string | null;
   balance_receivable_id: string | null;
@@ -85,17 +86,14 @@ export function useApprovalMutation({
       }
 
       const result = data as unknown as ApprovalRpcResult;
-      if (result.success !== true
-        || !result.ordem_servico_id
-        || typeof result.os_number !== 'number') {
-        throw new Error('A aprovação não retornou uma ordem de serviço válida');
+      if (result.success !== true || !result.sale_id) {
+        throw new Error('A aprovação não retornou uma venda válida');
       }
 
       return {
-        ordemServico: {
-          id: result.ordem_servico_id,
-          os_number: result.os_number,
-        },
+        ordemServico: result.ordem_servico_id && typeof result.os_number === 'number'
+          ? { id: result.ordem_servico_id, os_number: result.os_number }
+          : null,
         saleId: result.sale_id,
         idempotentReplay: result.idempotent_replay,
       };
@@ -103,7 +101,9 @@ export function useApprovalMutation({
     onSuccess: (data) => {
       toast({
         title: 'Orçamento aprovado!',
-        description: `OS #${data.ordemServico.os_number} criada com sucesso.`,
+        description: data.ordemServico
+          ? `Venda confirmada e OS #${data.ordemServico.os_number} criada com sucesso.`
+          : 'Venda imediata confirmada com sucesso.',
       });
       // Close immediately so a completed approval cannot be submitted again
       // while the affected queries are being refreshed.
@@ -122,7 +122,7 @@ export function useApprovalMutation({
     onError: (error: Error) => {
       toast({
         title: 'Erro ao aprovar orçamento',
-        description: error.message,
+        description: operationalErrorMessage(error, 'Não foi possível aprovar o orçamento.'),
         variant: 'destructive',
       });
     },

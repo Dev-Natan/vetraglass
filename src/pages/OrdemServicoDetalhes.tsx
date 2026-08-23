@@ -162,7 +162,7 @@ export default function OrdemServicoDetalhes() {
   const regenerateMutation = useMutation({
     mutationFn: async () => {
       if (!ordem) throw new Error('OS não encontrada');
-      return regenerateOSDocuments(ordem.id, ordem.quote_id);
+      return regenerateOSDocuments(ordem.id);
     },
     onSuccess: (result) => {
       if (result.success) {

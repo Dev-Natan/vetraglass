@@ -1,5 +1,5 @@
 import { parseCurrencyBRL } from '@/utils/currencyMask';
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,19 +49,40 @@ export function ProductCompositionEditor({
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 
   // Reset whenever sheet opens with new product
-  useMemo(() => { if (open) setLines(initialLines); }, [open, initialLines]);
+  useEffect(() => {
+    if (open) setLines(initialLines);
+  }, [open, initialLines]);
 
   const { data: stockOptions = [] } = useQuery<StockOption[]>({
     queryKey: ['composition-stock-options', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('company_items')
-        .select(`id, item_template_id, name, unit, type,
-                 company_stock!company_stock_company_item_id_fkey (quantity)`)
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('name');
+      const [reservationResult, itemResult] = await Promise.all([
+        supabase
+          .from('stock_reservations')
+          .select('company_item_id, quantity_reserved')
+          .eq('company_id', currentCompany.id)
+          .eq('status', 'reserved'),
+        supabase
+          .from('company_items')
+          .select(`id, item_template_id, name, unit, type,
+                   company_stock!company_stock_company_item_id_fkey (quantity)`)
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true)
+          .order('name'),
+      ]);
+      const { data: reservations, error: reservationError } = reservationResult;
+      if (reservationError) throw reservationError;
+      const reservedByItem = new Map<string, number>();
+      (reservations || []).forEach((reservation) => {
+        if (!reservation.company_item_id) return;
+        reservedByItem.set(
+          reservation.company_item_id,
+          (reservedByItem.get(reservation.company_item_id) || 0)
+            + Number(reservation.quantity_reserved || 0),
+        );
+      });
+      const { data, error } = itemResult;
       if (error) {
         // Fallback without nested select if FK alias not present
         const { data: items } = await supabase
@@ -74,23 +95,33 @@ export function ProductCompositionEditor({
           .from('company_stock')
           .select('company_item_id, quantity')
           .eq('company_id', currentCompany.id);
-        const stockMap = new Map((stocks || []).map((s: any) => [s.company_item_id, s.quantity]));
-        return (items || []).map((i: any) => ({
+        const stockMap = new Map<string, number>(
+          (stocks || [])
+            .filter((stock) => stock.company_item_id !== null)
+            .map((stock) => [stock.company_item_id as string, Number(stock.quantity || 0)]),
+        );
+        return (items || []).map((i) => ({
           company_item_id: i.id,
           item_template_id: i.item_template_id,
           name: i.name,
           unit: i.unit,
           type: i.type,
-          available: Number(stockMap.get(i.id) || 0),
+          available: Math.max(
+            0,
+            Number(stockMap.get(i.id) || 0) - (reservedByItem.get(i.id) || 0),
+          ),
         }));
       }
-      return (data || []).map((i: any) => ({
+      return (data || []).map((i) => ({
         company_item_id: i.id,
         item_template_id: i.item_template_id,
         name: i.name,
         unit: i.unit,
         type: i.type,
-        available: Number(i.company_stock?.[0]?.quantity || 0),
+        available: Math.max(
+          0,
+          Number(i.company_stock?.[0]?.quantity || 0) - (reservedByItem.get(i.id) || 0),
+        ),
       }));
     },
     enabled: open && !!currentCompany?.id,

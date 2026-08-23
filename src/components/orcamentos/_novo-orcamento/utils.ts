@@ -12,6 +12,7 @@ export const computeTotals = (items: QuoteItem[], discountPercent: number) => {
 };
 
 export const mapItemForInsert = (item: QuoteItem, quoteId: string) => ({
+  id: item.id || null,
   quote_id: quoteId,
   company_product_id: item.company_product_id || null,
   product_template_id: item.product_template_id || null,

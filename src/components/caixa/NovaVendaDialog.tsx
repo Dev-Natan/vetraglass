@@ -161,13 +161,38 @@ export function NovaVendaDialog({
     queryKey: ['company-stock', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('company_stock')
-        .select('item_template_id, quantity')
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true);
-      if (error) throw error;
-      return data || [];
+      const [stockResult, reservationResult] = await Promise.all([
+        supabase
+          .from('company_stock')
+          .select('item_template_id, company_item_id, quantity')
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true),
+        supabase
+          .from('stock_reservations')
+          .select('company_item_id, quantity_reserved')
+          .eq('company_id', currentCompany.id)
+          .eq('status', 'reserved'),
+      ]);
+      if (stockResult.error) throw stockResult.error;
+      if (reservationResult.error) throw reservationResult.error;
+      const reservedByItem = new Map<string, number>();
+      (reservationResult.data || []).forEach((reservation) => {
+        if (!reservation.company_item_id) return;
+        reservedByItem.set(
+          reservation.company_item_id,
+          (reservedByItem.get(reservation.company_item_id) || 0)
+            + Number(reservation.quantity_reserved || 0),
+        );
+      });
+      return (stockResult.data || []).map((stock) => ({
+        ...stock,
+        physical_quantity: Number(stock.quantity || 0),
+        quantity: Math.max(
+          0,
+          Number(stock.quantity || 0)
+            - (stock.company_item_id ? reservedByItem.get(stock.company_item_id) || 0 : 0),
+        ),
+      }));
     },
     enabled: !!currentCompany?.id,
     staleTime: 30 * 1000, // 30 seconds

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { QuoteFormData, QuoteItem, Quote } from '../types';
 import { mapItemForInsert } from '../utils';
+import { operationalErrorMessage } from '@/utils/operationalError';
 
 interface SubmitParams {
   companyId: string | undefined;
@@ -44,24 +45,16 @@ export function useQuoteSubmit({ companyId, clientId, quote, items, totals, disc
   const createMutation = useMutation({
     mutationFn: async (data: QuoteFormData) => {
       if (!companyId) throw new Error('Empresa não selecionada');
+      if (items.length === 0) throw new Error('Adicione ao menos um item ao orçamento');
 
-      const { data: newQuote, error: quoteError } = await supabase
-        .from('quotes')
-        .insert({ company_id: companyId, ...buildQuotePayload(data) })
-        .select()
-        .single();
-
-      if (quoteError) throw quoteError;
-
-      if (items.length > 0) {
-        const { error: itemsError } = await supabase
-          .from('quote_items')
-          .insert(items.map(item => mapItemForInsert(item, newQuote.id)));
-
-        if (itemsError) throw itemsError;
-      }
-
-      return newQuote;
+      const { data: result, error } = await supabase.rpc('save_quote_transactional', {
+        _company_id: companyId,
+        _quote_id: null,
+        _quote: buildQuotePayload(data),
+        _items: items.map(item => mapItemForInsert(item, '')),
+      });
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -69,50 +62,23 @@ export function useQuoteSubmit({ companyId, clientId, quote, items, totals, disc
       onClose();
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar orçamento', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar orçamento', description: operationalErrorMessage(error, 'Não foi possível salvar o orçamento.'), variant: 'destructive' });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (data: QuoteFormData) => {
       if (!quote?.id) throw new Error('Orçamento não encontrado');
+      if (!companyId) throw new Error('Empresa não selecionada');
+      if (items.length === 0) throw new Error('Adicione ao menos um item ao orçamento');
 
-      // 1) Atualiza o cabeçalho do orçamento
-      const { error: quoteError } = await supabase
-        .from('quotes')
-        .update(buildQuotePayload(data))
-        .eq('id', quote.id);
-
-      if (quoteError) throw quoteError;
-
-      // 2) Captura IDs antigos ANTES de qualquer mutação destrutiva
-      const { data: existingRows, error: fetchError } = await supabase
-        .from('quote_items')
-        .select('id')
-        .eq('quote_id', quote.id);
-
-      if (fetchError) throw fetchError;
-      const oldIds = (existingRows ?? []).map((r) => r.id);
-
-      // 3) Insere os novos itens PRIMEIRO. Se falhar, os antigos permanecem intactos.
-      if (items.length > 0) {
-        const { error: itemsError } = await supabase
-          .from('quote_items')
-          .insert(items.map((item) => mapItemForInsert(item, quote.id)));
-
-        if (itemsError) throw itemsError;
-      }
-
-      // 4) Só agora removemos os antigos. Se essa etapa falhar, o usuário verá
-      // itens duplicados (recuperável) em vez de perder tudo (irrecuperável).
-      if (oldIds.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('quote_items')
-          .delete()
-          .in('id', oldIds);
-
-        if (deleteError) throw deleteError;
-      }
+      const { error } = await supabase.rpc('save_quote_transactional', {
+        _company_id: companyId,
+        _quote_id: quote.id,
+        _quote: buildQuotePayload(data),
+        _items: items.map(item => mapItemForInsert(item, quote.id)),
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -120,7 +86,7 @@ export function useQuoteSubmit({ companyId, clientId, quote, items, totals, disc
       onClose();
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao atualizar orçamento', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao atualizar orçamento', description: operationalErrorMessage(error, 'Não foi possível atualizar o orçamento.'), variant: 'destructive' });
     },
   });
 
