@@ -43,13 +43,19 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 const VIDROS_KEY = '__vidros__';
 const DIVERSOS_KEY = '__diversos__';
+const PERFIS_KEY = '__perfis__';
+
+const normalizeStockType = (type: string | null | undefined) => (type || '').trim().toLowerCase();
+const isProfileType = (type: string | null | undefined) => ['profile', 'perfil'].includes(normalizeStockType(type));
+const isGlassType = (type: string | null | undefined) => ['glass', 'vidro'].includes(normalizeStockType(type));
 
 export default function EstoqueLinha() {
   const { linha: linhaParam = '' } = useParams<{ linha: string }>();
   const decodedLinha = decodeURIComponent(linhaParam);
   const isVidros = decodedLinha === VIDROS_KEY;
   const isDiversos = decodedLinha === DIVERSOS_KEY;
-  const pageTitle = isVidros ? 'Vidros' : isDiversos ? 'Acessórios / Diversos' : decodedLinha;
+  const isPerfis = decodedLinha === PERFIS_KEY;
+  const pageTitle = isVidros ? 'Vidros' : isDiversos ? 'Acessórios / Diversos' : isPerfis ? 'Perfis' : decodedLinha;
 
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
@@ -133,7 +139,7 @@ export default function EstoqueLinha() {
     const cats = new Set<string>();
     activeItems.forEach(item => {
       const type = item.company_item?.type ?? item.item_template?.type;
-      if (type) cats.add(type);
+      if (type) cats.add(normalizeStockType(type));
     });
     return Array.from(cats);
   }, [activeItems]);
@@ -157,11 +163,12 @@ export default function EstoqueLinha() {
       const linha = item.company_item?.linha ?? item.item_template?.linha;
       const type = item.company_item?.type ?? item.item_template?.type;
       if (isVidros) {
-        if (type !== 'glass' && type !== 'vidro') return false;
+        if (!isGlassType(type)) return false;
         if (semLinhaOnly) return !linha;
         return true;
       }
-      if (isDiversos) return !linha && type !== 'glass' && type !== 'vidro';
+      if (isPerfis) return isProfileType(type);
+      if (isDiversos) return !linha && !isGlassType(type);
       return (linha || '') === decodedLinha;
     });
     if (searchTerm) {
@@ -174,17 +181,22 @@ export default function EstoqueLinha() {
     if (categoryFilter === 'diversos') {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
-        return type !== 'perfil' && type !== 'vidro' && type !== 'glass';
+        return !isProfileType(type) && !isGlassType(type);
       });
-    } else if (categoryFilter === 'vidro') {
+    } else if (categoryFilter === 'vidro' || categoryFilter === 'glass') {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
-        return type === 'vidro' || type === 'glass';
+        return isGlassType(type);
+      });
+    } else if (categoryFilter === 'perfil' || categoryFilter === 'profile') {
+      items = items.filter((item) => {
+        const type = item.company_item?.type ?? item.item_template?.type;
+        return isProfileType(type);
       });
     } else if (categoryFilter !== 'all') {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
-        return type === categoryFilter;
+        return normalizeStockType(type) === normalizeStockType(categoryFilter);
       });
     }
     if (statusFilter === 'low') items = items.filter((item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0);
@@ -206,7 +218,7 @@ export default function EstoqueLinha() {
       inStockItems: items.filter(item => item.quantity > 0),
       outOfStockItems: items.filter(item => item.quantity === 0),
     };
-  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha, semLinhaOnly]);
+  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, isPerfis, decodedLinha, semLinhaOnly]);
 
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
@@ -255,10 +267,12 @@ export default function EstoqueLinha() {
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <Boxes className="w-7 h-7 text-primary" />
               Estoque · {pageTitle}
-              {lockedTipo === 'perfil' ? ' · Perfis' : lockedTipo === 'diversos' ? ' · Acessórios/Diversos' : lockedTipo === 'vidro' ? ' · Vidros' : ''}
+              {!isVidros && !isDiversos && !isPerfis && (lockedTipo === 'perfil' ? ' · Perfis' : lockedTipo === 'diversos' ? ' · Acessórios/Diversos' : lockedTipo === 'vidro' ? ' · Vidros' : '')}
             </h1>
             <p className="text-muted-foreground">
-              {lockedTipo === 'perfil'
+              {isPerfis
+                ? 'Todos os perfis da empresa, independentemente da linha.'
+                : lockedTipo === 'perfil'
                 ? `Somente perfis da linha ${pageTitle}`
                 : lockedTipo === 'diversos'
                 ? `Somente acessórios/diversos da linha ${pageTitle}`
@@ -469,36 +483,14 @@ export default function EstoqueLinha() {
         open={entradaDialogOpen}
         onOpenChange={setEntradaDialogOpen}
         tipo="entrada"
-        stockItems={activeItems.map(item => ({
-          id: item.id,
-          item_template_id: item.item_template_id,
-          company_item_id: item.company_item?.id ?? null,
-          quantity: item.quantity,
-          item_template: item.item_template ? {
-            id: item.item_template.id, name: item.item_template.name,
-            unit: item.item_template.unit, image_url: item.item_template.image_url || undefined,
-            type: item.item_template.type, linha: item.item_template.linha,
-            bar_length_mm: (item.item_template as any).bar_length_mm ?? (item.company_item as any)?.bar_length_mm ?? null,
-          } : undefined,
-        }))}
+        stockItems={activeItems}
       />
 
       <RegistrarMovimentoDialog
         open={saidaDialogOpen}
         onOpenChange={setSaidaDialogOpen}
         tipo="saida"
-        stockItems={activeItems.map(item => ({
-          id: item.id,
-          item_template_id: item.item_template_id,
-          company_item_id: item.company_item?.id ?? null,
-          quantity: item.quantity,
-          item_template: item.item_template ? {
-            id: item.item_template.id, name: item.item_template.name,
-            unit: item.item_template.unit, image_url: item.item_template.image_url || undefined,
-            type: item.item_template.type, linha: item.item_template.linha,
-            bar_length_mm: (item.item_template as any).bar_length_mm ?? (item.company_item as any)?.bar_length_mm ?? null,
-          } : undefined,
-        }))}
+        stockItems={activeItems}
       />
       <ItemHistoricoDialog
         open={!!historyItem}

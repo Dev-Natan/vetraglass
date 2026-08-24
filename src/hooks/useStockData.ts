@@ -98,7 +98,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       if (!companyId) return [];
       const { data, error } = await supabase
         .from('stock_reservations')
-        .select('company_item_id, quantity_reserved')
+        .select('company_item_id, quantity_reserved, canonical_quantity')
         .eq('company_id', companyId)
         .eq('status', 'reserved');
       if (error) throw error;
@@ -115,12 +115,18 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     const templatesMap = new Map(templatesQuery.data.map(t => [t.id, t]));
     const companyItemsMap = new Map(companyItemsQuery.data?.map(ci => [ci.id, ci]) || []);
     const pricesMap = new Map(pricesQuery.data?.map(p => [p.item_template_id, p]) || []);
+    const stockByCompanyItem = new Map(
+      (stockQuery.data || []).flatMap((stock) => stock.company_item_id ? [[stock.company_item_id, stock] as const] : []),
+    );
     const reservedByCompanyItem = new Map<string, number>();
     (reservationsQuery.data || []).forEach((reservation) => {
       if (!reservation.company_item_id) return;
+      const item = stockByCompanyItem.get(reservation.company_item_id);
+      const factor = Number(item?.consumption_to_canonical_factor || 1);
+      const canonical = Number(reservation.canonical_quantity ?? Number(reservation.quantity_reserved || 0) * factor);
       reservedByCompanyItem.set(
         reservation.company_item_id,
-        (reservedByCompanyItem.get(reservation.company_item_id) || 0) + Number(reservation.quantity_reserved || 0),
+        (reservedByCompanyItem.get(reservation.company_item_id) || 0) + canonical / factor,
       );
     });
     
@@ -144,6 +150,8 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
         company_item_id: null,
         company_id: companyId || '',
         quantity: 0,
+        canonical_quantity: 0,
+        package_quantity: 0,
         reserved_quantity: 0,
         min_quantity: 0,
         location: null,
@@ -180,11 +188,8 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
   const kpis = useMemo(() => {
     const totalItems = activeItems.length;
     
-    // Calculate total value (quantity × cost) - prefer company_item cost for custom items
-    const totalValue = activeItems.reduce((acc, item) => {
-      const cost = item.company_item?.cost || item.priceInfo?.cost || 0;
-      return acc + (item.quantity * cost);
-    }, 0);
+    // Physical valuation is intentionally independent from commercial pricing.
+    const totalValue = activeItems.reduce((acc, item) => acc + Number(item.inventory_value || 0), 0);
     
     const lowStockCount = lowStockItems.length;
     

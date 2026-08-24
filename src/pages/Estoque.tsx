@@ -17,9 +17,11 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useDebounce } from '@/hooks/useDebounce';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
+import type { StockItem } from '@/types/estoque';
 
 const VIDROS_KEY = '__vidros__';
 const DIVERSOS_KEY = '__diversos__';
+const PERFIS_KEY = '__perfis__';
 
 function slug(s: string) {
   return encodeURIComponent(s);
@@ -89,11 +91,11 @@ export default function Estoque() {
     const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
     const byLinhaDiversos = new Map<string, { items: number; qty: number }>();
     const byLinhaVidros = new Map<string, { items: number; qty: number }>();
-    let vidros = { items: 0, qty: 0 };
-    let vidrosSemLinha = { items: 0, qty: 0 };
-    let diversos = { items: 0, qty: 0 };
-    let diversosSemLinha = { items: 0, qty: 0 };
-    let perfis = { items: 0, qty: 0 };
+    const vidros = { items: 0, qty: 0 };
+    const vidrosSemLinha = { items: 0, qty: 0 };
+    const diversos = { items: 0, qty: 0 };
+    const diversosSemLinha = { items: 0, qty: 0 };
+    const perfis = { items: 0, qty: 0 };
 
     for (const it of activeItems) {
       const linha = (it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
@@ -115,7 +117,7 @@ export default function Estoque() {
         continue;
       }
 
-      if (type === 'perfil') {
+      if (type === 'perfil' || type === 'profile') {
         perfis.items++;
         perfis.qty += qty;
         if (linha && (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase()))) {
@@ -167,13 +169,13 @@ export default function Estoque() {
     : view === 'vidros' ? 'Selecione a linha do vidro (Temperados, Comum, etc.).'
     : 'Selecione a linha dos acessórios/diversos.';
 
-  function goToItem(it: any) {
+  function goToItem(it: StockItem) {
     const linha = (it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
     const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
     let tipo = 'diversos';
     if (type === 'glass' || type === 'vidro') tipo = 'vidro';
     else if (type === 'perfil' || type === 'profile') tipo = 'perfil';
-    const key = linha || (tipo === 'vidro' ? VIDROS_KEY : DIVERSOS_KEY);
+    const key = linha || (tipo === 'vidro' ? VIDROS_KEY : tipo === 'perfil' ? PERFIS_KEY : DIVERSOS_KEY);
     navigate(`/estoque/linha/${slug(key)}?tipo=${tipo}`);
     setSearch('');
   }
@@ -375,6 +377,13 @@ export default function Estoque() {
           </div>
         ) : view === 'perfis' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <StockCard
+              to={`/estoque/linha/${slug(PERFIS_KEY)}?tipo=perfil`}
+              icon={<Blocks className="w-6 h-6" />}
+              title="Todos os Perfis"
+              subtitle={`${stats.perfis.items} perfil(is) · ${stats.perfis.qty.toFixed(2)} m em saldo`}
+              badge="Ver tudo"
+            />
             {stats.linhasPerfil.length === 0 ? (
               <Card className="col-span-full">
                 <CardContent className="py-8 text-center text-muted-foreground">
@@ -466,7 +475,7 @@ export default function Estoque() {
           open={!!movDialog}
           onOpenChange={(o) => { if (!o) setMovDialog(null); }}
           tipo={movDialog.tipo}
-          stockItems={activeItems as any}
+          stockItems={activeItems}
         />
       )}
 

@@ -1545,6 +1545,13 @@ export type Database = {
             referencedRelation: "company_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "company_item_variants_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
         ]
       }
       company_items: {
@@ -1977,6 +1984,13 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
+            foreignKeyName: "company_parametric_overrides_company_item_fk"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+          {
             foreignKeyName: "company_parametric_rule_overrides_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -2129,6 +2143,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
           },
           {
             foreignKeyName: "company_product_items_company_product_id_fkey"
@@ -2429,44 +2450,68 @@ export type Database = {
       company_stock: {
         Row: {
           allow_fractional: boolean
+          average_unit_cost: number | null
+          canonical_quantity: number
+          canonical_unit: string | null
           company_id: string
           company_item_id: string | null
           created_at: string
           id: string
+          inventory_value: number | null
           is_active: boolean
           item_template_id: string | null
+          legacy_quantity: number | null
+          legacy_unit: string | null
           location: string | null
           min_quantity: number | null
           quantity: number
           supplier_name: string | null
+          unit_migrated_at: string | null
+          unit_status: string
           updated_at: string
         }
         Insert: {
           allow_fractional?: boolean
+          average_unit_cost?: number | null
+          canonical_quantity?: number
+          canonical_unit?: string | null
           company_id: string
           company_item_id?: string | null
           created_at?: string
           id?: string
+          inventory_value?: number | null
           is_active?: boolean
           item_template_id?: string | null
+          legacy_quantity?: number | null
+          legacy_unit?: string | null
           location?: string | null
           min_quantity?: number | null
           quantity?: number
           supplier_name?: string | null
+          unit_migrated_at?: string | null
+          unit_status?: string
           updated_at?: string
         }
         Update: {
           allow_fractional?: boolean
+          average_unit_cost?: number | null
+          canonical_quantity?: number
+          canonical_unit?: string | null
           company_id?: string
           company_item_id?: string | null
           created_at?: string
           id?: string
+          inventory_value?: number | null
           is_active?: boolean
           item_template_id?: string | null
+          legacy_quantity?: number | null
+          legacy_unit?: string | null
           location?: string | null
           min_quantity?: number | null
           quantity?: number
           supplier_name?: string | null
+          unit_migrated_at?: string | null
+          unit_status?: string
           updated_at?: string
         }
         Relationships: [
@@ -2483,6 +2528,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_stock_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
           },
           {
             foreignKeyName: "company_stock_item_template_id_fkey"
@@ -3721,6 +3773,91 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_item_units: {
+        Row: {
+          canonical_unit: string
+          company_id: string
+          company_item_id: string
+          consumption_to_canonical_factor: number | null
+          consumption_unit: string
+          cost_policy: string
+          created_at: string
+          default_height_mm: number | null
+          default_width_mm: number | null
+          id: string
+          legacy_status: string
+          nominal_length_mm: number | null
+          physical_dimension: string
+          purchase_to_canonical_factor: number | null
+          purchase_unit: string
+          stock_to_canonical_factor: number | null
+          stock_unit: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_unit: string
+          company_id: string
+          company_item_id: string
+          consumption_to_canonical_factor?: number | null
+          consumption_unit: string
+          cost_policy?: string
+          created_at?: string
+          default_height_mm?: number | null
+          default_width_mm?: number | null
+          id?: string
+          legacy_status?: string
+          nominal_length_mm?: number | null
+          physical_dimension: string
+          purchase_to_canonical_factor?: number | null
+          purchase_unit: string
+          stock_to_canonical_factor?: number | null
+          stock_unit: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_unit?: string
+          company_id?: string
+          company_item_id?: string
+          consumption_to_canonical_factor?: number | null
+          consumption_unit?: string
+          cost_policy?: string
+          created_at?: string
+          default_height_mm?: number | null
+          default_width_mm?: number | null
+          id?: string
+          legacy_status?: string
+          nominal_length_mm?: number | null
+          physical_dimension?: string
+          purchase_to_canonical_factor?: number | null
+          purchase_unit?: string
+          stock_to_canonical_factor?: number | null
+          stock_unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_item_units_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_item_units_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "inventory_item_units_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+        ]
+      }
       investment_allocations: {
         Row: {
           color: string
@@ -4058,6 +4195,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
           },
           {
             foreignKeyName: "material_consumption_item_template_id_fkey"
@@ -4980,6 +5124,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "os_glass_pieces_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
+          {
             foreignKeyName: "os_glass_pieces_item_template_id_fkey"
             columns: ["item_template_id"]
             isOneToOne: false
@@ -5144,6 +5295,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
           },
         ]
       }
@@ -5371,6 +5529,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "os_materials_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
+          {
             foreignKeyName: "os_materials_item_template_id_fkey"
             columns: ["item_template_id"]
             isOneToOne: false
@@ -5515,6 +5680,105 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physical_stock_balances: {
+        Row: {
+          average_cost_per_canonical: number | null
+          canonical_quantity: number
+          company_id: string
+          company_item_id: string
+          created_at: string
+          document_reference: string | null
+          height_mm: number | null
+          id: string
+          inventory_value: number | null
+          location_id: string
+          lot_code: string
+          needs_review: boolean
+          package_quantity: number
+          supplier_name: string | null
+          thickness_mm: number | null
+          updated_at: string
+          variant_id: string | null
+          width_mm: number | null
+        }
+        Insert: {
+          average_cost_per_canonical?: number | null
+          canonical_quantity?: number
+          company_id: string
+          company_item_id: string
+          created_at?: string
+          document_reference?: string | null
+          height_mm?: number | null
+          id?: string
+          inventory_value?: number | null
+          location_id: string
+          lot_code?: string
+          needs_review?: boolean
+          package_quantity?: number
+          supplier_name?: string | null
+          thickness_mm?: number | null
+          updated_at?: string
+          variant_id?: string | null
+          width_mm?: number | null
+        }
+        Update: {
+          average_cost_per_canonical?: number | null
+          canonical_quantity?: number
+          company_id?: string
+          company_item_id?: string
+          created_at?: string
+          document_reference?: string | null
+          height_mm?: number | null
+          id?: string
+          inventory_value?: number | null
+          location_id?: string
+          lot_code?: string
+          needs_review?: boolean
+          package_quantity?: number
+          supplier_name?: string | null
+          thickness_mm?: number | null
+          updated_at?: string
+          variant_id?: string | null
+          width_mm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physical_stock_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_stock_balances_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "physical_stock_balances_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+          {
+            foreignKeyName: "physical_stock_balances_location_company_fkey"
+            columns: ["location_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "physical_stock_balances_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -6726,6 +6990,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quote_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
+          {
             foreignKeyName: "quote_items_company_product_id_fkey"
             columns: ["company_product_id"]
             isOneToOne: false
@@ -7066,6 +7337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_item_components_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
           },
           {
             foreignKeyName: "sale_item_components_item_template_id_fkey"
@@ -7596,63 +7874,162 @@ export type Database = {
           },
         ]
       }
+      stock_locations: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          kind: string
+          name: string
+          needs_review: boolean
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          kind?: string
+          name: string
+          needs_review?: boolean
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          kind?: string
+          name?: string
+          needs_review?: boolean
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locations_parent_company_fkey"
+            columns: ["parent_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
+          canonical_quantity: number | null
+          canonical_unit: string | null
           cash_movement_id: string | null
           category: string
           company_id: string
           company_item_id: string | null
+          conversion_factor: number | null
+          conversion_snapshot: Json
           created_at: string
           created_by: string | null
           description: string | null
+          document_reference: string | null
           expense_id: string | null
+          height_mm: number | null
           id: string
+          idempotency_key: string | null
           item_template_id: string | null
+          location_id: string | null
+          lot_code: string | null
+          original_quantity: number | null
+          original_unit: string | null
           quantity: number
           reference_id: string | null
           reference_type: string | null
           sale_id: string | null
+          supplier_name: string | null
           type: string
           unit_cost: number | null
           valor_financeiro: number
+          variant_id: string | null
+          width_mm: number | null
         }
         Insert: {
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           cash_movement_id?: string | null
           category: string
           company_id: string
           company_item_id?: string | null
+          conversion_factor?: number | null
+          conversion_snapshot?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
+          document_reference?: string | null
           expense_id?: string | null
+          height_mm?: number | null
           id?: string
+          idempotency_key?: string | null
           item_template_id?: string | null
+          location_id?: string | null
+          lot_code?: string | null
+          original_quantity?: number | null
+          original_unit?: string | null
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
           sale_id?: string | null
+          supplier_name?: string | null
           type: string
           unit_cost?: number | null
           valor_financeiro?: number
+          variant_id?: string | null
+          width_mm?: number | null
         }
         Update: {
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           cash_movement_id?: string | null
           category?: string
           company_id?: string
           company_item_id?: string | null
+          conversion_factor?: number | null
+          conversion_snapshot?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
+          document_reference?: string | null
           expense_id?: string | null
+          height_mm?: number | null
           id?: string
+          idempotency_key?: string | null
           item_template_id?: string | null
+          location_id?: string | null
+          lot_code?: string | null
+          original_quantity?: number | null
+          original_unit?: string | null
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
           sale_id?: string | null
+          supplier_name?: string | null
           type?: string
           unit_cost?: number | null
           valor_financeiro?: number
+          variant_id?: string | null
+          width_mm?: number | null
         }
         Relationships: [
           {
@@ -7677,6 +8054,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movements_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
+          {
             foreignKeyName: "stock_movements_expense_id_fkey"
             columns: ["expense_id"]
             isOneToOne: false
@@ -7691,16 +8075,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movements_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_offcuts: {
         Row: {
+          area_mm2: number | null
+          canonical_quantity: number | null
+          canonical_unit: string | null
           color: string | null
           company_id: string
           company_item_id: string | null
@@ -7711,6 +8112,7 @@ export type Database = {
           item_template_id: string | null
           kind: string
           length_mm: number | null
+          location_id: string | null
           name: string
           notes: string | null
           quantity: number
@@ -7720,9 +8122,13 @@ export type Database = {
           status: string
           thickness: number | null
           updated_at: string
+          variant_id: string | null
           width_mm: number | null
         }
         Insert: {
+          area_mm2?: number | null
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           color?: string | null
           company_id: string
           company_item_id?: string | null
@@ -7733,6 +8139,7 @@ export type Database = {
           item_template_id?: string | null
           kind: string
           length_mm?: number | null
+          location_id?: string | null
           name: string
           notes?: string | null
           quantity?: number
@@ -7742,9 +8149,13 @@ export type Database = {
           status?: string
           thickness?: number | null
           updated_at?: string
+          variant_id?: string | null
           width_mm?: number | null
         }
         Update: {
+          area_mm2?: number | null
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           color?: string | null
           company_id?: string
           company_item_id?: string | null
@@ -7755,6 +8166,7 @@ export type Database = {
           item_template_id?: string | null
           kind?: string
           length_mm?: number | null
+          location_id?: string | null
           name?: string
           notes?: string | null
           quantity?: number
@@ -7764,6 +8176,7 @@ export type Database = {
           status?: string
           thickness?: number | null
           updated_at?: string
+          variant_id?: string | null
           width_mm?: number | null
         }
         Relationships: [
@@ -7782,10 +8195,24 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
+            foreignKeyName: "stock_offcuts_company_item_company_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+          {
             foreignKeyName: "stock_offcuts_item_template_id_fkey"
             columns: ["item_template_id"]
             isOneToOne: false
             referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_offcuts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
             referencedColumns: ["id"]
           },
           {
@@ -7795,17 +8222,28 @@ export type Database = {
             referencedRelation: "ordens_servico"
             referencedColumns: ["id", "company_id"]
           },
+          {
+            foreignKeyName: "stock_offcuts_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_reservations: {
         Row: {
           cancelled_at: string | null
+          canonical_quantity: number | null
+          canonical_unit: string | null
           company_id: string
           company_item_id: string
           consumed_at: string | null
+          conversion_factor: number | null
           created_at: string | null
           created_by: string | null
           id: string
+          location_id: string | null
           ordem_servico_id: string
           os_glass_project_id: string | null
           quantity_reserved: number
@@ -7814,15 +8252,20 @@ export type Database = {
           unit: string
           unit_cost: number | null
           updated_at: string | null
+          variant_id: string | null
         }
         Insert: {
           cancelled_at?: string | null
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           company_id: string
           company_item_id: string
           consumed_at?: string | null
+          conversion_factor?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
+          location_id?: string | null
           ordem_servico_id: string
           os_glass_project_id?: string | null
           quantity_reserved: number
@@ -7831,15 +8274,20 @@ export type Database = {
           unit?: string
           unit_cost?: number | null
           updated_at?: string | null
+          variant_id?: string | null
         }
         Update: {
           cancelled_at?: string | null
+          canonical_quantity?: number | null
+          canonical_unit?: string | null
           company_id?: string
           company_item_id?: string
           consumed_at?: string | null
+          conversion_factor?: number | null
           created_at?: string | null
           created_by?: string | null
           id?: string
+          location_id?: string | null
           ordem_servico_id?: string
           os_glass_project_id?: string | null
           quantity_reserved?: number
@@ -7848,6 +8296,7 @@ export type Database = {
           unit?: string
           unit_cost?: number | null
           updated_at?: string | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -7865,6 +8314,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_reservations_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_reservations_ordem_servico_id_fkey"
             columns: ["ordem_servico_id"]
             isOneToOne: false
@@ -7876,6 +8339,13 @@ export type Database = {
             columns: ["os_glass_project_id"]
             isOneToOne: false
             referencedRelation: "os_glass_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -8210,6 +8680,55 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      physical_inventory_summary: {
+        Row: {
+          average_cost_per_canonical: number | null
+          average_cost_per_consumption_unit: number | null
+          canonical_quantity: number | null
+          canonical_unit: string | null
+          commercial_cost: number | null
+          commercial_sale_price: number | null
+          company_id: string | null
+          company_item_id: string | null
+          consumption_to_canonical_factor: number | null
+          consumption_unit: string | null
+          cost_policy: string | null
+          image_url: string | null
+          inventory_value: number | null
+          item_template_id: string | null
+          legacy_status: string | null
+          linha: string | null
+          location_count: number | null
+          locations: Json | null
+          name: string | null
+          nominal_length_mm: number | null
+          package_quantity: number | null
+          physical_dimension: string | null
+          pricing_unit: string | null
+          purchase_to_canonical_factor: number | null
+          purchase_unit: string | null
+          stock_unit: string | null
+          type: string | null
+          unit: string | null
+          variant_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_items_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -8578,6 +9097,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_stock_location: {
+        Args: {
+          _code: string
+          _company_id: string
+          _kind?: string
+          _name: string
+          _parent_id?: string
+        }
+        Returns: string
+      }
       deactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -8928,6 +9457,16 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      phase3f_normalize_unit: { Args: { _unit: string }; Returns: string }
+      phase3f_unit_factor: {
+        Args: {
+          _company_item_id: string
+          _height_mm?: number
+          _unit: string
+          _width_mm?: number
+        }
+        Returns: number
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -8989,6 +9528,28 @@ export type Database = {
           _user_agent?: string
         }
         Returns: undefined
+      }
+      record_physical_stock_movement: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _conversion_factor?: number
+          _direction: string
+          _document_reference?: string
+          _height_mm?: number
+          _idempotency_key?: string
+          _location_id: string
+          _lot_code?: string
+          _metadata?: Json
+          _original_quantity: number
+          _original_unit: string
+          _reason: string
+          _supplier_name?: string
+          _total_cost?: number
+          _variant_id?: string
+          _width_mm?: number
+        }
+        Returns: Json
       }
       refresh_daily_summary: { Args: never; Returns: undefined }
       register_cash_count: {

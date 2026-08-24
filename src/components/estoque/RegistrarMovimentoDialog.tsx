@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -24,19 +24,35 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight, MapPin, Plus } from 'lucide-react';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { cn } from '@/lib/utils';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { estoqueService } from '@/services/estoqueService';
+import { operationalErrorMessage } from '@/utils/operationalError';
 
 interface StockItem {
   id: string;
-  item_template_id: string;
+  item_template_id: string | null;
   company_item_id?: string | null;
   quantity: number;
-  company_item?: { id: string } | null;
+  canonical_quantity?: number;
+  canonical_unit?: string | null;
+  package_quantity?: number;
+  purchase_unit?: string | null;
+  consumption_unit?: string | null;
+  nominal_length_mm?: number | null;
+  company_item?: {
+    id: string;
+    name?: string;
+    unit?: string;
+    image_url?: string | null;
+    type?: string;
+    linha?: string | null;
+    bar_length_mm?: number | null;
+  } | null;
   item_template?: {
     id: string;
     name: string;
@@ -104,6 +120,20 @@ export function RegistrarMovimentoDialog({
   const [pieceHeight, setPieceHeight] = useState<string>('');
   const [pieceQty, setPieceQty] = useState<string>('1');
   const [linearMeters, setLinearMeters] = useState<string>('');
+  const [locationId, setLocationId] = useState('');
+  const [newLocationName, setNewLocationName] = useState('');
+  const [newLocationCode, setNewLocationCode] = useState('');
+  const [totalCost, setTotalCost] = useState('');
+  const [supplierName, setSupplierName] = useState('');
+  const [documentReference, setDocumentReference] = useState('');
+  const [lotCode, setLotCode] = useState('');
+
+  const locationsQuery = useQuery({
+    queryKey: ['stock-locations', currentCompany?.id],
+    queryFn: () => estoqueService.fetchLocations(currentCompany!.id),
+    enabled: open && !!currentCompany?.id,
+  });
+  const usableLocations = (locationsQuery.data || []).filter((location) => !location.needs_review);
 
   const isEntrada = tipo === 'entrada';
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
@@ -111,9 +141,9 @@ export function RegistrarMovimentoDialog({
   const selectedStockItem = stockItems.find(item => item.id === selectedItem);
 
   // Classificação da unidade
-  const itemType = (selectedStockItem?.item_template?.type || '').toLowerCase();
-  const rawUnit = (selectedStockItem?.item_template?.unit || '').toLowerCase().trim();
-  const barLengthMm = selectedStockItem?.item_template?.bar_length_mm || 0;
+  const itemType = (selectedStockItem?.company_item?.type || selectedStockItem?.item_template?.type || '').toLowerCase();
+  const rawUnit = (selectedStockItem?.consumption_unit || selectedStockItem?.company_item?.unit || selectedStockItem?.item_template?.unit || '').toLowerCase().trim();
+  const barLengthMm = selectedStockItem?.nominal_length_mm || selectedStockItem?.company_item?.bar_length_mm || selectedStockItem?.item_template?.bar_length_mm || 0;
   const barLengthM = barLengthMm > 0 ? barLengthMm / 1000 : 0;
 
   const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
@@ -123,9 +153,9 @@ export function RegistrarMovimentoDialog({
   const handleSelectItem = (id: string) => {
     setSelectedItem(id);
     const it = stockItems.find(x => x.id === id);
-    const t = (it?.item_template?.type || '').toLowerCase();
-    const u = (it?.item_template?.unit || '').toLowerCase();
-    const bl = it?.item_template?.bar_length_mm || 0;
+    const t = (it?.company_item?.type || it?.item_template?.type || '').toLowerCase();
+    const u = (it?.consumption_unit || it?.company_item?.unit || it?.item_template?.unit || '').toLowerCase();
+    const bl = it?.nominal_length_mm || it?.company_item?.bar_length_mm || it?.item_template?.bar_length_mm || 0;
     if (t === 'glass' || t === 'vidro' || u === 'm2') {
       setInputMode('piece');
     } else if (t === 'profile' || t === 'perfil' || bl > 0) {
@@ -143,9 +173,10 @@ export function RegistrarMovimentoDialog({
     setQuantidade('');
   };
 
-  // Calcula a quantidade final (na unidade de estoque) e um resumo textual
+  // Produz o contrato físico enviado ao banco; quantidade nunca viaja sem unidade.
   const computed = useMemo(() => {
-    if (!selectedStockItem) return { quantity: 0, storageUnit: '', summary: '', autoNote: '' };
+    const empty = { quantity: 0, originalQuantity: 0, originalUnit: '', storageUnit: '', summary: '', autoNote: '', widthMm: null as number | null, heightMm: null as number | null };
+    if (!selectedStockItem) return empty;
     const storageUnit = rawUnit || 'un';
 
     if (isGlass) {
@@ -156,9 +187,13 @@ export function RegistrarMovimentoDialog({
         const areaM2 = (w / 1000) * (h / 1000) * q;
         return {
           quantity: Number(areaM2.toFixed(4)),
+          originalQuantity: q,
+          originalUnit: 'SHEET',
           storageUnit: 'm²',
           summary: w && h && q ? `${q}× peça(s) de ${w} × ${h} mm = ${areaM2.toFixed(3)} m²` : '',
           autoNote: w && h && q ? `Peça cortada: ${q}× ${w}×${h} mm` : '',
+          widthMm: w || null,
+          heightMm: h || null,
         };
       }
       if (inputMode === 'sheet') {
@@ -169,9 +204,13 @@ export function RegistrarMovimentoDialog({
         const total = areaPer * sq;
         return {
           quantity: Number(total.toFixed(4)),
+          originalQuantity: sq,
+          originalUnit: 'SHEET',
           storageUnit: 'm²',
           summary: sw && sh && sq ? `${sq}× chapa(s) de ${sw} × ${sh} mm = ${total.toFixed(3)} m²` : '',
           autoNote: sw && sh && sq ? `Chapa inteira: ${sq}× ${sw}×${sh} mm` : '',
+          widthMm: sw || null,
+          heightMm: sh || null,
         };
       }
     }
@@ -182,44 +221,53 @@ export function RegistrarMovimentoDialog({
         // Armazenamento em barras
         const totalM = barLengthM > 0 ? q * barLengthM : 0;
         return {
-          quantity: q,
+          quantity: totalM,
+          originalQuantity: q,
+          originalUnit: 'BAR',
           storageUnit: 'barra(s)',
           summary: q ? (barLengthM > 0 ? `${q} barra(s) de ${barLengthM} m = ${totalM.toFixed(2)} m` : `${q} barra(s)`) : '',
           autoNote: '',
+          widthMm: null,
+          heightMm: null,
         };
       }
       if (inputMode === 'linear') {
         const meters = parseFloat(linearMeters) || 0;
         if (barLengthM <= 0) {
-          return { quantity: meters, storageUnit: 'm', summary: meters ? `${meters} m lineares` : '', autoNote: '' };
+          return { quantity: meters, originalQuantity: meters, originalUnit: 'M', storageUnit: 'm', summary: meters ? `${meters} m lineares` : '', autoNote: '', widthMm: null, heightMm: null };
         }
         const bars = meters / barLengthM;
         const barrasInteiras = Math.floor(bars);
         const retalhoM = Number((meters - barrasInteiras * barLengthM).toFixed(3));
         const retalhoTxt = retalhoM > 0 ? ` + retalho de ${retalhoM.toFixed(2)} m` : '';
         return {
-          quantity: Number(bars.toFixed(4)),
-          storageUnit: 'barra(s) equivalentes',
+          quantity: meters,
+          originalQuantity: meters,
+          originalUnit: 'M',
+          storageUnit: 'm',
           summary: meters ? `${meters} m lineares = ${bars.toFixed(3)} barras (${barrasInteiras} inteira(s)${retalhoTxt})` : '',
           autoNote: meters ? `Metro linear: ${meters} m${retalhoM > 0 ? ` (retalho ${retalhoM.toFixed(2)} m)` : ''}` : '',
+          widthMm: null,
+          heightMm: null,
         };
       }
     }
 
     // Padrão: unidade simples
     const q = parseFloat(quantidade) || 0;
-    return { quantity: q, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '' };
+    return { quantity: q, originalQuantity: q, originalUnit: storageUnit, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '', widthMm: null, heightMm: null };
   }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit]);
 
 
   // Filtrar itens por busca
   const filteredItems = useMemo(() => {
     return stockItems.filter(item => {
-      if (!item.item_template) return false;
+      const name = item.company_item?.name || item.item_template?.name;
+      if (!name) return false;
       const matchesSearch = !searchTerm || 
-        item.item_template.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLinha = selectedLinha === ALL_VALUE || item.item_template.linha === selectedLinha;
-      const matchesCategoria = selectedCategoria === ALL_VALUE || item.item_template.type === selectedCategoria;
+        name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesLinha = selectedLinha === ALL_VALUE || (item.company_item?.linha || item.item_template?.linha) === selectedLinha;
+      const matchesCategoria = selectedCategoria === ALL_VALUE || (item.company_item?.type || item.item_template?.type) === selectedCategoria;
       return matchesSearch && matchesLinha && matchesCategoria;
     });
   }, [stockItems, searchTerm, selectedLinha, selectedCategoria]);
@@ -232,8 +280,9 @@ export function RegistrarMovimentoDialog({
     // Também incluir linhas existentes nos itens (para compatibilidade com dados legados)
     const linhasFromItems = new Set<string>();
     stockItems.forEach(item => {
-      if (item.item_template?.linha) {
-        linhasFromItems.add(item.item_template.linha);
+      const linha = item.company_item?.linha || item.item_template?.linha;
+      if (linha) {
+        linhasFromItems.add(linha);
       }
     });
     
@@ -246,10 +295,11 @@ export function RegistrarMovimentoDialog({
   const availableCategorias = useMemo(() => {
     const categorias = new Set<string>();
     stockItems
-      .filter(item => selectedLinha === ALL_VALUE || item.item_template?.linha === selectedLinha)
+      .filter(item => selectedLinha === ALL_VALUE || (item.company_item?.linha || item.item_template?.linha) === selectedLinha)
       .forEach(item => {
-        if (item.item_template?.type) {
-          categorias.add(item.item_template.type);
+        const type = item.company_item?.type || item.item_template?.type;
+        if (type) {
+          categorias.add(type);
         }
       });
     return Array.from(categorias).sort();
@@ -260,8 +310,8 @@ export function RegistrarMovimentoDialog({
     const grouped: Record<string, Record<string, StockItem[]>> = {};
     
     filteredItems.forEach(item => {
-      const linhaKey = item.item_template?.linha || 'Sem Linha';
-      const typeKey = item.item_template?.type || 'other';
+      const linhaKey = item.company_item?.linha || item.item_template?.linha || 'Sem Linha';
+      const typeKey = item.company_item?.type || item.item_template?.type || 'other';
       
       if (!grouped[linhaKey]) grouped[linhaKey] = {};
       if (!grouped[linhaKey][typeKey]) grouped[linhaKey][typeKey] = [];
@@ -292,9 +342,33 @@ export function RegistrarMovimentoDialog({
     });
   };
 
+  const createLocationMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id || !newLocationName.trim() || !newLocationCode.trim()) {
+        throw new Error('MISSING_LOCATION');
+      }
+      const { data, error } = await supabase.rpc('create_stock_location', {
+        _company_id: currentCompany.id,
+        _name: newLocationName.trim(),
+        _code: newLocationCode.trim(),
+        _kind: 'POSITION',
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (id) => {
+      await locationsQuery.refetch();
+      setLocationId(id);
+      setNewLocationName('');
+      setNewLocationCode('');
+      toast.success('Localização criada.');
+    },
+    onError: (error: unknown) => toast.error(operationalErrorMessage(error, 'Não foi possível criar a localização.')),
+  });
+
   const movimentoMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !selectedItem || !motivo) {
+      if (!currentCompany?.id || !selectedItem || !motivo || !locationId) {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
@@ -314,27 +388,37 @@ export function RegistrarMovimentoDialog({
       if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
       const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
-      const { data, error } = await supabase.rpc('adjust_company_stock', {
+      const { data, error } = await supabase.rpc('record_physical_stock_movement', {
         _company_id: currentCompany.id,
         _company_item_id: companyItemId,
-        _delta: isEntrada ? qtd : -qtd,
+        _direction: isEntrada ? 'IN' : 'OUT',
+        _original_quantity: computed.originalQuantity,
+        _original_unit: computed.originalUnit,
+        _location_id: locationId,
         _reason: finalDescription,
+        _idempotency_key: crypto.randomUUID(),
+        _lot_code: lotCode.trim(),
+        _supplier_name: supplierName.trim() || undefined,
+        _document_reference: documentReference.trim() || undefined,
+        _total_cost: isEntrada && totalCost ? Number(totalCost) : undefined,
+        _width_mm: computed.widthMm || undefined,
+        _height_mm: computed.heightMm || undefined,
       });
       if (error) throw error;
-      const result = data as { new_quantity?: number };
-      return { newQuantity: result.new_quantity ?? stockItem.quantity };
+      const result = data as { consumption_quantity?: number; consumption_unit?: string };
+      return { newQuantity: result.consumption_quantity ?? stockItem.quantity, unit: result.consumption_unit ?? computed.storageUnit };
     },
     onSuccess: (data) => {
       invalidateStock();
       toast.success(
         isEntrada
-          ? `Entrada registrada. Novo saldo: ${data.newQuantity}`
-          : `Saída registrada. Novo saldo: ${data.newQuantity}`
+          ? `Entrada registrada. Novo saldo: ${data.newQuantity} ${data.unit}`
+          : `Saída registrada. Novo saldo: ${data.newQuantity} ${data.unit}`
       );
       handleClose();
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Erro ao registrar movimento');
+    onError: (error: unknown) => {
+      toast.error(operationalErrorMessage(error, 'Erro ao registrar movimento.'));
     },
   });
 
@@ -355,6 +439,13 @@ export function RegistrarMovimentoDialog({
     setPieceHeight('');
     setPieceQty('1');
     setLinearMeters('');
+    setLocationId('');
+    setNewLocationName('');
+    setNewLocationCode('');
+    setTotalCost('');
+    setSupplierName('');
+    setDocumentReference('');
+    setLotCode('');
     onOpenChange(false);
   };
 
@@ -490,7 +581,7 @@ export function RegistrarMovimentoDialog({
                     </div>
                   </div>
                   <Badge className="flex-shrink-0 text-xs">
-                    Estoque: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
+                    Estoque: {selectedStockItem.quantity} {selectedStockItem.consumption_unit || selectedStockItem.company_item?.unit || selectedStockItem.item_template?.unit}
                   </Badge>
                 </div>
               )}
@@ -567,10 +658,10 @@ export function RegistrarMovimentoDialog({
                                           
                                           {/* Imagem */}
                                           <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center mb-2 overflow-hidden">
-                                            {item.item_template?.image_url ? (
+                                            {item.company_item?.image_url || item.item_template?.image_url ? (
                                               <img 
-                                                src={item.item_template.image_url} 
-                                                alt={item.item_template.name}
+                                                src={item.company_item?.image_url || item.item_template?.image_url || ''}
+                                                alt={item.company_item?.name || item.item_template?.name || 'Item'}
                                                 className="w-full h-full object-contain"
                                               />
                                             ) : (
@@ -580,7 +671,7 @@ export function RegistrarMovimentoDialog({
                                           
                                           {/* Nome */}
                                           <span className="text-xs font-medium text-center line-clamp-2 leading-tight w-full">
-                                            {item.item_template?.name}
+                                            {item.company_item?.name || item.item_template?.name}
                                           </span>
                                           
                                           {/* Estoque */}
@@ -592,7 +683,7 @@ export function RegistrarMovimentoDialog({
                                               ? "bg-amber-100 text-amber-700"
                                               : "bg-muted text-muted-foreground"
                                           )}>
-                                            {item.quantity} {item.item_template?.unit}
+                                            {item.quantity} {item.consumption_unit || item.company_item?.unit || item.item_template?.unit}
                                           </span>
                                         </div>
                                       ))}
@@ -712,9 +803,9 @@ export function RegistrarMovimentoDialog({
                 <div className="space-y-2">
                   <Label htmlFor="quantidade">
                     Quantidade *
-                    {selectedStockItem?.item_template?.unit && (
+                    {(selectedStockItem?.consumption_unit || selectedStockItem?.company_item?.unit || selectedStockItem?.item_template?.unit) && (
                       <span className="text-muted-foreground ml-1">
-                        ({selectedStockItem.item_template.unit})
+                        ({selectedStockItem.consumption_unit || selectedStockItem.company_item?.unit || selectedStockItem.item_template?.unit})
                       </span>
                     )}
                   </Label>
@@ -730,7 +821,7 @@ export function RegistrarMovimentoDialog({
                   />
                   {selectedStockItem && !isEntrada && (
                     <p className="text-xs text-muted-foreground">
-                      Disponível: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
+                      Disponível: {selectedStockItem.quantity} {selectedStockItem.consumption_unit || selectedStockItem.company_item?.unit || selectedStockItem.item_template?.unit}
                     </p>
                   )}
                 </div>
@@ -753,6 +844,65 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
+            <div className="rounded-lg border p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <Label>Localização física *</Label>
+              </div>
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger aria-label="Localização física">
+                  <SelectValue placeholder={locationsQuery.isLoading ? 'Carregando localizações...' : 'Selecione depósito / posição'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {usableLocations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name} · {location.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {usableLocations.length === 0 && !locationsQuery.isLoading && (
+                <p className="text-xs text-amber-700">
+                  O saldo legado está em revisão. Crie uma localização real antes de registrar novo movimento.
+                </p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+                <Input value={newLocationName} onChange={(event) => setNewLocationName(event.target.value)} placeholder="Ex.: Depósito A / Prateleira P04" />
+                <Input value={newLocationCode} onChange={(event) => setNewLocationCode(event.target.value)} placeholder="Ex.: DEP-A-P04" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => createLocationMutation.mutate()}
+                  disabled={!newLocationName.trim() || !newLocationCode.trim() || createLocationMutation.isPending}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Criar
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="lotCode">Lote</Label>
+                <Input id="lotCode" value={lotCode} onChange={(event) => setLotCode(event.target.value)} placeholder="Opcional" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="documentReference">Documento</Label>
+                <Input id="documentReference" value={documentReference} onChange={(event) => setDocumentReference(event.target.value)} placeholder="NF, pedido ou referência" />
+              </div>
+              {isEntrada && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="supplierName">Fornecedor</Label>
+                    <Input id="supplierName" value={supplierName} onChange={(event) => setSupplierName(event.target.value)} placeholder="Opcional" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="totalCost">Custo total da entrada</Label>
+                    <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
+                  </div>
+                </>
+              )}
+            </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="observacao">Observação</Label>
@@ -773,7 +923,7 @@ export function RegistrarMovimentoDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={!selectedItem || !motivo || computed.quantity <= 0 || movimentoMutation.isPending}
+              disabled={!selectedItem || !motivo || !locationId || computed.quantity <= 0 || movimentoMutation.isPending}
               className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
               {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}

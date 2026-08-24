@@ -18,18 +18,19 @@ const itemTypeLabels: Record<string, string> = {
 function formatQuantityDisplay(item: StockItem) {
   const rawUnit = (item.item_template?.unit || item.company_item?.unit || 'un').toLowerCase().trim();
   const qty = item.quantity;
-  const barLengthMm = item.company_item?.bar_length_mm;
+  const barLengthMm = item.nominal_length_mm ?? item.company_item?.bar_length_mm ?? item.item_template?.bar_length_mm;
   const type = item.item_template?.type || item.company_item?.type || '';
 
   // Profiles with bar_length_mm: show "X barras de Y m = Z m"
   if (barLengthMm && barLengthMm > 0 && (type === 'profile' || rawUnit === 'barra' || rawUnit === 'barras')) {
     const barLengthM = barLengthMm / 1000;
-    const totalMeters = qty * barLengthM;
-    const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+    const totalMeters = Number(item.canonical_quantity || 0) / 1000;
+    const bars = Number(item.package_quantity || 0);
+    const fmtQty = Number.isInteger(bars) ? bars : bars.toFixed(2);
     const fmtTotal = Number.isInteger(totalMeters) ? totalMeters : totalMeters.toFixed(2);
     const fmtBar = Number.isInteger(barLengthM) ? barLengthM : barLengthM.toFixed(2);
     return {
-      primary: `${fmtQty} ${qty === 1 ? 'barra' : 'barras'}`,
+      primary: `${fmtQty} ${bars === 1 ? 'barra' : 'barras'}`,
       detail: `de ${fmtBar} m = ${fmtTotal} m`,
     };
   }
@@ -85,7 +86,7 @@ export const StockItemCard = memo(function StockItemCard({
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${borderClass} ${
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${borderClass} ${
         item.is_active === false ? 'opacity-60' : ''
       }`}
       onClick={() => onEdit(item)}
@@ -109,7 +110,7 @@ export const StockItemCard = memo(function StockItemCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <p className="font-medium truncate">{(() => {
-              const ci: any = item.company_item;
+              const ci = item.company_item;
               const baseName = item.item_template?.name ?? ci?.name ?? 'Item';
               const unit = item.item_template?.unit || ci?.unit;
               const type = item.item_template?.type || ci?.type;
@@ -153,6 +154,12 @@ export const StockItemCard = memo(function StockItemCard({
               {item.location}
             </p>
           )}
+          {item.locations && item.locations.length > 0 && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3" />
+              {item.locations.map((location) => `${location.name}${location.needs_review ? ' (revisar)' : ''}`).join(' · ')}
+            </p>
+          )}
           <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
             {(() => {
               const cost = item.priceInfo?.cost ?? item.company_item?.cost ?? item.item_template?.default_cost ?? 0;
@@ -187,11 +194,19 @@ export const StockItemCard = memo(function StockItemCard({
                 Atualizado: {format(new Date(item.updated_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
               </span>
             )}
+            {item.average_unit_cost != null && (
+              <span className="text-muted-foreground">
+                Custo médio físico: R$ {Number(item.average_unit_cost).toFixed(2)}/{item.consumption_unit}
+              </span>
+            )}
+            {item.inventory_value != null && (
+              <span className="font-medium">Valor físico: R$ {Number(item.inventory_value).toFixed(2)}</span>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
         <div className="text-right">
           <p className={`font-semibold text-lg whitespace-nowrap ${(isZeroStock || isLowStock) ? 'text-destructive' : ''}`}>
             {qtyDisplay.primary}
@@ -201,6 +216,14 @@ export const StockItemCard = memo(function StockItemCard({
               {qtyDisplay.detail}
             </p>
           )}
+          {item.reserved_quantity > 0 && (
+            <p className="text-xs text-amber-700 whitespace-nowrap">
+              Reservado: {item.reserved_quantity.toFixed(3)} {item.consumption_unit || item.item_template?.unit}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground whitespace-nowrap">
+            Disponível: {Math.max(0, item.quantity - item.reserved_quantity).toFixed(3)} {item.consumption_unit || item.item_template?.unit}
+          </p>
           {minQty > 0 && (
             <p className={`text-xs ${(isLowStock || isZeroStock) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
               Mín: {item.min_quantity}
@@ -238,6 +261,10 @@ export const StockItemCard = memo(function StockItemCard({
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.item.quantity === nextProps.item.quantity &&
+    prevProps.item.canonical_quantity === nextProps.item.canonical_quantity &&
+    prevProps.item.package_quantity === nextProps.item.package_quantity &&
+    prevProps.item.reserved_quantity === nextProps.item.reserved_quantity &&
+    prevProps.item.inventory_value === nextProps.item.inventory_value &&
     prevProps.item.is_active === nextProps.item.is_active &&
     prevProps.item.min_quantity === nextProps.item.min_quantity &&
     prevProps.item.priceInfo?.cost === nextProps.item.priceInfo?.cost &&
