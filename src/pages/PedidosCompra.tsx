@@ -1,15 +1,22 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, Truck, CheckCircle2, Clock, XCircle } from 'lucide-react';
-import { usePurchaseOrders, type PurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { Button } from '@/components/ui/button';
+import { Search, Package, Truck, CheckCircle2, Clock, Plus } from 'lucide-react';
+import {
+  useMaterialPurchaseRequirements,
+  usePhase3GCapabilities,
+  usePurchaseOrders,
+  type PurchaseOrder,
+} from '@/hooks/usePurchaseOrders';
 import { PurchaseOrderCard } from '@/components/pedidos-compra/PurchaseOrderCard';
 import { PurchaseOrderDetails } from '@/components/pedidos-compra/PurchaseOrderDetails';
 import { MarkAsOrderedDialog } from '@/components/pedidos-compra/MarkAsOrderedDialog';
 import { ReceiveItemsDialog } from '@/components/pedidos-compra/ReceiveItemsDialog';
+import { CreatePurchaseOrderDialog } from '@/components/pedidos-compra/CreatePurchaseOrderDialog';
+import { CancelPurchaseOrderDialog } from '@/components/pedidos-compra/CancelPurchaseOrderDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 
@@ -29,11 +36,15 @@ export default function PedidosCompra() {
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [orderToMark, setOrderToMark] = useState<PurchaseOrder | null>(null);
   const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
+  const [createOrderOpen, setCreateOrderOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<PurchaseOrder | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
   
   const { data: orders, isLoading } = usePurchaseOrders(
     statusFilter === 'all' ? undefined : statusFilter
   );
+  const { data: requirements = [] } = useMaterialPurchaseRequirements();
+  const { data: capabilities } = usePhase3GCapabilities();
   
   // Filter by search term
   const filteredOrders = orders?.filter(order => {
@@ -76,8 +87,9 @@ export default function PedidosCompra() {
         <PurchaseOrderDetails
           purchaseOrderId={selectedOrder.id}
           onBack={handleBackToList}
-          onMarkOrdered={() => setOrderToMark(selectedOrder)}
-          onReceive={() => setOrderToReceive(selectedOrder)}
+          onMarkOrdered={capabilities?.canApprove ? () => setOrderToMark(selectedOrder) : undefined}
+          onReceive={capabilities?.canReceive ? () => setOrderToReceive(selectedOrder) : undefined}
+          onCancel={capabilities?.canManageRequirements ? () => setOrderToCancel(selectedOrder) : undefined}
         />
         
         <MarkAsOrderedDialog
@@ -91,6 +103,10 @@ export default function PedidosCompra() {
           onOpenChange={(open) => !open && setOrderToReceive(null)}
           order={orderToReceive}
         />
+        <CancelPurchaseOrderDialog
+          order={orderToCancel}
+          onOpenChange={(open) => !open && setOrderToCancel(null)}
+        />
       </MainLayout>
     );
   }
@@ -99,11 +115,19 @@ export default function PedidosCompra() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Pedidos de Compra</h1>
-          <p className="text-muted-foreground">
-            Gerencie os pedidos de materiais para suas ordens de serviço
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Pedidos de Compra</h1>
+            <p className="text-muted-foreground">
+              Consolide faltas reais de materiais sem perder a origem por OS
+            </p>
+          </div>
+          {capabilities?.canCreatePurchase ? (
+            <Button onClick={() => setCreateOrderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo pedido ({requirements.length})
+            </Button>
+          ) : null}
         </div>
         
         {/* Stats */}
@@ -161,7 +185,9 @@ export default function PedidosCompra() {
               <p className="text-sm text-muted-foreground">
                 {searchTerm 
                   ? 'Tente ajustar sua busca'
-                  : 'Os pedidos de compra serão criados automaticamente ao aprovar orçamentos com vidros'
+                  : requirements.length > 0
+                    ? 'Existem necessidades pendentes. Use “Novo pedido” para consolidá-las.'
+                    : 'Pedidos são criados manualmente a partir das necessidades pós-venda.'
                 }
               </p>
             </CardContent>
@@ -174,8 +200,9 @@ export default function PedidosCompra() {
                   key={order.id}
                   order={order}
                   onView={handleView}
-                  onMarkOrdered={() => setOrderToMark(order)}
-                  onReceive={() => setOrderToReceive(order)}
+                  onMarkOrdered={capabilities?.canApprove ? () => setOrderToMark(order) : undefined}
+                  onReceive={capabilities?.canReceive ? () => setOrderToReceive(order) : undefined}
+                  onCancel={capabilities?.canManageRequirements ? () => setOrderToCancel(order) : undefined}
                 />
               ))}
             </div>
@@ -203,6 +230,11 @@ export default function PedidosCompra() {
         open={!!orderToReceive}
         onOpenChange={(open) => !open && setOrderToReceive(null)}
         order={orderToReceive}
+      />
+      <CreatePurchaseOrderDialog open={createOrderOpen} onOpenChange={setCreateOrderOpen} />
+      <CancelPurchaseOrderDialog
+        order={orderToCancel}
+        onOpenChange={(open) => !open && setOrderToCancel(null)}
       />
     </MainLayout>
   );

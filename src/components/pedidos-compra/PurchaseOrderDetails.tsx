@@ -28,8 +28,9 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 interface PurchaseOrderDetailsProps {
   purchaseOrderId: string;
   onBack: () => void;
-  onMarkOrdered: () => void;
-  onReceive: () => void;
+  onMarkOrdered?: () => void;
+  onReceive?: () => void;
+  onCancel?: () => void;
 }
 
 export function PurchaseOrderDetails({ 
@@ -37,6 +38,7 @@ export function PurchaseOrderDetails({
   onBack,
   onMarkOrdered,
   onReceive,
+  onCancel,
 }: PurchaseOrderDetailsProps) {
   const { data: order, isLoading: orderLoading } = usePurchaseOrder(purchaseOrderId);
   const { data: items, isLoading: itemsLoading } = usePurchaseOrderItems(purchaseOrderId);
@@ -63,7 +65,7 @@ export function PurchaseOrderDetails({
   }
   
   const status = statusConfig[order.status] || statusConfig.pending;
-  const pendingItems = items?.filter(i => i.status === 'pending') || [];
+  const pendingItems = items?.filter(i => ['pending', 'ordered', 'partial'].includes(i.status)) || [];
   const receivedItems = items?.filter(i => i.status === 'received') || [];
   
   return (
@@ -90,18 +92,23 @@ export function PurchaseOrderDetails({
         </div>
         
         <div className="flex gap-2">
-          {order.status === 'pending' && (
+          {order.status === 'pending' && onMarkOrdered ? (
             <Button onClick={onMarkOrdered}>
               <Truck className="w-4 h-4 mr-2" />
               Marcar como Pedido
             </Button>
-          )}
-          {(order.status === 'ordered' || order.status === 'partial') && (
+          ) : null}
+          {(order.status === 'ordered' || order.status === 'partial') && onReceive ? (
             <Button onClick={onReceive}>
               <Package className="w-4 h-4 mr-2" />
               Registrar Recebimento
             </Button>
-          )}
+          ) : null}
+          {(order.status === 'pending' || order.status === 'ordered' || order.status === 'partial') && onCancel ? (
+            <Button variant="destructive" onClick={onCancel}>
+              Cancelar pedido
+            </Button>
+          ) : null}
         </div>
       </div>
       
@@ -182,6 +189,21 @@ export function PurchaseOrderDetails({
                         }
                         {' • '}{item.quantity} {item.unit}
                       </p>
+                      {item.received_quantity > 0 ? (
+                        <p className="text-xs text-primary">
+                          Recebido: {item.received_quantity} · Pendente: {item.quantity - item.received_quantity}
+                        </p>
+                      ) : null}
+                      {item.allocations && item.allocations.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {item.allocations.map((allocation) => (
+                            <Badge key={allocation.id} variant="outline" className="text-[10px]">
+                              OS #{allocation.material_purchase_requirements?.ordens_servico?.os_number ?? '—'}:{' '}
+                              {allocation.allocated_canonical_quantity}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(item.estimated_cost)}</p>

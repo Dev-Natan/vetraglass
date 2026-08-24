@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Calendar, DollarSign, Truck, Eye, MoreVertical } from 'lucide-react';
+import { Package, Calendar, DollarSign, Truck, Eye, MoreVertical, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -26,9 +26,10 @@ interface PurchaseOrderCardProps {
   onView: (order: PurchaseOrder) => void;
   onMarkOrdered?: (order: PurchaseOrder) => void;
   onReceive?: (order: PurchaseOrder) => void;
+  onCancel?: (order: PurchaseOrder) => void;
 }
 
-export const PurchaseOrderCard = memo(function PurchaseOrderCard({ order, onView, onMarkOrdered, onReceive }: PurchaseOrderCardProps) {
+export const PurchaseOrderCard = memo(function PurchaseOrderCard({ order, onView, onMarkOrdered, onReceive, onCancel }: PurchaseOrderCardProps) {
   const status = statusConfig[order.status] || statusConfig.pending;
   
   const formatCurrency = (value: number) =>
@@ -75,6 +76,18 @@ export const PurchaseOrderCard = memo(function PurchaseOrderCard({ order, onView
                   Registrar Recebimento
                 </DropdownMenuItem>
               )}
+              {(order.status === 'pending' || order.status === 'ordered' || order.status === 'partial') && onCancel ? (
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCancel(order);
+                  }}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancelar pedido
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

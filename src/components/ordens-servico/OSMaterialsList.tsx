@@ -3,12 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
 import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
 import { osService } from '@/services/osService';
+import { Link } from 'react-router-dom';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
@@ -19,7 +21,6 @@ interface MaterialAvailabilityItem {
   item_name: string;
   unit: string;
   required: number;
-  physical: number;
   reserved_for_os: number;
   missing: number;
   sufficient: boolean;
@@ -125,13 +126,12 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Material</TableHead>
                   <TableHead className="text-right">Necessário</TableHead>
-                  <TableHead className="text-right">Físico</TableHead>
                   <TableHead className="text-right">Reservado p/ OS</TableHead>
                   <TableHead className="text-right">Falta</TableHead>
                 </TableRow>
@@ -141,7 +141,6 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                   <TableRow key={item.company_item_id ?? `${item.item_name}-${index}`}>
                     <TableCell className="font-medium">{item.item_name}</TableCell>
                     <TableCell className="text-right font-mono">{Number(item.required).toFixed(3)} {item.unit}</TableCell>
-                    <TableCell className="text-right font-mono">{Number(item.physical).toFixed(3)}</TableCell>
                     <TableCell className="text-right font-mono">{Number(item.reserved_for_os).toFixed(3)}</TableCell>
                     <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'text-destructive font-semibold' : 'text-green-600'}`}>
                       {Number(item.missing).toFixed(3)}
@@ -150,6 +149,11 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                 ))}
               </TableBody>
             </Table>
+            {!availability.sufficient ? (
+              <Button asChild variant="outline">
+                <Link to="/pedidos-compra">Ver necessidades de compra</Link>
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       )}

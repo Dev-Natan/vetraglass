@@ -4254,6 +4254,164 @@ export type Database = {
           },
         ]
       }
+      material_purchase_requirements: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          canonical_unit: string
+          company_id: string
+          company_item_id: string
+          consumption_to_canonical_factor: number
+          consumption_unit: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item_template_id: string | null
+          lifecycle_status: string
+          ordem_servico_id: string
+          os_item_id: string | null
+          os_material_id: string
+          priority: string
+          purchase_allows_fractional: boolean
+          purchase_to_canonical_factor: number
+          purchase_unit: string
+          required_canonical_quantity: number
+          required_quantity: number
+          required_unit: string
+          sale_id: string | null
+          sale_item_id: string | null
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          canonical_unit: string
+          company_id: string
+          company_item_id: string
+          consumption_to_canonical_factor: number
+          consumption_unit: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_template_id?: string | null
+          lifecycle_status?: string
+          ordem_servico_id: string
+          os_item_id?: string | null
+          os_material_id: string
+          priority?: string
+          purchase_allows_fractional?: boolean
+          purchase_to_canonical_factor: number
+          purchase_unit: string
+          required_canonical_quantity: number
+          required_quantity: number
+          required_unit: string
+          sale_id?: string | null
+          sale_item_id?: string | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          canonical_unit?: string
+          company_id?: string
+          company_item_id?: string
+          consumption_to_canonical_factor?: number
+          consumption_unit?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_template_id?: string | null
+          lifecycle_status?: string
+          ordem_servico_id?: string
+          os_item_id?: string | null
+          os_material_id?: string
+          priority?: string
+          purchase_allows_fractional?: boolean
+          purchase_to_canonical_factor?: number
+          purchase_unit?: string
+          required_canonical_quantity?: number
+          required_quantity?: number
+          required_unit?: string
+          sale_id?: string | null
+          sale_item_id?: string | null
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_purchase_requirements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_os_material_id_fkey"
+            columns: ["os_material_id"]
+            isOneToOne: true
+            referencedRelation: "os_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_checklist: {
         Row: {
           created_at: string
@@ -6599,9 +6757,78 @@ export type Database = {
           },
         ]
       }
+      purchase_order_item_requirement_allocations: {
+        Row: {
+          allocated_canonical_quantity: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          material_requirement_id: string
+          purchase_order_item_id: string
+          received_canonical_quantity: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_canonical_quantity: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_requirement_id: string
+          purchase_order_item_id: string
+          received_canonical_quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_canonical_quantity?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_requirement_id?: string
+          purchase_order_item_id?: string
+          received_canonical_quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_item_requirement_al_material_requirement_id_fkey"
+            columns: ["material_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "material_purchase_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_item_requirement_al_material_requirement_id_fkey"
+            columns: ["material_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "material_purchase_requirements_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_item_requirement_all_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_item_requirement_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_order_items: {
         Row: {
           actual_cost: number | null
+          company_item_id: string | null
           created_at: string
           description: string
           estimated_cost: number
@@ -6609,19 +6836,26 @@ export type Database = {
           id: string
           item_template_id: string | null
           notes: string | null
+          ordered_canonical_quantity: number | null
           os_glass_project_id: string | null
           os_material_id: string | null
+          purchase_allows_fractional: boolean
           purchase_order_id: string
+          purchase_to_canonical_factor: number | null
+          purchase_unit: string | null
           quantity: number
           received_at: string | null
+          received_canonical_quantity: number
           received_quantity: number | null
           status: string
           unit: string
           updated_at: string
+          variant_id: string | null
           width_mm: number | null
         }
         Insert: {
           actual_cost?: number | null
+          company_item_id?: string | null
           created_at?: string
           description: string
           estimated_cost?: number
@@ -6629,19 +6863,26 @@ export type Database = {
           id?: string
           item_template_id?: string | null
           notes?: string | null
+          ordered_canonical_quantity?: number | null
           os_glass_project_id?: string | null
           os_material_id?: string | null
+          purchase_allows_fractional?: boolean
           purchase_order_id: string
+          purchase_to_canonical_factor?: number | null
+          purchase_unit?: string | null
           quantity?: number
           received_at?: string | null
+          received_canonical_quantity?: number
           received_quantity?: number | null
           status?: string
           unit?: string
           updated_at?: string
+          variant_id?: string | null
           width_mm?: number | null
         }
         Update: {
           actual_cost?: number | null
+          company_item_id?: string | null
           created_at?: string
           description?: string
           estimated_cost?: number
@@ -6649,18 +6890,38 @@ export type Database = {
           id?: string
           item_template_id?: string | null
           notes?: string | null
+          ordered_canonical_quantity?: number | null
           os_glass_project_id?: string | null
           os_material_id?: string | null
+          purchase_allows_fractional?: boolean
           purchase_order_id?: string
+          purchase_to_canonical_factor?: number | null
+          purchase_unit?: string | null
           quantity?: number
           received_at?: string | null
+          received_canonical_quantity?: number
           received_quantity?: number | null
           status?: string
           unit?: string
           updated_at?: string
+          variant_id?: string | null
           width_mm?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id"]
+          },
           {
             foreignKeyName: "purchase_order_items_item_template_id_fkey"
             columns: ["item_template_id"]
@@ -6682,6 +6943,13 @@ export type Database = {
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       purchase_orders: {
@@ -6691,6 +6959,7 @@ export type Database = {
           created_by: string | null
           expected_delivery: string | null
           id: string
+          idempotency_key: string | null
           notes: string | null
           ordem_servico_id: string | null
           order_number: number
@@ -6707,6 +6976,7 @@ export type Database = {
           created_by?: string | null
           expected_delivery?: string | null
           id?: string
+          idempotency_key?: string | null
           notes?: string | null
           ordem_servico_id?: string | null
           order_number?: number
@@ -6723,6 +6993,7 @@ export type Database = {
           created_by?: string | null
           expected_delivery?: string | null
           id?: string
+          idempotency_key?: string | null
           notes?: string | null
           ordem_servico_id?: string | null
           order_number?: number
@@ -8244,8 +8515,10 @@ export type Database = {
           created_by: string | null
           id: string
           location_id: string | null
+          material_requirement_id: string | null
           ordem_servico_id: string
           os_glass_project_id: string | null
+          physical_stock_balance_id: string | null
           quantity_reserved: number
           reserved_at: string | null
           status: string | null
@@ -8266,8 +8539,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           location_id?: string | null
+          material_requirement_id?: string | null
           ordem_servico_id: string
           os_glass_project_id?: string | null
+          physical_stock_balance_id?: string | null
           quantity_reserved: number
           reserved_at?: string | null
           status?: string | null
@@ -8288,8 +8563,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           location_id?: string | null
+          material_requirement_id?: string | null
           ordem_servico_id?: string
           os_glass_project_id?: string | null
+          physical_stock_balance_id?: string | null
           quantity_reserved?: number
           reserved_at?: string | null
           status?: string | null
@@ -8328,6 +8605,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_reservations_material_requirement_id_fkey"
+            columns: ["material_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "material_purchase_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_material_requirement_id_fkey"
+            columns: ["material_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "material_purchase_requirements_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_reservations_ordem_servico_id_fkey"
             columns: ["ordem_servico_id"]
             isOneToOne: false
@@ -8339,6 +8630,13 @@ export type Database = {
             columns: ["os_glass_project_id"]
             isOneToOne: false
             referencedRelation: "os_glass_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_physical_stock_balance_id_fkey"
+            columns: ["physical_stock_balance_id"]
+            isOneToOne: false
+            referencedRelation: "physical_stock_balances"
             referencedColumns: ["id"]
           },
           {
@@ -8684,6 +8982,119 @@ export type Database = {
           },
         ]
       }
+      material_purchase_requirements_summary: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          canonical_unit: string | null
+          company_id: string | null
+          company_item_id: string | null
+          consumption_to_canonical_factor: number | null
+          consumption_unit: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          item_code: string | null
+          item_name: string | null
+          item_template_id: string | null
+          item_type: string | null
+          lifecycle_status: string | null
+          open_order_canonical_quantity: number | null
+          ordem_servico_id: string | null
+          os_item_id: string | null
+          os_material_id: string | null
+          os_number: number | null
+          priority: string | null
+          purchase_allows_fractional: boolean | null
+          purchase_required_canonical_quantity: number | null
+          purchase_to_canonical_factor: number | null
+          purchase_unit: string | null
+          received_canonical_quantity: number | null
+          required_canonical_quantity: number | null
+          required_quantity: number | null
+          required_unit: string | null
+          reserved_canonical_quantity: number | null
+          sale_id: string | null
+          sale_item_id: string | null
+          shortage_canonical_quantity: number | null
+          status: string | null
+          suggested_purchase_quantity: number | null
+          updated_at: string | null
+          variant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_purchase_requirements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_company_item_fkey"
+            columns: ["company_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "physical_inventory_summary"
+            referencedColumns: ["company_item_id", "company_id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_os_material_id_fkey"
+            columns: ["os_material_id"]
+            isOneToOne: true
+            referencedRelation: "os_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_purchase_requirements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       physical_inventory_summary: {
         Row: {
           average_cost_per_canonical: number | null
@@ -8792,6 +9203,10 @@ export type Database = {
           table_name: string
         }[]
       }
+      approve_purchase_order: {
+        Args: { _purchase_order_id: string }
+        Returns: Json
+      }
       approve_quote_transactional: {
         Args: {
           p_balance_due_date?: string
@@ -8846,6 +9261,10 @@ export type Database = {
       cancel_os_materials: {
         Args: { _ordem_servico_id: string }
         Returns: number
+      }
+      cancel_purchase_order: {
+        Args: { _purchase_order_id: string }
+        Returns: Json
       }
       cancel_sale: {
         Args: {
@@ -9096,6 +9515,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_purchase_order_from_requirements: {
+        Args: {
+          _company_id: string
+          _expected_delivery?: string
+          _idempotency_key?: string
+          _items: Json
+          _notes?: string
+          _supplier_name: string
+        }
+        Returns: Json
       }
       create_stock_location: {
         Args: {
@@ -9467,6 +9897,27 @@ export type Database = {
         }
         Returns: number
       }
+      phase3g_refresh_requirement_compat: {
+        Args: { _requirement_id: string }
+        Returns: undefined
+      }
+      phase3g_reserve_requirement: {
+        Args: { _requirement_id: string }
+        Returns: Json
+      }
+      phase3g_seed_company_permissions: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      phase3g_user_can: {
+        Args: {
+          _action: string
+          _company_id: string
+          _module: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -9483,14 +9934,25 @@ export type Database = {
         }
         Returns: Json
       }
-      receive_purchase_order_items: {
-        Args: {
-          _items: Json
-          _purchase_order_id: string
-          _total_actual?: number
-        }
-        Returns: Json
-      }
+      receive_purchase_order_items:
+        | {
+            Args: {
+              _items: Json
+              _purchase_order_id: string
+              _total_actual?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _document_reference?: string
+              _items: Json
+              _location_id: string
+              _purchase_order_id: string
+              _receipt_key: string
+            }
+            Returns: Json
+          }
       receive_quote_deposit_transactional: {
         Args: {
           _cash_register_id: string
@@ -9518,6 +9980,10 @@ export type Database = {
           _payment_method: string
           _sale_id: string
         }
+        Returns: Json
+      }
+      reconcile_os_material_requirements: {
+        Args: { _ordem_servico_id: string }
         Returns: Json
       }
       record_login_attempt: {

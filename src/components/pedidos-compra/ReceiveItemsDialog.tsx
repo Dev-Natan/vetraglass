@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,9 +11,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Package } from 'lucide-react';
-import { usePurchaseOrderItems, useReceivePurchaseOrderItems } from '@/hooks/usePurchaseOrders';
+import {
+  usePurchaseOrderItems,
+  useReceivePurchaseOrderItems,
+  useStockLocations,
+} from '@/hooks/usePurchaseOrders';
 import type { PurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { createUuid } from '@/utils/createUuid';
 
 interface ReceiveItemsDialogProps {
   open: boolean;
@@ -30,21 +36,24 @@ interface ItemReceiveState {
 
 export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDialogProps) {
   const { data: items, isLoading } = usePurchaseOrderItems(order?.id || '');
+  const { data: locations = [], isLoading: locationsLoading } = useStockLocations();
   const receiveItems = useReceivePurchaseOrderItems();
-  
+  const receiptKey = useRef(createUuid());
   const [itemStates, setItemStates] = useState<ItemReceiveState[]>([]);
+  const [locationId, setLocationId] = useState('');
+  const [documentReference, setDocumentReference] = useState('');
   
   // Initialize item states when items load
   useEffect(() => {
     if (items) {
       setItemStates(
         items
-          .filter(item => item.status === 'pending')
+          .filter(item => item.status === 'ordered' || item.status === 'partial')
           .map(item => ({
             id: item.id,
             selected: true,
-            actualCost: item.estimated_cost,
-            receivedQuantity: item.quantity,
+            actualCost: 0,
+            receivedQuantity: Math.max(0, item.quantity - Number(item.received_quantity || 0)),
           }))
       );
     }
@@ -59,20 +68,24 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   
-  const handleItemChange = (itemId: string, field: keyof ItemReceiveState, value: any) => {
+  const handleItemChange = (
+    itemId: string,
+    patch: Partial<Pick<ItemReceiveState, 'selected' | 'actualCost' | 'receivedQuantity'>>,
+  ) => {
     setItemStates(prev => prev.map(state => 
-      state.id === itemId ? { ...state, [field]: value } : state
+      state.id === itemId ? { ...state, ...patch } : state
     ));
   };
   
   const handleSubmit = async () => {
-    if (!order) return;
+    if (!order || !locationId) return;
     
     const selectedItems = itemStates
       .filter(s => s.selected)
       .map(s => ({
         id: s.id,
-        actualCost: s.actualCost,
+        variantId: items?.find((item) => item.id === s.id)?.variant_id || null,
+        totalCost: s.actualCost,
         receivedQuantity: s.receivedQuantity,
       }));
     
@@ -80,14 +93,17 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
     
     await receiveItems.mutateAsync({
       purchaseOrderId: order.id,
+      locationId,
+      receiptKey: receiptKey.current,
+      documentReference: documentReference || undefined,
       items: selectedItems,
-      totalActual,
     });
     
+    receiptKey.current = createUuid();
     onOpenChange(false);
   };
   
-  const pendingItems = items?.filter(item => item.status === 'pending') || [];
+  const pendingItems = items?.filter(item => item.status === 'ordered' || item.status === 'partial') || [];
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,7 +115,7 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
           </DialogTitle>
         </DialogHeader>
         
-        {isLoading ? (
+        {isLoading || locationsLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
@@ -109,6 +125,32 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
           </div>
         ) : (
           <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="receipt-location">Localização física</Label>
+                <Select value={locationId} onValueChange={setLocationId}>
+                  <SelectTrigger id="receipt-location">
+                    <SelectValue placeholder="Selecione a localização" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.code} — {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="document-reference">Documento / nota</Label>
+                <Input
+                  id="document-reference"
+                  value={documentReference}
+                  onChange={(event) => setDocumentReference(event.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
             <ScrollArea className="max-h-[400px]">
               <div className="space-y-4 p-1">
                 {pendingItems.map(item => {
@@ -121,15 +163,15 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
                         <Checkbox
                           checked={state.selected}
                           onCheckedChange={(checked) => 
-                            handleItemChange(item.id, 'selected', !!checked)
+                            handleItemChange(item.id, { selected: !!checked })
                           }
                         />
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.description}</p>
                           <p className="text-xs text-muted-foreground">
-                            {item.width_mm && item.height_mm 
+                            {item.width_mm && item.height_mm
                               ? `${item.width_mm} x ${item.height_mm} mm`
-                              : `${item.quantity} ${item.unit}`
+                              : `${item.quantity - Number(item.received_quantity || 0)} ${item.purchase_unit || item.unit} pendentes`
                             }
                           </p>
                         </div>
@@ -141,10 +183,12 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
                             <Label className="text-xs">Qtd Recebida</Label>
                             <Input
                               type="number"
-                              min={0}
+                              min={0.000001}
+                              max={item.quantity - Number(item.received_quantity || 0)}
+                              step={item.purchase_allows_fractional ? 'any' : 1}
                               value={state.receivedQuantity}
                               onChange={(e) => 
-                                handleItemChange(item.id, 'receivedQuantity', Number(e.target.value))
+                                handleItemChange(item.id, { receivedQuantity: Number(e.target.value) })
                               }
                             />
                           </div>
@@ -156,7 +200,7 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
                               step={0.01}
                               value={state.actualCost}
                               onChange={(e) => 
-                                handleItemChange(item.id, 'actualCost', Number(e.target.value))
+                                handleItemChange(item.id, { actualCost: Number(e.target.value) })
                               }
                             />
                           </div>
@@ -183,7 +227,11 @@ export function ReceiveItemsDialog({ open, onOpenChange, order }: ReceiveItemsDi
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={receiveItems.isPending || itemStates.filter(s => s.selected).length === 0}
+            disabled={
+              receiveItems.isPending ||
+              !locationId ||
+              itemStates.filter(s => s.selected && s.receivedQuantity > 0).length === 0
+            }
           >
             {receiveItems.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Confirmar Recebimento
