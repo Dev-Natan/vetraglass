@@ -1,142 +1,820 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Loader2, Pencil, Plus } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Layers3,
+  Loader2,
+  Pencil,
+  Plus,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { StockPricingRow, useStockPricing } from '@/hooks/useStockPricing';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database, Json } from '@/integrations/supabase/types';
+import { operationalErrorMessage } from '@/utils/operationalError';
 
-type Variant = Database['public']['Tables']['company_item_variants']['Row'];
-type Product = Pick<Database['public']['Tables']['company_products']['Row'], 'id' | 'commercial_name' | 'pricing_type' | 'price_per_sqm'>;
-type ProductSnapshot = {
-  totals: { cost: number; sale_price: number; profit: number; margin_percent: number | null };
-  warnings: Array<{ code: string; item_name?: string }>;
-  materials: Array<{ company_item_id: string; item_name: string; material_type: string; quantity: number; unit: string; unit_cost: number; unit_sale_price: number; cost: number; sale_price: number }>;
+type AreaItem = Pick<
+  Database['public']['Tables']['company_items']['Row'],
+  | 'id'
+  | 'company_id'
+  | 'name'
+  | 'type'
+  | 'pricing_basis'
+  | 'pricing_unit'
+  | 'variant_attribute_schema'
+  | 'is_active'
+>;
+type AreaVariant = Database['public']['Tables']['company_item_variants']['Row'];
+
+type AttributeDefinition = {
+  key: string;
+  label: string;
+  kind: 'select' | 'text' | 'number';
+  catalog?: string;
+  required?: boolean;
 };
-const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const num = (value: string) => { const parsed = Number(value.replace(',', '.')); return Number.isFinite(parsed) ? parsed : null; };
+
+type CatalogOption = {
+  value: string;
+  label: string;
+};
+
+type EditorState = {
+  item: AreaItem;
+  variant: AreaVariant | null;
+};
+
+type Catalogs = Record<string, CatalogOption[]>;
+
+const brl = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
+function parseNumber(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number(value.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseAttributeSchema(value: Json): AttributeDefinition[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const key = typeof entry.key === 'string' ? entry.key : '';
+    const label = typeof entry.label === 'string' ? entry.label : key;
+    const kind = entry.kind;
+    if (!key || !['select', 'text', 'number'].includes(String(kind))) return [];
+    return [{
+      key,
+      label,
+      kind: kind as AttributeDefinition['kind'],
+      catalog: typeof entry.catalog === 'string' ? entry.catalog : undefined,
+      required: entry.required === true,
+    }];
+  });
+}
+
+function categoryLabel(type: string): string {
+  const normalized = type.trim().toLowerCase();
+  if (normalized === 'glass') return 'Vidros';
+  if (normalized === 'mirror' || normalized === 'espelho') return 'Espelhos';
+  if (normalized === 'acm') return 'ACM';
+  return type.trim()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function uniqueOptions(options: CatalogOption[]): CatalogOption[] {
+  return Array.from(new Map(options.map((option) => [option.value, option])).values());
+}
+
+function attributeLabel(
+  attributes: Json,
+  schema: AttributeDefinition[],
+  catalogs: Catalogs,
+): string {
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) {
+    return 'Atributos não informados';
+  }
+  const values = attributes as Record<string, Json | undefined>;
+  const labels = schema.flatMap((definition) => {
+    const value = values[definition.key];
+    if (value == null || value === '') return [];
+    const option = definition.catalog
+      ? catalogs[definition.catalog]?.find((entry) => entry.value === String(value))
+      : null;
+    const formatted = definition.key === 'thickness_mm'
+      ? `${String(value)} mm`
+      : option?.label ?? String(value);
+    return [formatted];
+  });
+  return labels.length > 0 ? labels.join(' · ') : 'Atributos incompletos';
+}
+
+function priceMetrics(variant: AreaVariant) {
+  const cost = variant.cost == null ? null : Number(variant.cost);
+  const sale = variant.sale_price == null ? null : Number(variant.sale_price);
+  const profit = cost != null && sale != null ? sale - cost : null;
+  const margin = profit != null && sale != null && sale > 0
+    ? (profit / sale) * 100
+    : null;
+  return { cost, sale, profit, margin };
+}
 
 export default function MeusPrecos() {
   const { currentCompany } = useAuth();
   const companyId = currentCompany?.id;
   const { canEdit, canSeeCosts, canSeePrices } = usePermissions();
-  const itemsQuery = useStockPricing();
-  const [priceItem, setPriceItem] = useState<StockPricingRow | null>(null);
-  const [variantItem, setVariantItem] = useState<StockPricingRow | null>(null);
-  const [product, setProduct] = useState<Product | null>(null);
+  const queryClient = useQueryClient();
+  const [activeCategory, setActiveCategory] = useState('');
+  const [editor, setEditor] = useState<EditorState | null>(null);
 
-  const stockQuery = useQuery({
-    queryKey: ['phase3e-stock', companyId], enabled: !!companyId,
-    queryFn: async () => { const { data, error } = await supabase.from('physical_inventory_summary').select('company_item_id,canonical_quantity,consumption_to_canonical_factor,consumption_unit,package_quantity,purchase_unit').eq('company_id', companyId!); if (error) throw error; return data; },
-  });
-  const reservationQuery = useQuery({
-    queryKey: ['phase3e-reservations', companyId], enabled: !!companyId,
-    queryFn: async () => { const { data, error } = await supabase.from('stock_reservations').select('company_item_id,quantity_reserved,canonical_quantity').eq('company_id', companyId!).eq('status', 'reserved'); if (error) throw error; return data; },
-  });
-  const variantQuery = useQuery({
-    queryKey: ['phase3e-variants', companyId], enabled: !!companyId,
-    queryFn: async () => { const { data, error } = await supabase.from('company_item_variants').select('*').eq('company_id', companyId!).eq('is_active', true); if (error) throw error; return data; },
-  });
-  const productQuery = useQuery({
-    queryKey: ['phase3e-products', companyId], enabled: !!companyId,
-    queryFn: async () => { const { data, error } = await supabase.from('company_products').select('id,commercial_name,pricing_type,price_per_sqm').eq('company_id', companyId!).eq('is_active', true).order('commercial_name'); if (error) throw error; return data as Product[]; },
+  const pricingQuery = useQuery({
+    queryKey: ['phase4a-area-pricing', companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data: items, error: itemsError } = await supabase
+        .from('company_items')
+        .select(
+          'id,company_id,name,type,pricing_basis,pricing_unit,variant_attribute_schema,is_active',
+        )
+        .eq('company_id', companyId!)
+        .eq('pricing_basis', 'AREA')
+        .eq('is_active', true)
+        .order('type')
+        .order('name');
+      if (itemsError) throw itemsError;
+
+      const itemIds = (items ?? []).map((item) => item.id);
+      if (itemIds.length === 0) {
+        return { items: [] as AreaItem[], variants: [] as AreaVariant[] };
+      }
+      const { data: variants, error: variantsError } = await supabase
+        .from('company_item_variants')
+        .select('*')
+        .eq('company_id', companyId!)
+        .eq('pricing_basis', 'AREA')
+        .eq('is_active', true)
+        .in('company_item_id', itemIds)
+        .order('created_at');
+      if (variantsError) throw variantsError;
+      return {
+        items: (items ?? []) as AreaItem[],
+        variants: (variants ?? []) as AreaVariant[],
+      };
+    },
   });
 
-  const stock = useMemo(() => new Map((stockQuery.data ?? []).flatMap(row => row.company_item_id ? [[row.company_item_id, row] as const] : [])), [stockQuery.data]);
-  const reserved = useMemo(() => { const map = new Map<string, number>(); for (const row of reservationQuery.data ?? []) { const physical = stock.get(row.company_item_id); const factor = Number(physical?.consumption_to_canonical_factor || 1); const quantity = Number(row.canonical_quantity ?? Number(row.quantity_reserved || 0) * factor) / factor; map.set(row.company_item_id, (map.get(row.company_item_id) ?? 0) + quantity); } return map; }, [reservationQuery.data, stock]);
-  const variantCount = useMemo(() => { const map = new Map<string, number>(); for (const row of variantQuery.data ?? []) map.set(row.company_item_id, (map.get(row.company_item_id) ?? 0) + 1); return map; }, [variantQuery.data]);
-  const items = itemsQuery.data ?? [];
-  const missingCost = items.filter(row => !row.cost || row.cost <= 0).length;
-  const missingPrice = items.filter(row => !row.sale_price || row.sale_price <= 0).length;
-  const incomplete = items.filter(row => !row.cost || row.cost <= 0 || !row.sale_price || row.sale_price <= 0).length;
-  const mayEdit = canEdit('estoque') || canEdit('produtos');
+  const catalogsQuery = useQuery({
+    queryKey: ['phase4a-area-pricing-catalogs'],
+    queryFn: async (): Promise<Catalogs> => {
+      const [types, colors, thicknesses, aluminumColors] = await Promise.all([
+        supabase
+          .from('glass_types')
+          .select('slug,name')
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('admin_glass_colors')
+          .select('slug,name')
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('admin_glass_thicknesses')
+          .select('thickness_mm,label')
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('admin_aluminum_colors')
+          .select('slug,name')
+          .eq('is_active', true)
+          .order('sort_order'),
+      ]);
+      const error = types.error ?? colors.error ?? thicknesses.error ?? aluminumColors.error;
+      if (error) throw error;
+      return {
+        glass_types: uniqueOptions((types.data ?? []).map((row) => ({
+          value: row.slug.toUpperCase().replace(/^VIDRO_/, ''),
+          label: row.name,
+        }))),
+        admin_glass_colors: (colors.data ?? []).map((row) => ({
+          value: row.slug.toUpperCase(),
+          label: row.name,
+        })),
+        admin_glass_thicknesses: (thicknesses.data ?? []).map((row) => ({
+          value: String(row.thickness_mm),
+          label: row.label,
+        })),
+        admin_aluminum_colors: (aluminumColors.data ?? []).map((row) => ({
+          value: row.slug.toUpperCase(),
+          label: row.name,
+        })),
+      };
+    },
+    staleTime: 5 * 60_000,
+  });
 
-  if (!companyId) return <MainLayout><div className="p-6">Selecione uma empresa.</div></MainLayout>;
-  return <MainLayout><div className="mx-auto max-w-7xl space-y-6 p-6">
-    <div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Central canônica: itens empresariais, variações e produtos sem fallback legado.</p></div>
-    <div className="grid gap-3 md:grid-cols-4"><Metric label="Itens prontos" value={`${items.length - incomplete}/${items.length}`} ok={!incomplete} /><Metric label="Sem custo" value={String(missingCost)} ok={!missingCost} /><Metric label="Sem preço" value={String(missingPrice)} ok={!missingPrice} /><Metric label="Variações" value={String(variantQuery.data?.length ?? 0)} ok={(variantQuery.data?.length ?? 0) > 0} /></div>
-    <Tabs defaultValue="materials"><TabsList><TabsTrigger value="overview">Visão geral</TabsTrigger><TabsTrigger value="materials">Materiais</TabsTrigger><TabsTrigger value="products">Produtos</TabsTrigger></TabsList>
-      <TabsContent value="overview"><Card><CardContent className="space-y-3 p-5 text-sm"><p><strong>Fonte única:</strong> <code>company_items</code> para custo, markup e venda; <code>company_item_variants</code> para vidro/perfil.</p><p>Markup é calculado sobre custo. Margem é lucro dividido pela venda.</p>{(missingCost > 0 || missingPrice > 0) && <div className="flex gap-2 rounded border border-amber-300 bg-amber-50 p-3 text-amber-900"><AlertTriangle className="h-5 w-5" />Itens incompletos bloqueiam o preço definitivo, mas estoque zero gera somente aviso.</div>}</CardContent></Card></TabsContent>
-      <TabsContent value="materials"><Card><CardHeader><CardTitle>Materiais</CardTitle></CardHeader><CardContent className="overflow-x-auto p-0">{itemsQuery.isLoading ? <Loading /> : <table className="w-full text-sm"><thead className="border-y bg-muted/40 text-left"><tr><th className="p-3">Item</th><th className="p-3">Unidade</th>{canSeeCosts() && <th className="p-3">Custo</th>}{canSeePrices() && <><th className="p-3">Markup</th><th className="p-3">Venda</th></>}{canSeeCosts() && canSeePrices() && <><th className="p-3">Lucro</th><th className="p-3">Margem</th></>}<th className="p-3">Estoque</th><th className="p-3">Variações</th><th /></tr></thead><tbody>{items.map(item => {
-        const physicalStock = stock.get(item.id); const factor = Number(physicalStock?.consumption_to_canonical_factor || 1); const physical = Number(physicalStock?.canonical_quantity || 0) / factor; const physicalUnit = physicalStock?.consumption_unit || item.unit; const packages = Number(physicalStock?.package_quantity || 0); const held = reserved.get(item.id) ?? 0; const cost = Number(item.cost ?? 0); const sale = Number(item.sale_price ?? 0); const profit = sale - cost; const margin = sale > 0 ? profit / sale * 100 : null;
-        const variants = (variantQuery.data ?? []).filter(row => row.company_item_id === item.id);
-        return <tr key={item.id} className="border-b"><td className="p-3"><div className="font-medium">{item.name}</div><div className="text-xs text-muted-foreground">{item.type} · {item.linha ?? 'sem linha'}</div></td><td className="p-3">{item.pricing_unit ?? item.unit}</td>{canSeeCosts() && <td className="p-3">{cost > 0 ? brl.format(cost) : <Missing text="Sem custo" />}</td>}{canSeePrices() && <><td className="p-3">{item.markup_percent == null ? '—' : `${Number(item.markup_percent).toFixed(2)}%`}</td><td className="p-3">{sale > 0 ? brl.format(sale) : <Missing text="Sem preço" />}</td></>}{canSeeCosts() && canSeePrices() && <><td className="p-3">{cost > 0 && sale > 0 ? brl.format(profit) : '—'}</td><td className="p-3">{margin == null ? '—' : `${margin.toFixed(2)}%`}</td></>}<td className="p-3 whitespace-nowrap">Físico {physical.toFixed(3)} {physicalUnit}{physicalStock?.purchase_unit === 'BAR' && <div className="text-xs text-muted-foreground">{packages.toFixed(2)} barra(s)</div>}<div className="text-xs text-muted-foreground">Reservado {held.toFixed(3)} · Disponível {(physical - held).toFixed(3)} {physicalUnit}</div></td><td className="p-3"><Badge variant="outline">{variants.length}</Badge>{variants.slice(0, 2).map(row => <div key={row.id} className="mt-1 text-[10px] text-muted-foreground">{row.variant_type === 'GLASS' ? `${row.glass_type ?? ''} ${row.glass_color ?? ''} ${row.glass_thickness_mm ?? ''}mm` : `${row.profile_color ?? ''} ${row.profile_finish ?? ''}`}</div>)}</td><td className="p-3"><div className="flex justify-end">{mayEdit && <><Button size="icon" variant="ghost" onClick={() => setPriceItem(item)} title="Editar preço"><Pencil className="h-4 w-4" /></Button>{['glass', 'profile'].includes(item.type.toLowerCase()) && <Button size="icon" variant="ghost" onClick={() => setVariantItem(item)} title="Adicionar ou atualizar variação"><Plus className="h-4 w-4" /></Button>}</>}</div></td></tr>;
-      })}</tbody></table>}</CardContent></Card></TabsContent>
-      <TabsContent value="products"><Card><CardHeader><CardTitle>Produtos</CardTitle></CardHeader><CardContent className="space-y-2">{productQuery.isLoading ? <Loading /> : productQuery.data?.map(row => <ProductPricingRow key={row.id} product={row} companyId={companyId} mayEdit={mayEdit} showCost={canSeeCosts()} showPrice={canSeePrices()} onEdit={() => setProduct(row)} />)}</CardContent></Card></TabsContent>
-    </Tabs>
-  </div><PricingDialog item={priceItem} companyId={companyId} onClose={() => setPriceItem(null)} /><VariantDialog item={variantItem} companyId={companyId} onClose={() => setVariantItem(null)} /><ProductDialog product={product} companyId={companyId} onClose={() => setProduct(null)} /></MainLayout>;
+  const items = useMemo(
+    () => pricingQuery.data?.items ?? [],
+    [pricingQuery.data?.items],
+  );
+  const variants = useMemo(
+    () => pricingQuery.data?.variants ?? [],
+    [pricingQuery.data?.variants],
+  );
+  const catalogs = catalogsQuery.data ?? {};
+  const categories = useMemo(
+    () => Array.from(new Set(items.map((item) => item.type))).sort(),
+    [items],
+  );
+  const selectedCategory = categories.includes(activeCategory)
+    ? activeCategory
+    : categories[0] ?? '';
+  const variantsByItem = useMemo(() => {
+    const map = new Map<string, AreaVariant[]>();
+    for (const variant of variants) {
+      const current = map.get(variant.company_item_id) ?? [];
+      current.push(variant);
+      map.set(variant.company_item_id, current);
+    }
+    return map;
+  }, [variants]);
+
+  const missingCost = variants.filter((variant) => variant.cost == null).length;
+  const missingPrice = variants.filter((variant) => variant.sale_price == null).length;
+  const mayEdit = (canEdit('estoque') || canEdit('produtos'))
+    && canSeeCosts()
+    && canSeePrices();
+
+  const closeEditor = () => setEditor(null);
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['phase4a-area-pricing', companyId] });
+  };
+
+  if (!companyId) {
+    return (
+      <MainLayout>
+        <div className="p-6">Selecione uma empresa.</div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+        <div>
+          <h1 className="text-2xl font-bold">Meus Preços</h1>
+          <p className="text-sm text-muted-foreground">
+            Materiais precificados por área, com custo e venda por m².
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Metric label="Materiais por área" value={String(items.length)} ok={items.length > 0} />
+          <Metric label="Variantes" value={String(variants.length)} ok={variants.length > 0} />
+          <Metric label="Sem custo" value={String(missingCost)} ok={missingCost === 0} />
+          <Metric label="Sem preço" value={String(missingPrice)} ok={missingPrice === 0} />
+        </div>
+
+        <Card>
+          <CardContent className="flex gap-3 p-4 text-sm">
+            <Layers3 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <p className="font-medium">Uma fonte empresarial por combinação</p>
+              <p className="text-muted-foreground">
+                Material + tipo + cor + espessura + acabamento definem uma variante.
+                Perfis e acessórios são tratados no Estoque.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {pricingQuery.isLoading || catalogsQuery.isLoading ? (
+          <Loading />
+        ) : pricingQuery.error || catalogsQuery.error ? (
+          <ErrorState
+            message={operationalErrorMessage(
+              pricingQuery.error ?? catalogsQuery.error,
+              'Não foi possível carregar os preços.',
+            )}
+          />
+        ) : categories.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              Nenhum material com base de precificação AREA está ativo nesta empresa.
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs value={selectedCategory} onValueChange={setActiveCategory}>
+            <TabsList className="h-auto w-full justify-start overflow-x-auto">
+              {categories.map((category) => (
+                <TabsTrigger key={category} value={category} className="shrink-0">
+                  {categoryLabel(category)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {categories.map((category) => (
+              <TabsContent key={category} value={category} className="space-y-4">
+                {items
+                  .filter((item) => item.type === category)
+                  .map((item) => (
+                    <AreaMaterialCard
+                      key={item.id}
+                      item={item}
+                      variants={variantsByItem.get(item.id) ?? []}
+                      catalogs={catalogs}
+                      canSeeCosts={canSeeCosts()}
+                      canSeePrices={canSeePrices()}
+                      mayEdit={mayEdit}
+                      onAdd={() => setEditor({ item, variant: null })}
+                      onEdit={(variant) => setEditor({ item, variant })}
+                    />
+                  ))}
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
+      </div>
+
+      {editor ? (
+        <AreaPriceDialog
+          key={editor.variant?.id ?? `new-${editor.item.id}`}
+          editor={editor}
+          catalogs={catalogs}
+          onClose={closeEditor}
+          onSaved={invalidate}
+        />
+      ) : null}
+    </MainLayout>
+  );
 }
 
-function Metric({ label, value, ok }: { label: string; value: string; ok: boolean }) { return <Card><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs text-muted-foreground">{label}</p><p className="text-2xl font-semibold">{value}</p></div>{ok ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <AlertTriangle className="h-5 w-5 text-amber-600" />}</CardContent></Card>; }
-function Missing({ text }: { text: string }) { return <Badge variant="destructive">{text}</Badge>; }
-function Loading() { return <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin" /></div>; }
+function Metric({
+  label,
+  value,
+  ok,
+}: {
+  label: string;
+  value: string;
+  ok: boolean;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between gap-2 p-4">
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-2xl font-semibold">{value}</p>
+        </div>
+        {ok ? (
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+        ) : (
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
-function ProductPricingRow({ product, companyId, mayEdit, showCost, showPrice, onEdit }: { product: Product; companyId: string; mayEdit: boolean; showCost: boolean; showPrice: boolean; onEdit: () => void }) {
-  const [width, setWidth] = useState('1000');
-  const [height, setHeight] = useState('1000');
-  const [glassType, setGlassType] = useState('');
-  const [glassColor, setGlassColor] = useState('');
-  const [glassThickness, setGlassThickness] = useState('');
-  const [profileColor, setProfileColor] = useState('');
-  const [profileFinish, setProfileFinish] = useState('');
-  const composition = useQuery({
-    queryKey: ['phase3e-product-items', product.id],
-    queryFn: async () => { const { data, error } = await supabase.from('company_product_items').select('company_item_id').eq('company_product_id', product.id); if (error) throw error; return (data ?? []).map(row => row.company_item_id).filter((id): id is string => !!id); },
+function Loading() {
+  return (
+    <div className="flex justify-center p-10">
+      <Loader2 className="h-6 w-6 animate-spin" aria-label="Carregando" />
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <Card className="border-destructive/40">
+      <CardContent className="flex gap-2 p-5 text-sm text-destructive">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        {message}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AreaMaterialCard({
+  item,
+  variants,
+  catalogs,
+  canSeeCosts,
+  canSeePrices,
+  mayEdit,
+  onAdd,
+  onEdit,
+}: {
+  item: AreaItem;
+  variants: AreaVariant[];
+  catalogs: Catalogs;
+  canSeeCosts: boolean;
+  canSeePrices: boolean;
+  mayEdit: boolean;
+  onAdd: () => void;
+  onEdit: (variant: AreaVariant) => void;
+}) {
+  const schema = parseAttributeSchema(item.variant_attribute_schema);
+  return (
+    <Card>
+      <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-lg">{item.name}</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            {categoryLabel(item.type)} · preço por {item.pricing_unit ?? 'm²'}
+          </p>
+        </div>
+        {mayEdit ? (
+          <Button onClick={onAdd} size="sm" className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova variante
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        {variants.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Nenhuma variante com preço configurado.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {variants.map((variant) => {
+              const metrics = priceMetrics(variant);
+              return (
+                <div key={variant.id} className="rounded-lg border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {attributeLabel(variant.attributes, schema, catalogs)}
+                      </p>
+                      <Badge variant="outline" className="mt-1">
+                        {variant.pricing_basis}
+                      </Badge>
+                    </div>
+                    {mayEdit ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Editar preço da variante"
+                        onClick={() => onEdit(variant)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    {canSeeCosts ? (
+                      <PriceValue
+                        label="Custo/m²"
+                        value={metrics.cost}
+                        missing="Sem custo"
+                      />
+                    ) : null}
+                    {canSeePrices ? (
+                      <PriceValue
+                        label="Venda/m²"
+                        value={metrics.sale}
+                        missing="Sem preço"
+                      />
+                    ) : null}
+                    {canSeeCosts && canSeePrices ? (
+                      <>
+                        <PriceValue label="Lucro/m²" value={metrics.profit} missing="—" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Margem</p>
+                          <p className="font-semibold">
+                            {metrics.margin == null ? '—' : `${metrics.margin.toFixed(2)}%`}
+                          </p>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                  {canSeePrices ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Markup sobre custo:{' '}
+                      {variant.markup_percent == null
+                        ? 'indisponível sem custo'
+                        : `${Number(variant.markup_percent).toFixed(2)}%`}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PriceValue({
+  label,
+  value,
+  missing,
+}: {
+  label: string;
+  value: number | null;
+  missing: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-semibold">{value == null ? missing : brl.format(value)}</p>
+    </div>
+  );
+}
+
+function AreaPriceDialog({
+  editor,
+  catalogs,
+  onClose,
+  onSaved,
+}: {
+  editor: EditorState;
+  catalogs: Catalogs;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const schema = parseAttributeSchema(editor.item.variant_attribute_schema);
+  const existingAttributes =
+    editor.variant?.attributes
+    && typeof editor.variant.attributes === 'object'
+    && !Array.isArray(editor.variant.attributes)
+      ? editor.variant.attributes as Record<string, Json | undefined>
+      : {};
+  const [attributes, setAttributes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      schema.map((definition) => [
+        definition.key,
+        existingAttributes[definition.key] == null
+          ? ''
+          : String(existingAttributes[definition.key]),
+      ]),
+    ),
+  );
+  const [cost, setCost] = useState(
+    editor.variant?.cost == null ? '' : String(editor.variant.cost),
+  );
+  const [basis, setBasis] = useState<'MARKUP' | 'SALE_PRICE'>('MARKUP');
+  const [value, setValue] = useState(
+    editor.variant?.markup_percent == null
+      ? ''
+      : String(editor.variant.markup_percent),
+  );
+
+  const costNumber = parseNumber(cost);
+  const valueNumber = parseNumber(value);
+  const sale = costNumber != null && valueNumber != null
+    ? basis === 'MARKUP'
+      ? costNumber * (1 + valueNumber / 100)
+      : valueNumber
+    : null;
+  const markup = costNumber != null && costNumber > 0 && sale != null
+    ? ((sale / costNumber) - 1) * 100
+    : null;
+  const profit = costNumber != null && sale != null ? sale - costNumber : null;
+  const margin = profit != null && sale != null && sale > 0
+    ? (profit / sale) * 100
+    : null;
+  const missingRequired = !editor.variant && schema.some(
+    (definition) => definition.required && !attributes[definition.key]?.trim(),
+  );
+  const invalidPricing = costNumber == null
+    || costNumber <= 0
+    || valueNumber == null
+    || (basis === 'MARKUP' ? valueNumber < 0 : valueNumber <= 0)
+    || (sale != null && sale < costNumber);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (missingRequired) {
+        throw new Error('Preencha todos os atributos obrigatórios.');
+      }
+      if (invalidPricing) {
+        throw new Error('Informe custo e preço/markup válidos.');
+      }
+      const payload = Object.fromEntries(
+        Object.entries(attributes)
+          .filter(([, attributeValue]) => attributeValue.trim() !== '')
+          .map(([key, attributeValue]) => [
+            key,
+            key === 'thickness_mm' ? Number(attributeValue) : attributeValue,
+          ]),
+      );
+      const { error } = await supabase.rpc('save_company_item_variant', {
+        _company_id: editor.item.company_id,
+        _company_item_id: editor.item.id,
+        _variant_type: editor.variant?.variant_type ?? editor.item.type.toUpperCase(),
+        _attributes: payload,
+        _cost: costNumber!,
+        _basis: basis,
+        _value: valueNumber!,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await onSaved();
+      toast.success('Preço por área salvo.');
+      onClose();
+    },
+    onError: (error) => {
+      toast.error(operationalErrorMessage(error, 'Não foi possível salvar o preço.'));
+    },
   });
-  const variants = useQuery({
-    queryKey: ['phase3e-product-simulator-variants', companyId, composition.data], enabled: !!composition.data?.length,
-    queryFn: async () => { const { data, error } = await supabase.from('company_item_variants').select('*').eq('company_id', companyId).eq('is_active', true).in('company_item_id', composition.data!); if (error) throw error; return data as Variant[]; },
-  });
-  const rows = variants.data ?? [];
-  const values = (selector: (row: Variant) => string | number | null) => Array.from(new Set(rows.map(selector).filter((value): value is string | number => value != null && value !== ''))).map(String).sort();
-  const glassTypes = values(row => row.variant_type === 'GLASS' ? row.glass_type : null);
-  const glassColors = values(row => row.variant_type === 'GLASS' ? row.glass_color : null);
-  const glassThicknesses = values(row => row.variant_type === 'GLASS' ? row.glass_thickness_mm : null).sort((a, b) => Number(a) - Number(b));
-  const profileColors = values(row => row.variant_type === 'PROFILE' ? row.profile_color : null);
-  const profileFinishes = values(row => row.variant_type === 'PROFILE' ? row.profile_finish : null);
-  const variantPayload = { glass_type: glassType || null, glass_color: glassColor || null, glass_thickness_mm: glassThickness ? Number(glassThickness) : null, profile_color: profileColor || null, profile_finish: profileFinish || null };
-  const pricing = useQuery({
-    queryKey: ['phase3e-product-preview', companyId, product.id, width, height, variantPayload], retry: false,
-    queryFn: async () => { const { data, error } = await supabase.rpc('resolve_company_product_pricing', { _company_id: companyId, _company_product_id: product.id, _width_mm: Number(width), _height_mm: Number(height), _quantity: 1, _variants: variantPayload }); if (error) throw error; return data as unknown as ProductSnapshot; },
-    enabled: Number(width) > 0 && Number(height) > 0,
-  });
-  const totals = pricing.data?.totals;
-  return <div className="rounded border p-3"><div className="flex items-start justify-between gap-3"><div><div className="font-medium">{product.commercial_name}</div><div className="text-xs text-muted-foreground">Simulador comercial · não cria orçamento</div></div><div className="flex gap-2"><Badge>{product.pricing_type}</Badge>{mayEdit && <Button size="sm" variant="outline" onClick={onEdit}>Configurar</Button>}</div></div>
-    <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-7"><Field label="Largura (mm)"><Input type="number" value={width} onChange={event => setWidth(event.target.value)} /></Field><Field label="Altura (mm)"><Input type="number" value={height} onChange={event => setHeight(event.target.value)} /></Field>{glassTypes.length > 0 && <Choice label="Tipo vidro" value={glassType} options={glassTypes} onChange={setGlassType} />}{glassColors.length > 0 && <Choice label="Cor vidro" value={glassColor} options={glassColors} onChange={setGlassColor} />}{glassThicknesses.length > 0 && <Choice label="Espessura" value={glassThickness} options={glassThicknesses} onChange={setGlassThickness} />}{profileColors.length > 0 && <Choice label="Cor perfil" value={profileColor} options={profileColors} onChange={setProfileColor} />}{profileFinishes.length > 0 && <Choice label="Acabamento" value={profileFinish} options={profileFinishes} onChange={setProfileFinish} />}</div>
-    {pricing.isLoading ? <div className="mt-2 text-xs text-muted-foreground">Calculando prontidão…</div> : pricing.error ? <div className="mt-2 flex items-center gap-2 text-xs text-amber-700"><AlertTriangle className="h-4 w-4" />Incompleto: {(pricing.error as Error).message}</div> : totals && <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">{showCost && <div>Custo <strong className="block">{brl.format(totals.cost)}</strong></div>}{showPrice && <div>Venda <strong className="block">{brl.format(totals.sale_price)}</strong></div>}{showCost && showPrice && <><div>Lucro <strong className="block">{brl.format(totals.profit)}</strong></div><div>Margem <strong className="block">{totals.margin_percent == null ? '—' : `${totals.margin_percent.toFixed(2)}%`}</strong></div></>}</div>}
-    {pricing.data?.materials?.length ? <div className="mt-3 overflow-x-auto"><table className="w-full text-xs"><thead><tr className="border-b text-left text-muted-foreground"><th className="py-1">Composição</th><th>Qtd.</th>{showCost && <th>Custo</th>}{showPrice && <th>Venda</th>}</tr></thead><tbody>{pricing.data.materials.map(material => <tr key={material.company_item_id} className="border-b last:border-0"><td className="py-1">{material.item_name}<span className="ml-1 text-muted-foreground">({material.material_type})</span></td><td>{material.quantity} {material.unit}</td>{showCost && <td>{brl.format(material.cost)}</td>}{showPrice && <td>{brl.format(material.sale_price)}</td>}</tr>)}</tbody></table></div> : null}
-  </div>;
-}
-function Choice({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <Field label={label}><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{options.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent></Select></Field>; }
 
-function PricingDialog({ item, companyId, onClose }: { item: StockPricingRow | null; companyId: string; onClose: () => void }) {
-  const qc = useQueryClient(); const [cost, setCost] = useState(''); const [basis, setBasis] = useState<'MARKUP' | 'SALE_PRICE'>('MARKUP'); const [value, setValue] = useState(''); const [unit, setUnit] = useState('');
-  const load = () => { setCost(item?.cost?.toString() ?? ''); setBasis('MARKUP'); setValue(item?.markup_percent?.toString() ?? ''); setUnit(item?.pricing_unit ?? item?.unit ?? 'un'); };
-  const save = useMutation({ mutationFn: async () => { const c = num(cost); const v = num(value); if (!item || !c || v == null) throw new Error('Informe custo e valor válidos.'); const { error } = await supabase.rpc('save_company_item_pricing', { _company_id: companyId, _company_item_id: item.id, _cost: c, _basis: basis, _value: v, _pricing_unit: unit }); if (error) throw error; }, onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['stock-pricing'] }); toast.success('Precificação salva.'); onClose(); }, onError: (error: Error) => toast.error(error.message) });
-  const c = num(cost) ?? 0; const v = num(value) ?? 0; const sale = basis === 'MARKUP' ? c * (1 + v / 100) : v; const markup = basis === 'SALE_PRICE' && c > 0 ? (sale / c - 1) * 100 : v; const margin = sale > 0 ? (sale - c) / sale * 100 : 0;
-  return <Dialog open={!!item} onOpenChange={open => !open && onClose()}><DialogContent onOpenAutoFocus={load}><DialogHeader><DialogTitle>Precificar {item?.name}</DialogTitle></DialogHeader><div className="grid gap-3"><Field label="Custo"><Input type="number" value={cost} onChange={e => setCost(e.target.value)} /></Field><Field label="Editar por"><Select value={basis} onValueChange={next => { setBasis(next as typeof basis); setValue(''); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MARKUP">Markup sobre custo</SelectItem><SelectItem value="SALE_PRICE">Preço de venda</SelectItem></SelectContent></Select></Field><Field label={basis === 'MARKUP' ? 'Markup (%)' : 'Preço de venda'}><Input type="number" value={value} onChange={e => setValue(e.target.value)} /></Field><Field label="Unidade de precificação"><Input value={unit} onChange={e => setUnit(e.target.value)} /></Field><div className="rounded bg-muted p-3 text-sm">Venda <strong>{brl.format(sale)}</strong> · Markup {markup.toFixed(2)}% · Lucro {brl.format(sale - c)} · Margem {margin.toFixed(2)}%</div></div><DialogFooter><Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button></DialogFooter></DialogContent></Dialog>;
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>
+            {editor.variant ? 'Editar variante' : 'Nova variante'} · {editor.item.name}
+          </DialogTitle>
+          <DialogDescription>
+            A combinação de atributos identifica este preço por m².
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          {schema.map((definition) => (
+            <AttributeField
+              key={definition.key}
+              definition={definition}
+              value={attributes[definition.key] ?? ''}
+              options={definition.catalog ? catalogs[definition.catalog] ?? [] : []}
+              disabled={!!editor.variant}
+              onChange={(next) => {
+                setAttributes((current) => ({ ...current, [definition.key]: next }));
+              }}
+            />
+          ))}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Custo/m²">
+              <Input
+                inputMode="decimal"
+                type="number"
+                min="0"
+                step="0.01"
+                value={cost}
+                onChange={(event) => setCost(event.target.value)}
+              />
+            </Field>
+            <Field label="Editar por">
+              <Select
+                value={basis}
+                onValueChange={(next) => {
+                  setBasis(next as typeof basis);
+                  setValue('');
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MARKUP">Markup sobre custo</SelectItem>
+                  <SelectItem value="SALE_PRICE">Preço de venda</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label={basis === 'MARKUP' ? 'Markup (%)' : 'Venda/m²'}>
+            <Input
+              inputMode="decimal"
+              type="number"
+              min="0"
+              step="0.01"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-4 text-sm">
+            <PreviewValue label="Venda/m²" value={sale} currency />
+            <PreviewValue label="Markup" value={markup} suffix="%" />
+            <PreviewValue label="Lucro/m²" value={profit} currency />
+            <PreviewValue label="Margem sobre venda" value={margin} suffix="%" />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={missingRequired || invalidPricing || save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-function VariantDialog({ item, companyId, onClose }: { item: StockPricingRow | null; companyId: string; onClose: () => void }) {
-  const qc = useQueryClient(); const glass = item?.type.toLowerCase() === 'glass'; const [color, setColor] = useState(''); const [detail, setDetail] = useState(''); const [thickness, setThickness] = useState(''); const [cost, setCost] = useState(''); const [markup, setMarkup] = useState('');
-  const save = useMutation({ mutationFn: async () => { const c = num(cost); const m = num(markup); if (!item || !c || m == null || !color || (glass && !num(thickness))) throw new Error('Preencha os campos obrigatórios.'); const attributes: Json = glass ? { glass_type: detail || null, glass_color: color, glass_thickness_mm: num(thickness) } : { profile_color: color, profile_finish: detail || null }; const { error } = await supabase.rpc('save_company_item_variant', { _company_id: companyId, _company_item_id: item.id, _variant_type: glass ? 'GLASS' : 'PROFILE', _attributes: attributes, _cost: c, _basis: 'MARKUP', _value: m }); if (error) throw error; }, onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['phase3e-variants'] }); toast.success('Variação salva.'); onClose(); }, onError: (error: Error) => toast.error(error.message) });
-  return <Dialog open={!!item} onOpenChange={open => !open && onClose()}><DialogContent><DialogHeader><DialogTitle>Variação · {item?.name}</DialogTitle></DialogHeader><div className="grid gap-3"><Field label={glass ? 'Cor do vidro' : 'Cor do perfil'}><Input value={color} onChange={e => setColor(e.target.value)} /></Field>{glass && <Field label="Espessura (mm)"><Input type="number" value={thickness} onChange={e => setThickness(e.target.value)} /></Field>}<Field label={glass ? 'Tipo do vidro (opcional)' : 'Acabamento (opcional)'}><Input value={detail} onChange={e => setDetail(e.target.value)} /></Field><Field label="Custo"><Input type="number" value={cost} onChange={e => setCost(e.target.value)} /></Field><Field label="Markup (%)"><Input type="number" value={markup} onChange={e => setMarkup(e.target.value)} /></Field></div><DialogFooter><Button onClick={() => save.mutate()}>Salvar variação</Button></DialogFooter></DialogContent></Dialog>;
+function AttributeField({
+  definition,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  definition: AttributeDefinition;
+  value: string;
+  options: CatalogOption[];
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const label = `${definition.label}${definition.required ? ' *' : ''}`;
+  if (definition.kind === 'select') {
+    return (
+      <Field label={label}>
+        <Select value={value} onValueChange={onChange} disabled={disabled}>
+          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+    );
+  }
+  return (
+    <Field label={label}>
+      <Input
+        value={value}
+        disabled={disabled}
+        type={definition.kind === 'number' ? 'number' : 'text'}
+        inputMode={definition.kind === 'number' ? 'decimal' : undefined}
+        min={definition.kind === 'number' ? '0' : undefined}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </Field>
+  );
 }
 
-function ProductDialog({ product, companyId, onClose }: { product: Product | null; companyId: string; onClose: () => void }) {
-  const qc = useQueryClient(); const [mode, setMode] = useState<'COMPOSITION' | 'FIXED_PER_SQM'>('COMPOSITION'); const [price, setPrice] = useState(''); const load = () => { setMode(product?.pricing_type === 'FIXED_PER_SQM' ? 'FIXED_PER_SQM' : 'COMPOSITION'); setPrice(product?.price_per_sqm?.toString() ?? ''); };
-  const save = useMutation({ mutationFn: async () => { if (!product) return; const fixed = mode === 'FIXED_PER_SQM' ? num(price) : undefined; const { error } = await supabase.rpc('save_company_product_pricing', { _company_id: companyId, _company_product_id: product.id, _pricing_type: mode, _fixed_price_per_sqm: fixed }); if (error) throw error; }, onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['phase3e-products'] }); toast.success('Método salvo.'); onClose(); }, onError: (error: Error) => toast.error(error.message) });
-  return <Dialog open={!!product} onOpenChange={open => !open && onClose()}><DialogContent onOpenAutoFocus={load}><DialogHeader><DialogTitle>Método · {product?.commercial_name}</DialogTitle></DialogHeader><div className="grid gap-3"><Field label="Método comercial"><Select value={mode} onValueChange={next => setMode(next as typeof mode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COMPOSITION">Por composição</SelectItem><SelectItem value="FIXED_PER_SQM">Preço fixo por m²</SelectItem></SelectContent></Select></Field>{mode === 'FIXED_PER_SQM' && <Field label="Preço de venda por m²"><Input type="number" value={price} onChange={e => setPrice(e.target.value)} /><p className="text-xs text-muted-foreground">O custo continua vindo da composição.</p></Field>}</div><DialogFooter><Button onClick={() => save.mutate()}>Salvar</Button></DialogFooter></DialogContent></Dialog>;
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
 }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div><Label>{label}</Label>{children}</div>; }
+
+function PreviewValue({
+  label,
+  value,
+  currency = false,
+  suffix = '',
+}: {
+  label: string;
+  value: number | null;
+  currency?: boolean;
+  suffix?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-semibold">
+        {value == null
+          ? 'Indisponível'
+          : currency
+            ? brl.format(value)
+            : `${value.toFixed(2)}${suffix}`}
+      </p>
+    </div>
+  );
+}

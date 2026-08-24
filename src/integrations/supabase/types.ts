@@ -1480,6 +1480,7 @@ export type Database = {
       }
       company_item_variants: {
         Row: {
+          attributes: Json
           company_id: string
           company_item_id: string
           cost: number | null
@@ -1490,6 +1491,7 @@ export type Database = {
           id: string
           is_active: boolean
           markup_percent: number | null
+          pricing_basis: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -1497,6 +1499,7 @@ export type Database = {
           variant_type: string
         }
         Insert: {
+          attributes?: Json
           company_id: string
           company_item_id: string
           cost?: number | null
@@ -1507,6 +1510,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           markup_percent?: number | null
+          pricing_basis: string
           profile_color?: string | null
           profile_finish?: string | null
           sale_price?: number | null
@@ -1514,6 +1518,7 @@ export type Database = {
           variant_type: string
         }
         Update: {
+          attributes?: Json
           company_id?: string
           company_item_id?: string
           cost?: number | null
@@ -1524,6 +1529,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           markup_percent?: number | null
+          pricing_basis?: string
           profile_color?: string | null
           profile_finish?: string | null
           sale_price?: number | null
@@ -1586,6 +1592,7 @@ export type Database = {
           ncm: string | null
           origem: string | null
           preco_unitario: number | null
+          pricing_basis: string
           pricing_configured_at: string | null
           pricing_unit: string | null
           sale_margin_percent: number | null
@@ -1598,6 +1605,7 @@ export type Database = {
           type: string
           unit: string
           updated_at: string
+          variant_attribute_schema: Json
           weight_kg: number | null
           weight_per_meter: number | null
         }
@@ -1632,6 +1640,7 @@ export type Database = {
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
+          pricing_basis?: string
           pricing_configured_at?: string | null
           pricing_unit?: string | null
           sale_margin_percent?: number | null
@@ -1644,6 +1653,7 @@ export type Database = {
           type?: string
           unit?: string
           updated_at?: string
+          variant_attribute_schema?: Json
           weight_kg?: number | null
           weight_per_meter?: number | null
         }
@@ -1678,6 +1688,7 @@ export type Database = {
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
+          pricing_basis?: string
           pricing_configured_at?: string | null
           pricing_unit?: string | null
           sale_margin_percent?: number | null
@@ -1690,6 +1701,7 @@ export type Database = {
           type?: string
           unit?: string
           updated_at?: string
+          variant_attribute_schema?: Json
           weight_kg?: number | null
           weight_per_meter?: number | null
         }
@@ -9918,6 +9930,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      phase4a_normalize_variant_attributes: {
+        Args: { _attributes: Json }
+        Returns: Json
+      }
+      phase4a_pricing_basis_for_unit: {
+        Args: { _item_type?: string; _pricing_unit: string }
+        Returns: string
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -10201,6 +10221,7 @@ export type Database = {
           ncm: string | null
           origem: string | null
           preco_unitario: number | null
+          pricing_basis: string
           pricing_configured_at: string | null
           pricing_unit: string | null
           sale_margin_percent: number | null
@@ -10213,6 +10234,7 @@ export type Database = {
           type: string
           unit: string
           updated_at: string
+          variant_attribute_schema: Json
           weight_kg: number | null
           weight_per_meter: number | null
         }
@@ -10234,6 +10256,7 @@ export type Database = {
           _variant_type: string
         }
         Returns: {
+          attributes: Json
           company_id: string
           company_item_id: string
           cost: number | null
@@ -10244,6 +10267,7 @@ export type Database = {
           id: string
           is_active: boolean
           markup_percent: number | null
+          pricing_basis: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
