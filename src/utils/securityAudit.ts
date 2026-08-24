@@ -26,25 +26,25 @@ export async function logSecurityEvent({
   metadata = {}
 }: SecurityAuditParams): Promise<void> {
   try {
+    // Anonymous login failures cannot be written from the browser. Keeping anon
+    // denied is intentional; server-side auth telemetry owns that event class.
+    if (!userId || event === 'login_failed') return;
+
     // Não bloquear a UI esperando o log
-    const logData = {
-      action: `security:${event}`,
-      table_name: 'auth_security',
-      user_id: userId || null,
-      company_id: companyId || null,
-      metadata: {
-        ...metadata,
-        user_agent: navigator.userAgent,
-        timestamp_local: new Date().toISOString(),
-        screen_resolution: `${window.screen.width}x${window.screen.height}`,
-      },
-      ip_address: null, // Será preenchido pelo servidor se disponível
+    const auditMetadata = {
+      ...metadata,
+      user_agent: navigator.userAgent,
+      timestamp_local: new Date().toISOString(),
+      screen_resolution: `${window.screen.width}x${window.screen.height}`,
     };
 
     // Fire and forget - não bloqueia a execução
     supabase
-      .from('audit_logs')
-      .insert(logData)
+      .rpc('log_authenticated_security_event', {
+        _event: event,
+        _company_id: companyId || undefined,
+        _metadata: auditMetadata,
+      })
       .then(({ error }) => {
         if (error) {
           console.warn('Falha ao registrar evento de segurança:', error.message);

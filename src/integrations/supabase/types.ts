@@ -8853,6 +8853,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_authenticated_security_event: {
+        Args: { _company_id?: string; _event: string; _metadata?: Json }
+        Returns: string
+      }
       mark_company_product_override: {
         Args: { p_company_product_id: string; p_field: string }
         Returns: undefined
