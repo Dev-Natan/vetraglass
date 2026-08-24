@@ -1569,6 +1569,7 @@ export type Database = {
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
+          commercial_material_family: string | null
           company_id: string
           comprimento_linear_mm: number | null
           cost: number | null
@@ -1583,6 +1584,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_commercial_area_material: boolean
           is_custom: boolean
           item_template_id: string | null
           largura_mm: number | null
@@ -1617,6 +1619,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          commercial_material_family?: string | null
           company_id: string
           comprimento_linear_mm?: number | null
           cost?: number | null
@@ -1631,6 +1634,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_commercial_area_material?: boolean
           is_custom?: boolean
           item_template_id?: string | null
           largura_mm?: number | null
@@ -1665,6 +1669,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          commercial_material_family?: string | null
           company_id?: string
           comprimento_linear_mm?: number | null
           cost?: number | null
@@ -1679,6 +1684,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_commercial_area_material?: boolean
           is_custom?: boolean
           item_template_id?: string | null
           largura_mm?: number | null
@@ -3960,6 +3966,7 @@ export type Database = {
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
+          commercial_material_family: string | null
           created_at: string
           default_cost: number | null
           default_formulas: Json | null
@@ -3970,6 +3977,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_commercial_area_material: boolean
           linha: string | null
           name: string
           ncm: string | null
@@ -3979,6 +3987,7 @@ export type Database = {
           type: Database["public"]["Enums"]["item_type"]
           unit: string
           updated_at: string
+          variant_attribute_schema: Json
           weight_per_bar: number | null
           weight_per_meter: number | null
         }
@@ -3992,6 +4001,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          commercial_material_family?: string | null
           created_at?: string
           default_cost?: number | null
           default_formulas?: Json | null
@@ -4002,6 +4012,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_commercial_area_material?: boolean
           linha?: string | null
           name: string
           ncm?: string | null
@@ -4011,6 +4022,7 @@ export type Database = {
           type: Database["public"]["Enums"]["item_type"]
           unit?: string
           updated_at?: string
+          variant_attribute_schema?: Json
           weight_per_bar?: number | null
           weight_per_meter?: number | null
         }
@@ -4024,6 +4036,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          commercial_material_family?: string | null
           created_at?: string
           default_cost?: number | null
           default_formulas?: Json | null
@@ -4034,6 +4047,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_commercial_area_material?: boolean
           linha?: string | null
           name?: string
           ncm?: string | null
@@ -4043,6 +4057,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["item_type"]
           unit?: string
           updated_at?: string
+          variant_attribute_schema?: Json
           weight_per_bar?: number | null
           weight_per_meter?: number | null
         }
@@ -9561,6 +9576,10 @@ export type Database = {
         Args: { _product_template_id: string }
         Returns: undefined
       }
+      ensure_company_area_pricing_catalog: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       generate_next_recurring_expense: {
         Args: { expense_id: string }
         Returns: string
@@ -10198,6 +10217,7 @@ export type Database = {
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
+          commercial_material_family: string | null
           company_id: string
           comprimento_linear_mm: number | null
           cost: number | null
@@ -10212,6 +10232,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_commercial_area_material: boolean
           is_custom: boolean
           item_template_id: string | null
           largura_mm: number | null

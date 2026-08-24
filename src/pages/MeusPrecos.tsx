@@ -47,6 +47,8 @@ type AreaItem = Pick<
   | 'pricing_unit'
   | 'variant_attribute_schema'
   | 'is_active'
+  | 'is_commercial_area_material'
+  | 'commercial_material_family'
 >;
 type AreaVariant = Database['public']['Tables']['company_item_variants']['Row'];
 
@@ -163,10 +165,11 @@ export default function MeusPrecos() {
       const { data: items, error: itemsError } = await supabase
         .from('company_items')
         .select(
-          'id,company_id,name,type,pricing_basis,pricing_unit,variant_attribute_schema,is_active',
+          'id,company_id,name,type,pricing_basis,pricing_unit,variant_attribute_schema,is_active,is_commercial_area_material,commercial_material_family',
         )
         .eq('company_id', companyId!)
         .eq('pricing_basis', 'AREA')
+        .eq('is_commercial_area_material', true)
         .eq('is_active', true)
         .order('type')
         .order('name');
@@ -310,7 +313,8 @@ export default function MeusPrecos() {
               <p className="font-medium">Uma fonte empresarial por combinação</p>
               <p className="text-muted-foreground">
                 Material + tipo + cor + espessura + acabamento definem uma variante.
-                Perfis e acessórios são tratados no Estoque.
+                Os valores pertencem somente à empresa selecionada. Perfis, papéis técnicos
+                e acessórios são tratados fora desta tela.
               </p>
             </div>
           </CardContent>

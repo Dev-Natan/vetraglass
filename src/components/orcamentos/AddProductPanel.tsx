@@ -60,6 +60,7 @@ function describePricingError(error: unknown): string {
   const candidate = error as { message?: string; details?: string };
   const code = candidate.message ?? '';
   const detail = candidate.details ? `: ${candidate.details}` : '';
+  if (code.includes('MISSING_PRICE_VARIANT')) return `Preço da especificação não configurado${detail}`;
   if (code.includes('MISSING_COST')) return `Custo não configurado${detail}`;
   if (code.includes('MISSING_PRICE')) return `Preço de venda não configurado${detail}`;
   if (code.includes('MISSING_VARIANT')) return `Variação comercial não configurada${detail}`;
@@ -457,7 +458,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const productUsesGlass = hasGlass;
   const isParametric = selectedProduct?.composition_mode === 'parametric';
 
-  // Variations are company-item owned and limited to the selected product BOM.
+  // Engineering items provide geometry. Commercial AREA items provide tenant-owned prices.
   const { data: productCompanyItemIds = [] } = useQuery({
     queryKey: ['phase3e-product-company-items', companyProduct?.id],
     queryFn: async () => {
@@ -472,20 +473,40 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     enabled: !!companyProduct?.id,
     staleTime: 60_000,
   });
-  const { data: canonicalVariants = [] } = useQuery({
-    queryKey: ['phase3e-product-variants', currentCompany?.id, productCompanyItemIds],
+  const { data: commercialAreaItemIds = [] } = useQuery({
+    queryKey: ['phase4a-commercial-area-items', currentCompany?.id],
     queryFn: async () => {
-      if (!currentCompany?.id || productCompanyItemIds.length === 0) return [];
+      if (!currentCompany?.id) return [] as string[];
+      const { data, error } = await supabase
+        .from('company_items')
+        .select('id')
+        .eq('company_id', currentCompany.id)
+        .eq('is_commercial_area_material', true)
+        .eq('is_active', true);
+      if (error) throw error;
+      return (data ?? []).map((row) => row.id);
+    },
+    enabled: !!currentCompany?.id,
+    staleTime: 60_000,
+  });
+  const pricingVariantItemIds = useMemo(
+    () => Array.from(new Set([...productCompanyItemIds, ...commercialAreaItemIds])),
+    [commercialAreaItemIds, productCompanyItemIds],
+  );
+  const { data: canonicalVariants = [] } = useQuery({
+    queryKey: ['phase4a-product-variants', currentCompany?.id, pricingVariantItemIds],
+    queryFn: async () => {
+      if (!currentCompany?.id || pricingVariantItemIds.length === 0) return [];
       const { data, error } = await supabase
         .from('company_item_variants')
         .select('*')
         .eq('company_id', currentCompany.id)
         .eq('is_active', true)
-        .in('company_item_id', productCompanyItemIds);
+        .in('company_item_id', pricingVariantItemIds);
       if (error) throw error;
       return data;
     },
-    enabled: !!currentCompany?.id && productCompanyItemIds.length > 0,
+    enabled: !!currentCompany?.id && pricingVariantItemIds.length > 0,
   });
   const profileAvailableColors = useMemo(() => Array.from(new Set(canonicalVariants
     .filter(row => row.variant_type === 'PROFILE' && row.profile_color)
@@ -555,6 +576,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     glass_type: selectedGlassType || null,
     glass_color: selectedGlassColor || null,
     glass_thickness_mm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
+    glass_finish: 'PADRAO',
     profile_color: selectedAluminumColor || null,
     profile_finish: selectedProfileFinish || null,
   }), [selectedGlassType, selectedGlassColor, selectedGlassThickness, selectedAluminumColor, selectedProfileFinish]);
@@ -666,7 +688,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       fulfillment_mode: selectedProduct.fulfillment_mode || 'PRODUCTION',
       composition_snapshot: ({
         ...canonicalSnapshot,
-        pricing_source: 'phase3e_company_items',
+        pricing_source: 'phase4a_company_area_material',
         technical_snapshot: parametricResult ?? null,
         totals: {
           ...canonicalSnapshot.totals,
