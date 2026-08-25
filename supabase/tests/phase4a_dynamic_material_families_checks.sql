@@ -208,6 +208,21 @@ BEGIN
   );
   r:=public.resolve_company_material_price(c.company_a,c.family_glass,option_ids);
   IF (r->>'cost')::numeric<>210 OR (r->>'sale_price')::numeric<>336 THEN RAISE EXCEPTION 'T14_CURRENT_GLASS_PRICE'; END IF;
+  snapshot:=r;
+
+  -- T08: the same canonical GLASS combination resolves independently per tenant.
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',c.user_b,'role','authenticated')::text,true);
+  PERFORM public.save_company_material_variant(c.company_b,c.family_glass,option_ids,240,'SALE_PRICE',390);
+  r:=public.resolve_company_material_price(c.company_b,c.family_glass,option_ids);
+  IF (r->>'sale_price')::numeric<>390 THEN RAISE EXCEPTION 'T08_GLASS_TENANT_B_PRICE'; END IF;
+  BEGIN
+    PERFORM public.resolve_company_material_price(c.company_c,c.family_glass,option_ids);
+    RAISE EXCEPTION 'T08_GLASS_TENANT_C_SHOULD_BE_MISSING';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM NOT LIKE '%MISSING_PRICE_VARIANT%' THEN RAISE; END IF;
+  END;
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',c.user_id,'role','authenticated')::text,true);
+
   IF round((500::numeric*940 + 550::numeric*980)/1000000,3)<>1.009 THEN RAISE EXCEPTION 'T14_ENGINEERING_AREA'; END IF;
   IF round(1.009*210,2)<>211.89 OR round(1.009*336,2)<>339.02 THEN RAISE EXCEPTION 'T15_AREA_MATH'; END IF;
   IF EXISTS(SELECT 1 FROM public.item_templates WHERE is_commercial_area_material AND upper(name) IN ('VIDRO FIXO','VIDRO MÓVEL','VIDRO MOVEL')) THEN
@@ -215,7 +230,6 @@ BEGIN
   END IF;
 
   -- T17: a serialized commercial snapshot remains unchanged after a later price update.
-  snapshot:=r;
   PERFORM public.save_company_material_variant(c.company_a,c.family_glass,option_ids,210,'SALE_PRICE',350);
   changed:=public.resolve_company_material_price(c.company_a,c.family_glass,option_ids);
   IF (snapshot->>'sale_price')::numeric<>336 OR (changed->>'sale_price')::numeric<>350 THEN
