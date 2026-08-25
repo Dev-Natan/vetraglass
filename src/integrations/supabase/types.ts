@@ -1478,8 +1478,52 @@ export type Database = {
           },
         ]
       }
+      company_item_variant_options: {
+        Row: {
+          attribute_id: string
+          created_at: string
+          option_id: string
+          variant_id: string
+        }
+        Insert: {
+          attribute_id: string
+          created_at?: string
+          option_id: string
+          variant_id: string
+        }
+        Update: {
+          attribute_id?: string
+          created_at?: string
+          option_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_item_variant_options_attribute_id_fkey"
+            columns: ["attribute_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_attributes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_item_variant_options_option_attribute_fkey"
+            columns: ["option_id", "attribute_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_attribute_options"
+            referencedColumns: ["id", "attribute_id"]
+          },
+          {
+            foreignKeyName: "company_item_variant_options_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_item_variants: {
         Row: {
+          attribute_signature: string | null
           attributes: Json
           company_id: string
           company_item_id: string
@@ -1499,6 +1543,7 @@ export type Database = {
           variant_type: string
         }
         Insert: {
+          attribute_signature?: string | null
           attributes?: Json
           company_id: string
           company_item_id: string
@@ -1518,6 +1563,7 @@ export type Database = {
           variant_type: string
         }
         Update: {
+          attribute_signature?: string | null
           attributes?: Json
           company_id?: string
           company_item_id?: string
@@ -3917,6 +3963,97 @@ export type Database = {
           },
         ]
       }
+      item_template_attribute_options: {
+        Row: {
+          attribute_id: string
+          canonical_value: Json | null
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          option_code: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          attribute_id: string
+          canonical_value?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          option_code: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          attribute_id?: string
+          canonical_value?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          option_code?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_template_attribute_options_attribute_id_fkey"
+            columns: ["attribute_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_attributes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_template_attributes: {
+        Row: {
+          attribute_code: string
+          created_at: string
+          data_type: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          item_template_id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          attribute_code: string
+          created_at?: string
+          data_type?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          item_template_id: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          attribute_code?: string
+          created_at?: string
+          data_type?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          item_template_id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_template_attributes_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_template_color_prices: {
         Row: {
           color_name: string
@@ -3967,6 +4104,7 @@ export type Database = {
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           commercial_material_family: string | null
+          company_id: string | null
           created_at: string
           default_cost: number | null
           default_formulas: Json | null
@@ -3982,7 +4120,10 @@ export type Database = {
           name: string
           ncm: string | null
           origem: string | null
+          pricing_basis: string | null
+          pricing_unit: string | null
           procurement_type: string | null
+          sort_order: number
           specifications: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit: string
@@ -4002,6 +4143,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           commercial_material_family?: string | null
+          company_id?: string | null
           created_at?: string
           default_cost?: number | null
           default_formulas?: Json | null
@@ -4017,7 +4159,10 @@ export type Database = {
           name: string
           ncm?: string | null
           origem?: string | null
+          pricing_basis?: string | null
+          pricing_unit?: string | null
           procurement_type?: string | null
+          sort_order?: number
           specifications?: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit?: string
@@ -4037,6 +4182,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           commercial_material_family?: string | null
+          company_id?: string | null
           created_at?: string
           default_cost?: number | null
           default_formulas?: Json | null
@@ -4052,7 +4198,10 @@ export type Database = {
           name?: string
           ncm?: string | null
           origem?: string | null
+          pricing_basis?: string | null
+          pricing_unit?: string | null
           procurement_type?: string | null
+          sort_order?: number
           specifications?: Json | null
           type?: Database["public"]["Enums"]["item_type"]
           unit?: string
@@ -4061,7 +4210,15 @@ export type Database = {
           weight_per_bar?: number | null
           weight_per_meter?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "item_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_types: {
         Row: {
@@ -9230,6 +9387,121 @@ export type Database = {
           table_name: string
         }[]
       }
+      admin_upsert_material_attribute: {
+        Args: {
+          _active: boolean
+          _code: string
+          _data_type: string
+          _family_id: string
+          _id: string
+          _label: string
+          _required: boolean
+          _sort_order: number
+        }
+        Returns: {
+          attribute_code: string
+          created_at: string
+          data_type: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          item_template_id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "item_template_attributes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_upsert_material_family: {
+        Args: {
+          _active: boolean
+          _code: string
+          _description: string
+          _id: string
+          _name: string
+          _pricing_basis: string
+          _pricing_unit: string
+          _sort_order: number
+        }
+        Returns: {
+          aliquota_cbs: number | null
+          aliquota_ibs: number | null
+          aliquota_is: number | null
+          aliquota_iss: number | null
+          bar_length_mm: number | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
+          commercial_material_family: string | null
+          company_id: string | null
+          created_at: string
+          default_cost: number | null
+          default_formulas: Json | null
+          default_price: number | null
+          default_sale_price: number | null
+          default_supplier: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_commercial_area_material: boolean
+          linha: string | null
+          name: string
+          ncm: string | null
+          origem: string | null
+          pricing_basis: string | null
+          pricing_unit: string | null
+          procurement_type: string | null
+          sort_order: number
+          specifications: Json | null
+          type: Database["public"]["Enums"]["item_type"]
+          unit: string
+          updated_at: string
+          variant_attribute_schema: Json
+          weight_per_bar: number | null
+          weight_per_meter: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "item_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_upsert_material_option: {
+        Args: {
+          _active: boolean
+          _attribute_id: string
+          _code: string
+          _id: string
+          _label: string
+          _sort_order: number
+          _value: Json
+        }
+        Returns: {
+          attribute_id: string
+          canonical_value: Json | null
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          option_code: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "item_template_attribute_options"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       approve_purchase_order: {
         Args: { _purchase_order_id: string }
         Returns: Json
@@ -9621,6 +9893,10 @@ export type Database = {
           unique_clients: number
         }[]
       }
+      get_company_material_family_catalog: {
+        Args: { _company_id: string; _family_id: string }
+        Returns: Json
+      }
       get_cutting_plan_items: {
         Args: { _company_id?: string; _template_id: string }
         Returns: {
@@ -9752,6 +10028,20 @@ export type Database = {
       }
       is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_company_material_families: {
+        Args: { _company_id: string }
+        Returns: {
+          code: string
+          configured_variants: number
+          description: string
+          id: string
+          name: string
+          pricing_basis: string
+          pricing_unit: string
+          sort_order: number
+          total_combinations: number
+        }[]
+      }
       list_cutting_plan_templates: {
         Args: { _category?: string; _linha?: string }
         Returns: {
@@ -9948,6 +10238,18 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      phase4a_material_attribute_signature: {
+        Args: {
+          _family_id: string
+          _option_ids: string[]
+          _require_active?: boolean
+        }
+        Returns: string
+      }
+      phase4a_normalize_catalog_code: {
+        Args: { _value: string }
+        Returns: string
       }
       phase4a_normalize_variant_attributes: {
         Args: { _attributes: Json }
@@ -10166,6 +10468,10 @@ export type Database = {
         Returns: Json
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
+      resolve_company_material_price: {
+        Args: { _company_id: string; _family_id: string; _option_ids: string[] }
+        Returns: Json
+      }
       resolve_company_product_pricing: {
         Args: {
           _company_id: string
@@ -10173,6 +10479,17 @@ export type Database = {
           _height_mm: number
           _quantity?: number
           _variants?: Json
+          _width_mm: number
+        }
+        Returns: Json
+      }
+      resolve_company_product_pricing_canonical: {
+        Args: {
+          _company_id: string
+          _company_product_id: string
+          _height_mm: number
+          _material_selections: Json
+          _quantity: number
           _width_mm: number
         }
         Returns: Json
@@ -10277,6 +10594,43 @@ export type Database = {
           _variant_type: string
         }
         Returns: {
+          attribute_signature: string | null
+          attributes: Json
+          company_id: string
+          company_item_id: string
+          cost: number | null
+          created_at: string
+          glass_color: string | null
+          glass_thickness_mm: number | null
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          markup_percent: number | null
+          pricing_basis: string
+          profile_color: string | null
+          profile_finish: string | null
+          sale_price: number | null
+          updated_at: string
+          variant_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_item_variants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_company_material_variant: {
+        Args: {
+          _basis: string
+          _company_id: string
+          _cost: number
+          _family_id: string
+          _option_ids: string[]
+          _value: number
+        }
+        Returns: {
+          attribute_signature: string | null
           attributes: Json
           company_id: string
           company_item_id: string

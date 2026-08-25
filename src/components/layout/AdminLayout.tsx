@@ -44,6 +44,11 @@ const adminMenuItems = [
     icon: Layers,
   },
   {
+    title: "Matérias-primas",
+    path: "/admin/material-families",
+    icon: Layers,
+  },
+  {
     title: "Product Templates",
     path: "/admin/product-templates",
     icon: Package,

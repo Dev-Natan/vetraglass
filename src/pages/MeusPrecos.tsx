@@ -1,824 +1,173 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Layers3,
-  Loader2,
-  Pencil,
-  Plus,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Layers3, Loader2, Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database, Json } from '@/integrations/supabase/types';
 import { operationalErrorMessage } from '@/utils/operationalError';
 
-type AreaItem = Pick<
-  Database['public']['Tables']['company_items']['Row'],
-  | 'id'
-  | 'company_id'
-  | 'name'
-  | 'type'
-  | 'pricing_basis'
-  | 'pricing_unit'
-  | 'variant_attribute_schema'
-  | 'is_active'
-  | 'is_commercial_area_material'
-  | 'commercial_material_family'
->;
-type AreaVariant = Database['public']['Tables']['company_item_variants']['Row'];
-
-type AttributeDefinition = {
-  key: string;
-  label: string;
-  kind: 'select' | 'text' | 'number';
-  catalog?: string;
-  required?: boolean;
+type Family = {
+  id: string; code: string; name: string; description: string | null;
+  pricing_basis: string; pricing_unit: string; sort_order: number;
+  configured_variants: number; total_combinations: number;
 };
+type Option = { id: string; code: string; label: string; value: unknown; sort_order: number };
+type Attribute = { id: string; code: string; label: string; data_type: string; required: boolean; sort_order: number; options: Option[] };
+type Variant = { id: string; company_item_id: string; signature: string; cost: number | null; markup_percent: number | null; sale_price: number | null; option_ids: string[] };
+type FamilyCatalog = { family: Family; attributes: Attribute[]; variants: Variant[] };
 
-type CatalogOption = {
-  value: string;
-  label: string;
-};
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-type EditorState = {
-  item: AreaItem;
-  variant: AreaVariant | null;
-};
-
-type Catalogs = Record<string, CatalogOption[]>;
-
-const brl = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-});
-
-function parseNumber(value: string): number | null {
-  if (!value.trim()) return null;
-  const parsed = Number(value.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseAttributeSchema(value: Json): AttributeDefinition[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const key = typeof entry.key === 'string' ? entry.key : '';
-    const label = typeof entry.label === 'string' ? entry.label : key;
-    const kind = entry.kind;
-    if (!key || !['select', 'text', 'number'].includes(String(kind))) return [];
-    return [{
-      key,
-      label,
-      kind: kind as AttributeDefinition['kind'],
-      catalog: typeof entry.catalog === 'string' ? entry.catalog : undefined,
-      required: entry.required === true,
-    }];
-  });
-}
-
-function categoryLabel(type: string): string {
-  const normalized = type.trim().toLowerCase();
-  if (normalized === 'glass') return 'Vidros';
-  if (normalized === 'mirror' || normalized === 'espelho') return 'Espelhos';
-  if (normalized === 'acm') return 'ACM';
-  return type.trim()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
-}
-
-function uniqueOptions(options: CatalogOption[]): CatalogOption[] {
-  return Array.from(new Map(options.map((option) => [option.value, option])).values());
-}
-
-function attributeLabel(
-  attributes: Json,
-  schema: AttributeDefinition[],
-  catalogs: Catalogs,
-): string {
-  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) {
-    return 'Atributos não informados';
-  }
-  const values = attributes as Record<string, Json | undefined>;
-  const labels = schema.flatMap((definition) => {
-    const value = values[definition.key];
-    if (value == null || value === '') return [];
-    const option = definition.catalog
-      ? catalogs[definition.catalog]?.find((entry) => entry.value === String(value))
-      : null;
-    const formatted = definition.key === 'thickness_mm'
-      ? `${String(value)} mm`
-      : option?.label ?? String(value);
-    return [formatted];
-  });
-  return labels.length > 0 ? labels.join(' · ') : 'Atributos incompletos';
-}
-
-function priceMetrics(variant: AreaVariant) {
-  const cost = variant.cost == null ? null : Number(variant.cost);
-  const sale = variant.sale_price == null ? null : Number(variant.sale_price);
-  const profit = cost != null && sale != null ? sale - cost : null;
-  const margin = profit != null && sale != null && sale > 0
-    ? (profit / sale) * 100
-    : null;
-  return { cost, sale, profit, margin };
+function asFamily(row: Record<string, unknown>): Family {
+  return {
+    id: String(row.id), code: String(row.code), name: String(row.name),
+    description: row.description == null ? null : String(row.description),
+    pricing_basis: String(row.pricing_basis), pricing_unit: String(row.pricing_unit),
+    sort_order: Number(row.sort_order), configured_variants: Number(row.configured_variants),
+    total_combinations: Number(row.total_combinations),
+  };
 }
 
 export default function MeusPrecos() {
   const { currentCompany } = useAuth();
   const companyId = currentCompany?.id;
-  const { canEdit, canSeeCosts, canSeePrices } = usePermissions();
+  const permissions = usePermissions();
   const queryClient = useQueryClient();
-  const [activeCategory, setActiveCategory] = useState('');
-  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<Variant | 'new' | null>(null);
 
-  const pricingQuery = useQuery({
-    queryKey: ['phase4a-area-pricing', companyId],
-    enabled: !!companyId,
+  const familiesQuery = useQuery({
+    queryKey: ['dynamic-material-families', companyId], enabled: !!companyId,
     queryFn: async () => {
-      const { data: items, error: itemsError } = await supabase
-        .from('company_items')
-        .select(
-          'id,company_id,name,type,pricing_basis,pricing_unit,variant_attribute_schema,is_active,is_commercial_area_material,commercial_material_family',
-        )
-        .eq('company_id', companyId!)
-        .eq('pricing_basis', 'AREA')
-        .eq('is_commercial_area_material', true)
-        .eq('is_active', true)
-        .order('type')
-        .order('name');
-      if (itemsError) throw itemsError;
-
-      const itemIds = (items ?? []).map((item) => item.id);
-      if (itemIds.length === 0) {
-        return { items: [] as AreaItem[], variants: [] as AreaVariant[] };
-      }
-      const { data: variants, error: variantsError } = await supabase
-        .from('company_item_variants')
-        .select('*')
-        .eq('company_id', companyId!)
-        .eq('pricing_basis', 'AREA')
-        .eq('is_active', true)
-        .in('company_item_id', itemIds)
-        .order('created_at');
-      if (variantsError) throw variantsError;
-      return {
-        items: (items ?? []) as AreaItem[],
-        variants: (variants ?? []) as AreaVariant[],
-      };
-    },
-  });
-
-  const catalogsQuery = useQuery({
-    queryKey: ['phase4a-area-pricing-catalogs'],
-    queryFn: async (): Promise<Catalogs> => {
-      const [types, colors, thicknesses, aluminumColors] = await Promise.all([
-        supabase
-          .from('glass_types')
-          .select('slug,name')
-          .eq('is_active', true)
-          .order('sort_order'),
-        supabase
-          .from('admin_glass_colors')
-          .select('slug,name')
-          .eq('is_active', true)
-          .order('sort_order'),
-        supabase
-          .from('admin_glass_thicknesses')
-          .select('thickness_mm,label')
-          .eq('is_active', true)
-          .order('sort_order'),
-        supabase
-          .from('admin_aluminum_colors')
-          .select('slug,name')
-          .eq('is_active', true)
-          .order('sort_order'),
-      ]);
-      const error = types.error ?? colors.error ?? thicknesses.error ?? aluminumColors.error;
+      const { data, error } = await supabase.rpc('list_company_material_families', { _company_id: companyId! });
       if (error) throw error;
-      return {
-        glass_types: uniqueOptions((types.data ?? []).map((row) => ({
-          value: row.slug.toUpperCase().replace(/^VIDRO_/, ''),
-          label: row.name,
-        }))),
-        admin_glass_colors: (colors.data ?? []).map((row) => ({
-          value: row.slug.toUpperCase(),
-          label: row.name,
-        })),
-        admin_glass_thicknesses: (thicknesses.data ?? []).map((row) => ({
-          value: String(row.thickness_mm),
-          label: row.label,
-        })),
-        admin_aluminum_colors: (aluminumColors.data ?? []).map((row) => ({
-          value: row.slug.toUpperCase(),
-          label: row.name,
-        })),
-      };
+      return ((data ?? []) as unknown as Record<string, unknown>[]).map(asFamily);
     },
-    staleTime: 5 * 60_000,
   });
-
-  const items = useMemo(
-    () => pricingQuery.data?.items ?? [],
-    [pricingQuery.data?.items],
-  );
-  const variants = useMemo(
-    () => pricingQuery.data?.variants ?? [],
-    [pricingQuery.data?.variants],
-  );
-  const catalogs = catalogsQuery.data ?? {};
-  const categories = useMemo(
-    () => Array.from(new Set(items.map((item) => item.type))).sort(),
-    [items],
-  );
-  const selectedCategory = categories.includes(activeCategory)
-    ? activeCategory
-    : categories[0] ?? '';
-  const variantsByItem = useMemo(() => {
-    const map = new Map<string, AreaVariant[]>();
-    for (const variant of variants) {
-      const current = map.get(variant.company_item_id) ?? [];
-      current.push(variant);
-      map.set(variant.company_item_id, current);
-    }
-    return map;
-  }, [variants]);
-
-  const missingCost = variants.filter((variant) => variant.cost == null).length;
-  const missingPrice = variants.filter((variant) => variant.sale_price == null).length;
-  const mayEdit = (canEdit('estoque') || canEdit('produtos'))
-    && canSeeCosts()
-    && canSeePrices();
-
-  const closeEditor = () => setEditor(null);
+  const catalogQuery = useQuery({
+    queryKey: ['dynamic-material-family-catalog', companyId, selectedFamilyId],
+    enabled: !!companyId && !!selectedFamilyId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_company_material_family_catalog', { _company_id: companyId!, _family_id: selectedFamilyId! });
+      if (error) throw error;
+      return data as unknown as FamilyCatalog;
+    },
+  });
+  const mayEdit = (permissions.canEdit('estoque') || permissions.canEdit('produtos'))
+    && permissions.canSeeCosts() && permissions.canSeePrices();
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['phase4a-area-pricing', companyId] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['dynamic-material-families', companyId] }),
+      queryClient.invalidateQueries({ queryKey: ['dynamic-material-family-catalog', companyId, selectedFamilyId] }),
+    ]);
   };
 
-  if (!companyId) {
-    return (
-      <MainLayout>
-        <div className="p-6">Selecione uma empresa.</div>
-      </MainLayout>
-    );
-  }
-
+  if (!companyId) return <MainLayout><div className="p-6">Selecione uma empresa.</div></MainLayout>;
+  const families = familiesQuery.data ?? [];
   return (
     <MainLayout>
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
-        <div>
-          <h1 className="text-2xl font-bold">Meus Preços</h1>
-          <p className="text-sm text-muted-foreground">
-            Materiais precificados por área, com custo e venda por m².
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Catálogo global, preços exclusivos da sua empresa.</p></div>
+          {selectedFamilyId ? <Button variant="outline" onClick={() => setSelectedFamilyId(null)}><ArrowLeft className="mr-2 h-4 w-4" /> Famílias</Button> : null}
         </div>
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label="Materiais por área" value={String(items.length)} ok={items.length > 0} />
-          <Metric label="Variantes" value={String(variants.length)} ok={variants.length > 0} />
-          <Metric label="Sem custo" value={String(missingCost)} ok={missingCost === 0} />
-          <Metric label="Sem preço" value={String(missingPrice)} ok={missingPrice === 0} />
-        </div>
-
-        <Card>
-          <CardContent className="flex gap-3 p-4 text-sm">
-            <Layers3 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <div>
-              <p className="font-medium">Uma fonte empresarial por combinação</p>
-              <p className="text-muted-foreground">
-                Material + tipo + cor + espessura + acabamento definem uma variante.
-                Os valores pertencem somente à empresa selecionada. Perfis, papéis técnicos
-                e acessórios são tratados fora desta tela.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {pricingQuery.isLoading || catalogsQuery.isLoading ? (
-          <Loading />
-        ) : pricingQuery.error || catalogsQuery.error ? (
-          <ErrorState
-            message={operationalErrorMessage(
-              pricingQuery.error ?? catalogsQuery.error,
-              'Não foi possível carregar os preços.',
-            )}
-          />
-        ) : categories.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              Nenhum material com base de precificação AREA está ativo nesta empresa.
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs value={selectedCategory} onValueChange={setActiveCategory}>
-            <TabsList className="h-auto w-full justify-start overflow-x-auto">
-              {categories.map((category) => (
-                <TabsTrigger key={category} value={category} className="shrink-0">
-                  {categoryLabel(category)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {categories.map((category) => (
-              <TabsContent key={category} value={category} className="space-y-4">
-                {items
-                  .filter((item) => item.type === category)
-                  .map((item) => (
-                    <AreaMaterialCard
-                      key={item.id}
-                      item={item}
-                      variants={variantsByItem.get(item.id) ?? []}
-                      catalogs={catalogs}
-                      canSeeCosts={canSeeCosts()}
-                      canSeePrices={canSeePrices()}
-                      mayEdit={mayEdit}
-                      onAdd={() => setEditor({ item, variant: null })}
-                      onEdit={(variant) => setEditor({ item, variant })}
-                    />
-                  ))}
-              </TabsContent>
+        {familiesQuery.isLoading ? <Loading /> : familiesQuery.error ? <ErrorCard error={familiesQuery.error} /> : !selectedFamilyId ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {families.map((family) => (
+              <Card key={family.id} className="flex flex-col">
+                <CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{family.name}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{family.description}</p></div><Layers3 className="h-5 w-5 text-primary" /></div></CardHeader>
+                <CardContent className="flex flex-1 flex-col gap-4">
+                  <div className="flex flex-wrap gap-2"><Badge variant="outline">{family.pricing_basis}</Badge><Badge variant="secondary">Preço por {family.pricing_unit}</Badge></div>
+                  <div className="grid grid-cols-2 gap-3 text-sm"><Metric label="Configuradas" value={family.configured_variants} /><Metric label="Pendentes" value={Math.max(family.total_combinations - family.configured_variants, 0)} /></div>
+                  <Button className="mt-auto w-full" onClick={() => setSelectedFamilyId(family.id)}>Configurar preços</Button>
+                </CardContent>
+              </Card>
             ))}
-          </Tabs>
-        )}
+            {families.length === 0 ? <Empty text="Nenhuma família de matéria-prima está ativa." /> : null}
+          </div>
+        ) : catalogQuery.isLoading ? <Loading /> : catalogQuery.error ? <ErrorCard error={catalogQuery.error} /> : catalogQuery.data ? (
+          <FamilyDetail catalog={catalogQuery.data} mayEdit={mayEdit} canSeeCosts={permissions.canSeeCosts()} canSeePrices={permissions.canSeePrices()}
+            onAdd={() => setEditor('new')} onEdit={setEditor} />
+        ) : null}
       </div>
-
-      {editor ? (
-        <AreaPriceDialog
-          key={editor.variant?.id ?? `new-${editor.item.id}`}
-          editor={editor}
-          catalogs={catalogs}
-          onClose={closeEditor}
-          onSaved={invalidate}
-        />
-      ) : null}
+      {editor && catalogQuery.data ? <PriceDialog companyId={companyId} catalog={catalogQuery.data} variant={editor === 'new' ? null : editor}
+        onClose={() => setEditor(null)} onSaved={invalidate} /> : null}
     </MainLayout>
   );
 }
 
-function Metric({
-  label,
-  value,
-  ok,
-}: {
-  label: string;
-  value: string;
-  ok: boolean;
+function FamilyDetail({ catalog, mayEdit, canSeeCosts, canSeePrices, onAdd, onEdit }: {
+  catalog: FamilyCatalog; mayEdit: boolean; canSeeCosts: boolean; canSeePrices: boolean;
+  onAdd: () => void; onEdit: (variant: Variant) => void;
 }) {
-  return (
-    <Card>
-      <CardContent className="flex items-center justify-between gap-2 p-4">
-        <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold">{value}</p>
-        </div>
-        {ok ? (
-          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-        ) : (
-          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
-        )}
-      </CardContent>
-    </Card>
-  );
+  const labels = useMemo(() => {
+    const map = new Map<string, string>();
+    catalog.attributes.forEach((attribute) => attribute.options.forEach((option) => map.set(option.id, option.label)));
+    return map;
+  }, [catalog.attributes]);
+  return <div className="space-y-4">
+    <Card><CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>{catalog.family.name}</CardTitle><p className="text-sm text-muted-foreground">Selecione uma combinação cadastrada no catálogo global.</p></div>{mayEdit ? <Button onClick={onAdd}><Plus className="mr-2 h-4 w-4" /> Nova combinação</Button> : null}</CardHeader></Card>
+    {catalog.variants.length === 0 ? <Empty text="Nenhum preço configurado para esta empresa." /> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {catalog.variants.map((variant) => {
+        const cost = variant.cost == null ? null : Number(variant.cost);
+        const sale = variant.sale_price == null ? null : Number(variant.sale_price);
+        return <Card key={variant.id}><CardContent className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-2"><p className="font-medium">{variant.option_ids.map((id) => labels.get(id) ?? id).join(' · ')}</p>{mayEdit ? <Button size="icon" variant="ghost" onClick={() => onEdit(variant)} aria-label="Editar preço"><Pencil className="h-4 w-4" /></Button> : null}</div>
+          <div className="grid grid-cols-2 gap-3 text-sm">{canSeeCosts ? <Price label={`Custo/${catalog.family.pricing_unit}`} value={cost} /> : null}{canSeePrices ? <Price label={`Venda/${catalog.family.pricing_unit}`} value={sale} /> : null}{canSeeCosts && canSeePrices ? <Price label="Lucro" value={cost != null && sale != null ? sale - cost : null} /> : null}{canSeePrices ? <div><p className="text-xs text-muted-foreground">Markup</p><p className="font-semibold">{variant.markup_percent == null ? '—' : `${Number(variant.markup_percent).toFixed(2)}%`}</p></div> : null}</div>
+        </CardContent></Card>;
+      })}
+    </div>}
+  </div>;
 }
 
-function Loading() {
-  return (
-    <div className="flex justify-center p-10">
-      <Loader2 className="h-6 w-6 animate-spin" aria-label="Carregando" />
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message: string }) {
-  return (
-    <Card className="border-destructive/40">
-      <CardContent className="flex gap-2 p-5 text-sm text-destructive">
-        <AlertTriangle className="h-5 w-5 shrink-0" />
-        {message}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AreaMaterialCard({
-  item,
-  variants,
-  catalogs,
-  canSeeCosts,
-  canSeePrices,
-  mayEdit,
-  onAdd,
-  onEdit,
-}: {
-  item: AreaItem;
-  variants: AreaVariant[];
-  catalogs: Catalogs;
-  canSeeCosts: boolean;
-  canSeePrices: boolean;
-  mayEdit: boolean;
-  onAdd: () => void;
-  onEdit: (variant: AreaVariant) => void;
+function PriceDialog({ companyId, catalog, variant, onClose, onSaved }: {
+  companyId: string; catalog: FamilyCatalog; variant: Variant | null; onClose: () => void; onSaved: () => Promise<void>;
 }) {
-  const schema = parseAttributeSchema(item.variant_attribute_schema);
-  return (
-    <Card>
-      <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle className="text-lg">{item.name}</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            {categoryLabel(item.type)} · preço por {item.pricing_unit ?? 'm²'}
-          </p>
-        </div>
-        {mayEdit ? (
-          <Button onClick={onAdd} size="sm" className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova variante
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        {variants.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Nenhuma variante com preço configurado.
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {variants.map((variant) => {
-              const metrics = priceMetrics(variant);
-              return (
-                <div key={variant.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">
-                        {attributeLabel(variant.attributes, schema, catalogs)}
-                      </p>
-                      <Badge variant="outline" className="mt-1">
-                        {variant.pricing_basis}
-                      </Badge>
-                    </div>
-                    {mayEdit ? (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Editar preço da variante"
-                        onClick={() => onEdit(variant)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    {canSeeCosts ? (
-                      <PriceValue
-                        label="Custo/m²"
-                        value={metrics.cost}
-                        missing="Sem custo"
-                      />
-                    ) : null}
-                    {canSeePrices ? (
-                      <PriceValue
-                        label="Venda/m²"
-                        value={metrics.sale}
-                        missing="Sem preço"
-                      />
-                    ) : null}
-                    {canSeeCosts && canSeePrices ? (
-                      <>
-                        <PriceValue label="Lucro/m²" value={metrics.profit} missing="—" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Margem</p>
-                          <p className="font-semibold">
-                            {metrics.margin == null ? '—' : `${metrics.margin.toFixed(2)}%`}
-                          </p>
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
-                  {canSeePrices ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Markup sobre custo:{' '}
-                      {variant.markup_percent == null
-                        ? 'indisponível sem custo'
-                        : `${Number(variant.markup_percent).toFixed(2)}%`}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function PriceValue({
-  label,
-  value,
-  missing,
-}: {
-  label: string;
-  value: number | null;
-  missing: string;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-semibold">{value == null ? missing : brl.format(value)}</p>
-    </div>
-  );
-}
-
-function AreaPriceDialog({
-  editor,
-  catalogs,
-  onClose,
-  onSaved,
-}: {
-  editor: EditorState;
-  catalogs: Catalogs;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const schema = parseAttributeSchema(editor.item.variant_attribute_schema);
-  const existingAttributes =
-    editor.variant?.attributes
-    && typeof editor.variant.attributes === 'object'
-    && !Array.isArray(editor.variant.attributes)
-      ? editor.variant.attributes as Record<string, Json | undefined>
-      : {};
-  const [attributes, setAttributes] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      schema.map((definition) => [
-        definition.key,
-        existingAttributes[definition.key] == null
-          ? ''
-          : String(existingAttributes[definition.key]),
-      ]),
-    ),
-  );
-  const [cost, setCost] = useState(
-    editor.variant?.cost == null ? '' : String(editor.variant.cost),
-  );
-  const [basis, setBasis] = useState<'MARKUP' | 'SALE_PRICE'>('MARKUP');
+  const initial = useMemo(() => Object.fromEntries(catalog.attributes.map((attribute) => [attribute.id, attribute.options.find((option) => variant?.option_ids.includes(option.id))?.id ?? ''])), [catalog.attributes, variant]);
+  const [selected, setSelected] = useState<Record<string, string>>(initial);
+  const [cost, setCost] = useState(variant?.cost == null ? '' : String(variant.cost));
+  const initialBasis = variant?.markup_percent == null ? 'SALE_PRICE' : 'MARKUP';
+  const [basis, setBasis] = useState<'MARKUP' | 'SALE_PRICE'>(initialBasis);
   const [value, setValue] = useState(
-    editor.variant?.markup_percent == null
-      ? ''
-      : String(editor.variant.markup_percent),
+    initialBasis === 'MARKUP'
+      ? String(variant?.markup_percent ?? '')
+      : String(variant?.sale_price ?? ''),
   );
-
-  const costNumber = parseNumber(cost);
-  const valueNumber = parseNumber(value);
-  const sale = costNumber != null && valueNumber != null
-    ? basis === 'MARKUP'
-      ? costNumber * (1 + valueNumber / 100)
-      : valueNumber
-    : null;
-  const markup = costNumber != null && costNumber > 0 && sale != null
-    ? ((sale / costNumber) - 1) * 100
-    : null;
-  const profit = costNumber != null && sale != null ? sale - costNumber : null;
-  const margin = profit != null && sale != null && sale > 0
-    ? (profit / sale) * 100
-    : null;
-  const missingRequired = !editor.variant && schema.some(
-    (definition) => definition.required && !attributes[definition.key]?.trim(),
-  );
-  const invalidPricing = costNumber == null
-    || costNumber <= 0
-    || valueNumber == null
-    || (basis === 'MARKUP' ? valueNumber < 0 : valueNumber <= 0)
-    || (sale != null && sale < costNumber);
-
-  const save = useMutation({
+  const optionIds = Object.values(selected).filter(Boolean);
+  const costNumber = Number(cost.replace(',', '.'));
+  const valueNumber = Number(value.replace(',', '.'));
+  const invalid = catalog.attributes.some((attribute) => attribute.required && !selected[attribute.id])
+    || !Number.isFinite(costNumber) || costNumber <= 0 || !Number.isFinite(valueNumber) || valueNumber < 0
+    || (basis === 'SALE_PRICE' && valueNumber < costNumber);
+  const mutation = useMutation({
     mutationFn: async () => {
-      if (missingRequired) {
-        throw new Error('Preencha todos os atributos obrigatórios.');
-      }
-      if (invalidPricing) {
-        throw new Error('Informe custo e preço/markup válidos.');
-      }
-      const payload = Object.fromEntries(
-        Object.entries(attributes)
-          .filter(([, attributeValue]) => attributeValue.trim() !== '')
-          .map(([key, attributeValue]) => [
-            key,
-            key === 'thickness_mm' ? Number(attributeValue) : attributeValue,
-          ]),
-      );
-      const { error } = await supabase.rpc('save_company_item_variant', {
-        _company_id: editor.item.company_id,
-        _company_item_id: editor.item.id,
-        _variant_type: editor.variant?.variant_type ?? editor.item.type.toUpperCase(),
-        _attributes: payload,
-        _cost: costNumber!,
-        _basis: basis,
-        _value: valueNumber!,
-      });
+      const { error } = await supabase.rpc('save_company_material_variant', { _company_id: companyId, _family_id: catalog.family.id, _option_ids: optionIds, _cost: costNumber, _basis: basis, _value: valueNumber });
       if (error) throw error;
     },
-    onSuccess: async () => {
-      await onSaved();
-      toast.success('Preço por área salvo.');
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(operationalErrorMessage(error, 'Não foi possível salvar o preço.'));
-    },
+    onSuccess: async () => { await onSaved(); toast.success('Preço empresarial salvo.'); onClose(); },
+    onError: (error) => toast.error(operationalErrorMessage(error, 'Não foi possível salvar o preço.')),
   });
-
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>
-            {editor.variant ? 'Editar variante' : 'Nova variante'} · {editor.item.name}
-          </DialogTitle>
-          <DialogDescription>
-            A combinação de atributos identifica este preço por m².
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4">
-          {schema.map((definition) => (
-            <AttributeField
-              key={definition.key}
-              definition={definition}
-              value={attributes[definition.key] ?? ''}
-              options={definition.catalog ? catalogs[definition.catalog] ?? [] : []}
-              disabled={!!editor.variant}
-              onChange={(next) => {
-                setAttributes((current) => ({ ...current, [definition.key]: next }));
-              }}
-            />
-          ))}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Custo/m²">
-              <Input
-                inputMode="decimal"
-                type="number"
-                min="0"
-                step="0.01"
-                value={cost}
-                onChange={(event) => setCost(event.target.value)}
-              />
-            </Field>
-            <Field label="Editar por">
-              <Select
-                value={basis}
-                onValueChange={(next) => {
-                  setBasis(next as typeof basis);
-                  setValue('');
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MARKUP">Markup sobre custo</SelectItem>
-                  <SelectItem value="SALE_PRICE">Preço de venda</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
-          <Field label={basis === 'MARKUP' ? 'Markup (%)' : 'Venda/m²'}>
-            <Input
-              inputMode="decimal"
-              type="number"
-              min="0"
-              step="0.01"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-            />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-4 text-sm">
-            <PreviewValue label="Venda/m²" value={sale} currency />
-            <PreviewValue label="Markup" value={markup} suffix="%" />
-            <PreviewValue label="Lucro/m²" value={profit} currency />
-            <PreviewValue label="Margem sobre venda" value={margin} suffix="%" />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            disabled={missingRequired || invalidPricing || save.isPending}
-            onClick={() => save.mutate()}
-          >
-            {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Salvar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AttributeField({
-  definition,
-  value,
-  options,
-  disabled,
-  onChange,
-}: {
-  definition: AttributeDefinition;
-  value: string;
-  options: CatalogOption[];
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  const label = `${definition.label}${definition.required ? ' *' : ''}`;
-  if (definition.kind === 'select') {
-    return (
-      <Field label={label}>
-        <Select value={value} onValueChange={onChange} disabled={disabled}>
-          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-          <SelectContent>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-    );
-  }
-  return (
-    <Field label={label}>
-      <Input
-        value={value}
-        disabled={disabled}
-        type={definition.kind === 'number' ? 'number' : 'text'}
-        inputMode={definition.kind === 'number' ? 'decimal' : undefined}
-        min={definition.kind === 'number' ? '0' : undefined}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </Field>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-1.5">
-      <Label>{label}</Label>
-      {children}
+  return <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+    <DialogHeader><DialogTitle>{variant ? 'Editar preço' : 'Nova combinação'} · {catalog.family.name}</DialogTitle><DialogDescription>Os valores pertencem somente à empresa atual.</DialogDescription></DialogHeader>
+    <div className="grid gap-4">{catalog.attributes.map((attribute) => <div key={attribute.id} className="space-y-2"><Label>{attribute.label}{attribute.required ? ' *' : ''}</Label><Select value={selected[attribute.id]} disabled={!!variant} onValueChange={(next) => setSelected((current) => ({ ...current, [attribute.id]: next }))}><SelectTrigger><SelectValue placeholder={`Selecione ${attribute.label.toLowerCase()}`} /></SelectTrigger><SelectContent>{attribute.options.map((option) => <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>)}</SelectContent></Select></div>)}
+      <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Custo/{catalog.family.pricing_unit}</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={cost} onChange={(event) => setCost(event.target.value)} /></div><div className="space-y-2"><Label>Editar por</Label><Select value={basis} onValueChange={(next) => { setBasis(next as typeof basis); setValue(''); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MARKUP">Markup</SelectItem><SelectItem value="SALE_PRICE">Preço de venda</SelectItem></SelectContent></Select></div></div>
+      <div className="space-y-2"><Label>{basis === 'MARKUP' ? 'Markup (%)' : `Venda/${catalog.family.pricing_unit}`}</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={value} onChange={(event) => setValue(event.target.value)} /></div>
     </div>
-  );
+    <DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button disabled={invalid || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}Salvar</Button></DialogFooter>
+  </DialogContent></Dialog>;
 }
 
-function PreviewValue({
-  label,
-  value,
-  currency = false,
-  suffix = '',
-}: {
-  label: string;
-  value: number | null;
-  currency?: boolean;
-  suffix?: string;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-semibold">
-        {value == null
-          ? 'Indisponível'
-          : currency
-            ? brl.format(value)
-            : `${value.toFixed(2)}${suffix}`}
-      </p>
-    </div>
-  );
-}
+function Loading() { return <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin" /></div>; }
+function ErrorCard({ error }: { error: unknown }) { return <Card><CardContent className="p-6 text-sm text-destructive">{operationalErrorMessage(error, 'Não foi possível carregar o catálogo.')}</CardContent></Card>; }
+function Empty({ text }: { text: string }) { return <Card className="sm:col-span-2 xl:col-span-3"><CardContent className="p-8 text-center text-sm text-muted-foreground">{text}</CardContent></Card>; }
+function Metric({ label, value }: { label: string; value: number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold">{Number.isFinite(value) ? value : 0}</p></div>; }
+function Price({ label, value }: { label: string; value: number | null }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="font-semibold">{value == null ? '—' : brl.format(value)}</p></div>; }

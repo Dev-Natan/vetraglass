@@ -70,6 +70,7 @@ const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
 // Admin pages - lazy loaded (only for SaaS admins)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ItemTemplates = lazy(() => import("./pages/admin/ItemTemplates"));
+const MaterialFamilies = lazy(() => import("./pages/admin/MaterialFamilies"));
 const ProductTemplates = lazy(() => import("./pages/admin/ProductTemplates"));
 
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
@@ -334,6 +335,9 @@ function AppRoutes() {
       } />
       <Route path="/admin/item-templates" element={
         <AdminRoute><LazyRoute><ItemTemplates /></LazyRoute></AdminRoute>
+      } />
+      <Route path="/admin/material-families" element={
+        <AdminRoute><LazyRoute><MaterialFamilies /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
