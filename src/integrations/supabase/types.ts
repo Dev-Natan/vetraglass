@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1540,6 +1540,7 @@ export type Database = {
           profile_finish: string | null
           sale_price: number | null
           updated_at: string
+          variant_definition_id: string | null
           variant_type: string
         }
         Insert: {
@@ -1560,6 +1561,7 @@ export type Database = {
           profile_finish?: string | null
           sale_price?: number | null
           updated_at?: string
+          variant_definition_id?: string | null
           variant_type: string
         }
         Update: {
@@ -1580,6 +1582,7 @@ export type Database = {
           profile_finish?: string | null
           sale_price?: number | null
           updated_at?: string
+          variant_definition_id?: string | null
           variant_type?: string
         }
         Relationships: [
@@ -1603,6 +1606,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "physical_inventory_summary"
             referencedColumns: ["company_item_id"]
+          },
+          {
+            foreignKeyName: "company_item_variants_variant_definition_id_fkey"
+            columns: ["variant_definition_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_variant_definitions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4085,6 +4095,96 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "item_template_color_prices_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_template_variant_definition_options: {
+        Row: {
+          attribute_id: string
+          created_at: string
+          definition_id: string
+          item_template_id: string
+          option_id: string
+        }
+        Insert: {
+          attribute_id: string
+          created_at?: string
+          definition_id: string
+          item_template_id: string
+          option_id: string
+        }
+        Update: {
+          attribute_id?: string
+          created_at?: string
+          definition_id?: string
+          item_template_id?: string
+          option_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_template_variant_definition_options_attribute_family_fkey"
+            columns: ["attribute_id", "item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_attributes"
+            referencedColumns: ["id", "item_template_id"]
+          },
+          {
+            foreignKeyName: "item_template_variant_definition_options_definition_family_fkey"
+            columns: ["definition_id", "item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_variant_definitions"
+            referencedColumns: ["id", "item_template_id"]
+          },
+          {
+            foreignKeyName: "item_template_variant_definition_options_option_attribute_fkey"
+            columns: ["option_id", "attribute_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_attribute_options"
+            referencedColumns: ["id", "attribute_id"]
+          },
+        ]
+      }
+      item_template_variant_definitions: {
+        Row: {
+          attribute_signature: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          item_template_id: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          attribute_signature: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          item_template_id: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          attribute_signature?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          item_template_id?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_template_variant_definitions_item_template_id_fkey"
             columns: ["item_template_id"]
             isOneToOne: false
             referencedRelation: "item_templates"
@@ -9387,6 +9487,52 @@ export type Database = {
           table_name: string
         }[]
       }
+      admin_save_material_combination: {
+        Args: {
+          _active?: boolean
+          _family_id: string
+          _id: string
+          _option_ids: string[]
+          _sort_order?: number
+        }
+        Returns: {
+          attribute_signature: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          item_template_id: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "item_template_variant_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_material_combination_active: {
+        Args: { _active: boolean; _definition_id: string }
+        Returns: {
+          attribute_signature: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          item_template_id: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "item_template_variant_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_upsert_material_attribute: {
         Args: {
           _active: boolean
@@ -10042,6 +10188,38 @@ export type Database = {
           total_combinations: number
         }[]
       }
+      list_company_material_families_activation: {
+        Args: { _company_id: string }
+        Returns: {
+          active_combinations: number
+          code: string
+          description: string
+          global_combinations: number
+          id: string
+          name: string
+          priced_combinations: number
+          pricing_basis: string
+          pricing_unit: string
+          sort_order: number
+        }[]
+      }
+      list_company_material_family_combinations: {
+        Args: { _company_id: string; _family_id: string }
+        Returns: {
+          attribute_signature: string
+          attributes: Json
+          company_active: boolean
+          company_variant_id: string
+          cost: number
+          definition_id: string
+          markup_percent: number
+          option_ids: string[]
+          option_labels: string[]
+          sale_price: number
+          sort_order: number
+          status: string
+        }[]
+      }
       list_cutting_plan_templates: {
         Args: { _category?: string; _linha?: string }
         Returns: {
@@ -10611,6 +10789,7 @@ export type Database = {
           profile_finish: string | null
           sale_price: number | null
           updated_at: string
+          variant_definition_id: string | null
           variant_type: string
         }
         SetofOptions: {
@@ -10647,6 +10826,43 @@ export type Database = {
           profile_finish: string | null
           sale_price: number | null
           updated_at: string
+          variant_definition_id: string | null
+          variant_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_item_variants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_company_material_variant_price: {
+        Args: {
+          _basis: string
+          _company_id: string
+          _cost: number
+          _definition_id: string
+          _value: number
+        }
+        Returns: {
+          attribute_signature: string | null
+          attributes: Json
+          company_id: string
+          company_item_id: string
+          cost: number | null
+          created_at: string
+          glass_color: string | null
+          glass_thickness_mm: number | null
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          markup_percent: number | null
+          pricing_basis: string
+          profile_color: string | null
+          profile_finish: string | null
+          sale_price: number | null
+          updated_at: string
+          variant_definition_id: string | null
           variant_type: string
         }
         SetofOptions: {
@@ -10723,6 +10939,10 @@ export type Database = {
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      set_company_material_combination_active: {
+        Args: { _active: boolean; _company_id: string; _definition_id: string }
+        Returns: Json
       }
       set_product_parametric_rule_active: {
         Args: { _change_reason: string; _is_active: boolean; _rule_id: string }

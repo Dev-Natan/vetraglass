@@ -504,7 +504,13 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         .eq('is_active', true)
         .in('company_item_id', pricingVariantItemIds);
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((row) => row.pricing_basis !== 'AREA' || (
+        row.variant_definition_id !== null
+        && row.cost !== null
+        && Number(row.cost) > 0
+        && row.sale_price !== null
+        && Number(row.sale_price) >= Number(row.cost)
+      ));
     },
     enabled: !!currentCompany?.id && pricingVariantItemIds.length > 0,
   });
