@@ -110,8 +110,8 @@ export default function EstoqueLinha() {
   const getItemData = useCallback((item: StockItem) => {
     return {
       name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
-      type: item.company_item?.type ?? item.item_template?.type ?? '',
-      linha: item.company_item?.linha ?? item.item_template?.linha ?? '',
+      type: item.category_code ?? item.company_item?.type ?? item.item_template?.type ?? '',
+      linha: item.line_name ?? item.company_item?.linha ?? item.item_template?.linha ?? '',
     };
   }, []);
 
@@ -160,8 +160,8 @@ export default function EstoqueLinha() {
   const { inStockItems, outOfStockItems } = useMemo(() => {
     // Lock scope to current line (from URL)
     let items = activeItems.filter((item) => {
-      const linha = item.company_item?.linha ?? item.item_template?.linha;
-      const type = item.company_item?.type ?? item.item_template?.type;
+      const linha = item.line_name ?? item.company_item?.linha ?? item.item_template?.linha;
+      const type = item.category_code ?? item.company_item?.type ?? item.item_template?.type;
       if (isVidros) {
         if (!isGlassType(type)) return false;
         if (semLinhaOnly) return !linha;
@@ -175,7 +175,9 @@ export default function EstoqueLinha() {
       const search = searchTerm.toLowerCase();
       items = items.filter((item) => {
         const name = item.company_item?.name ?? item.item_template?.name ?? '';
-        return name.toLowerCase().includes(search);
+        return [name, item.variant_name, item.line_name, item.category_name]
+          .filter(Boolean)
+          .some(value => String(value).toLowerCase().includes(search));
       });
     }
     if (categoryFilter === 'diversos') {
@@ -210,7 +212,7 @@ export default function EstoqueLinha() {
         return nameA.localeCompare(nameB);
       }
       if (sortBy === 'quantity') return b.quantity - a.quantity;
-      if (sortBy === 'value') return (b.quantity * (b.company_item?.cost || b.priceInfo?.cost || 0)) - (a.quantity * (a.company_item?.cost || a.priceInfo?.cost || 0));
+      if (sortBy === 'value') return Number(b.inventory_value || 0) - Number(a.inventory_value || 0);
       return 0;
     });
 
@@ -225,8 +227,6 @@ export default function EstoqueLinha() {
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
     const isCustom = item.company_item?.is_custom ?? false;
-    const isVirtual = item.id.startsWith('virtual-');
-    
     setSelectedItem({
       id: item.item_template_id,
       name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
@@ -234,7 +234,7 @@ export default function EstoqueLinha() {
       unit: item.item_template?.unit ?? item.company_item?.unit,
       companyItemId: item.company_item_id,
       isCustomItem: isCustom,
-      stockId: isVirtual ? undefined : item.id,
+      stockId: undefined,
     });
     setPriceDialogOpen(true);
   }, []);

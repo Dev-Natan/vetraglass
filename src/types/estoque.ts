@@ -3,6 +3,16 @@ export interface StockItem {
   item_template_id: string | null;
   company_item_id: string | null;
   company_id: string;
+  category_id?: string | null;
+  category_code?: string | null;
+  category_name?: string | null;
+  line_id?: string | null;
+  line_code?: string | null;
+  line_name?: string | null;
+  variant_id?: string | null;
+  variant_name?: string | null;
+  aluminum_color_id?: string | null;
+  color_code?: string | null;
   quantity: number;
   canonical_quantity?: number;
   canonical_unit?: 'MM' | 'MM2' | 'UNIT' | 'G' | null;
@@ -10,9 +20,15 @@ export interface StockItem {
   purchase_unit?: string | null;
   stock_unit?: string | null;
   consumption_unit?: string | null;
+  sale_unit?: string | null;
   purchase_to_canonical_factor?: number | null;
   consumption_to_canonical_factor?: number | null;
   nominal_length_mm?: number | null;
+  weight_per_meter_kg?: number | null;
+  weight_per_bar_kg?: number | null;
+  on_hand_bars?: number | null;
+  on_hand_meters?: number | null;
+  on_hand_kg?: number | null;
   average_unit_cost?: number | null;
   inventory_value?: number | null;
   unit_status?: 'CONFIGURED' | 'REVIEW_REQUIRED' | 'AMBIGUOUS' | null;
@@ -27,6 +43,8 @@ export interface StockItem {
   }>;
   /** Reserva ativa derivada de stock_reservations; não é persistida em company_stock. */
   reserved_quantity: number;
+  reserved_canonical?: number;
+  available_canonical?: number;
   min_quantity: number | null;
   location: string | null;
   is_active: boolean;
@@ -39,6 +57,8 @@ export interface StockItem {
     unit: string;
     image_url: string | null;
     linha: string | null;
+    category_id?: string | null;
+    line_id?: string | null;
     default_price: number | null;
     default_cost: number | null;
     default_sale_price: number | null;

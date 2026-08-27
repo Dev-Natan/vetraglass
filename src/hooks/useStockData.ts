@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import type { StockItem } from '@/types/estoque';
 import { useMemo } from 'react';
@@ -23,6 +22,8 @@ interface StockDataResult {
     unit: string;
     image_url: string | null;
     linha: string | null;
+    category_id: string | null;
+    line_id: string | null;
     default_price: number | null;
     default_cost: number | null;
     default_sale_price: number | null;
@@ -92,22 +93,6 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     staleTime: 30000,
   });
 
-  const reservationsQuery = useQuery({
-    queryKey: ['active-stock-reservations', companyId],
-    queryFn: async () => {
-      if (!companyId) return [];
-      const { data, error } = await supabase
-        .from('stock_reservations')
-        .select('company_item_id, quantity_reserved, canonical_quantity')
-        .eq('company_id', companyId)
-        .eq('status', 'reserved');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!companyId,
-    staleTime: 30000,
-  });
-
   // Combine and memoize stock items with templates, company items, and prices
   const stockItems = useMemo<StockItem[]>(() => {
     if (!templatesQuery.data) return [];
@@ -115,25 +100,10 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     const templatesMap = new Map(templatesQuery.data.map(t => [t.id, t]));
     const companyItemsMap = new Map(companyItemsQuery.data?.map(ci => [ci.id, ci]) || []);
     const pricesMap = new Map(pricesQuery.data?.map(p => [p.item_template_id, p]) || []);
-    const stockByCompanyItem = new Map(
-      (stockQuery.data || []).flatMap((stock) => stock.company_item_id ? [[stock.company_item_id, stock] as const] : []),
-    );
-    const reservedByCompanyItem = new Map<string, number>();
-    (reservationsQuery.data || []).forEach((reservation) => {
-      if (!reservation.company_item_id) return;
-      const item = stockByCompanyItem.get(reservation.company_item_id);
-      const factor = Number(item?.consumption_to_canonical_factor || 1);
-      const canonical = Number(reservation.canonical_quantity ?? Number(reservation.quantity_reserved || 0) * factor);
-      reservedByCompanyItem.set(
-        reservation.company_item_id,
-        (reservedByCompanyItem.get(reservation.company_item_id) || 0) + canonical / factor,
-      );
-    });
     
     // Map existing stock items
     const existingStockItems = (stockQuery.data || []).map((stock) => ({
       ...stock,
-      reserved_quantity: stock.company_item_id ? reservedByCompanyItem.get(stock.company_item_id) || 0 : 0,
       item_template: stock.item_template_id ? templatesMap.get(stock.item_template_id) || null : null,
       company_item: stock.company_item_id ? companyItemsMap.get(stock.company_item_id) || null : null,
       priceInfo: stock.item_template_id ? pricesMap.get(stock.item_template_id) || null : null,
@@ -164,7 +134,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       } as StockItem));
 
     return [...existingStockItems, ...virtualItems];
-  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data, reservationsQuery.data, companyId]);
+  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data, companyId]);
 
   // Memoized filtered lists
   const activeItems = useMemo(
@@ -203,8 +173,8 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     };
   }, [activeItems, lowStockItems]);
 
-  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading || companyItemsQuery.isLoading || reservationsQuery.isLoading;
-  const error = stockQuery.error || templatesQuery.error || pricesQuery.error || companyItemsQuery.error || reservationsQuery.error;
+  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading || companyItemsQuery.isLoading;
+  const error = stockQuery.error || templatesQuery.error || pricesQuery.error || companyItemsQuery.error;
 
   return {
     stockItems,

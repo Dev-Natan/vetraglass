@@ -214,29 +214,33 @@ export async function checkCompositionStockAvailability(
     let stockQty = 0;
     let reservedQty = 0;
 
-    if (need.companyItemId) {
-      const { data: stock } = await supabase
-        .from('company_stock')
-        .select('quantity')
-        .eq('company_item_id', need.companyItemId)
-        .maybeSingle();
-      stockQty = stock?.quantity || 0;
+    const canonicalToDisplay = (quantity: number, unit: string | null) => {
+      if (unit === 'MM') return quantity / 1000;
+      if (unit === 'MM2') return quantity / 1_000_000;
+      if (unit === 'G') return quantity / 1000;
+      return quantity;
+    };
 
-      // Check active reservations
-      const { data: reservations } = await supabase
-        .from('stock_reservations')
-        .select('quantity_reserved')
-        .eq('company_item_id', need.companyItemId)
-        .eq('status', 'reserved');
-      reservedQty = reservations?.reduce((sum, r) => sum + (r.quantity_reserved || 0), 0) || 0;
-    } else if (need.itemTemplateId) {
-      const { data: stock } = await supabase
-        .from('company_stock')
-        .select('quantity')
+    if (need.companyItemId) {
+      const { data: summaries } = await supabase
+        .from('inventory_variant_summary')
+        .select('on_hand_canonical,reserved_canonical,canonical_unit')
         .eq('company_id', companyId)
-        .eq('item_template_id', need.itemTemplateId)
-        .maybeSingle();
-      stockQty = stock?.quantity || 0;
+        .eq('company_item_id', need.companyItemId);
+      stockQty = (summaries || []).reduce((sum, row) =>
+        sum + canonicalToDisplay(Number(row.on_hand_canonical || 0), row.canonical_unit), 0);
+      reservedQty = (summaries || []).reduce((sum, row) =>
+        sum + canonicalToDisplay(Number(row.reserved_canonical || 0), row.canonical_unit), 0);
+    } else if (need.itemTemplateId) {
+      const { data: summaries } = await supabase
+        .from('inventory_variant_summary')
+        .select('on_hand_canonical,reserved_canonical,canonical_unit')
+        .eq('company_id', companyId)
+        .eq('item_template_id', need.itemTemplateId);
+      stockQty = (summaries || []).reduce((sum, row) =>
+        sum + canonicalToDisplay(Number(row.on_hand_canonical || 0), row.canonical_unit), 0);
+      reservedQty = (summaries || []).reduce((sum, row) =>
+        sum + canonicalToDisplay(Number(row.reserved_canonical || 0), row.canonical_unit), 0);
     }
 
     const available = Math.max(0, stockQty - reservedQty);

@@ -1345,6 +1345,13 @@ export type Database = {
             foreignKeyName: "company_enabled_linhas_linha_slug_fkey"
             columns: ["linha_slug"]
             isOneToOne: false
+            referencedRelation: "inventory_variant_summary"
+            referencedColumns: ["line_code"]
+          },
+          {
+            foreignKeyName: "company_enabled_linhas_linha_slug_fkey"
+            columns: ["linha_slug"]
+            isOneToOne: false
             referencedRelation: "product_linhas"
             referencedColumns: ["slug"]
           },
@@ -1523,6 +1530,7 @@ export type Database = {
       }
       company_item_variants: {
         Row: {
+          aluminum_color_id: string | null
           attribute_signature: string | null
           attributes: Json
           company_id: string
@@ -1544,6 +1552,7 @@ export type Database = {
           variant_type: string
         }
         Insert: {
+          aluminum_color_id?: string | null
           attribute_signature?: string | null
           attributes?: Json
           company_id: string
@@ -1565,6 +1574,7 @@ export type Database = {
           variant_type: string
         }
         Update: {
+          aluminum_color_id?: string | null
           attribute_signature?: string | null
           attributes?: Json
           company_id?: string
@@ -1586,6 +1596,20 @@ export type Database = {
           variant_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "company_item_variants_aluminum_color_id_fkey"
+            columns: ["aluminum_color_id"]
+            isOneToOne: false
+            referencedRelation: "admin_aluminum_colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_item_variants_aluminum_color_id_fkey"
+            columns: ["aluminum_color_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_variant_summary"
+            referencedColumns: ["aluminum_color_id"]
+          },
           {
             foreignKeyName: "company_item_variants_company_id_fkey"
             columns: ["company_id"]
@@ -3864,6 +3888,7 @@ export type Database = {
           physical_dimension: string
           purchase_to_canonical_factor: number | null
           purchase_unit: string
+          sale_unit: string | null
           stock_to_canonical_factor: number | null
           stock_unit: string
           updated_at: string
@@ -3884,6 +3909,7 @@ export type Database = {
           physical_dimension: string
           purchase_to_canonical_factor?: number | null
           purchase_unit: string
+          sale_unit?: string | null
           stock_to_canonical_factor?: number | null
           stock_unit: string
           updated_at?: string
@@ -3904,6 +3930,7 @@ export type Database = {
           physical_dimension?: string
           purchase_to_canonical_factor?: number | null
           purchase_unit?: string
+          sale_unit?: string | null
           stock_to_canonical_factor?: number | null
           stock_unit?: string
           updated_at?: string
@@ -4199,6 +4226,7 @@ export type Database = {
           aliquota_is: number | null
           aliquota_iss: number | null
           bar_length_mm: number | null
+          category_id: string | null
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
@@ -4216,6 +4244,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           is_commercial_area_material: boolean
+          line_id: string | null
           linha: string | null
           name: string
           ncm: string | null
@@ -4238,6 +4267,7 @@ export type Database = {
           aliquota_is?: number | null
           aliquota_iss?: number | null
           bar_length_mm?: number | null
+          category_id?: string | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -4255,6 +4285,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           is_commercial_area_material?: boolean
+          line_id?: string | null
           linha?: string | null
           name: string
           ncm?: string | null
@@ -4277,6 +4308,7 @@ export type Database = {
           aliquota_is?: number | null
           aliquota_iss?: number | null
           bar_length_mm?: number | null
+          category_id?: string | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -4294,6 +4326,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           is_commercial_area_material?: boolean
+          line_id?: string | null
           linha?: string | null
           name?: string
           ncm?: string | null
@@ -4312,10 +4345,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "item_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "item_templates_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_templates_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "product_linhas"
             referencedColumns: ["id"]
           },
         ]
@@ -9266,6 +9313,74 @@ export type Database = {
           },
         ]
       }
+      inventory_variant_summary: {
+        Row: {
+          aluminum_color_id: string | null
+          available_canonical: number | null
+          available_meters: number | null
+          average_cost_per_canonical: number | null
+          canonical_unit: string | null
+          category_code: string | null
+          category_id: string | null
+          category_name: string | null
+          color_code: string | null
+          commercial_cost: number | null
+          commercial_sale_price: number | null
+          company_id: string | null
+          company_item_id: string | null
+          consumption_unit: string | null
+          cost_policy: string | null
+          inventory_value: number | null
+          item_active: boolean | null
+          item_name: string | null
+          item_template_id: string | null
+          legacy_status: string | null
+          legacy_type: string | null
+          line_code: string | null
+          line_id: string | null
+          line_name: string | null
+          nominal_length_mm: number | null
+          on_hand_bars: number | null
+          on_hand_canonical: number | null
+          on_hand_kg: number | null
+          on_hand_meters: number | null
+          physical_dimension: string | null
+          pricing_unit: string | null
+          purchase_unit: string | null
+          reserved_canonical: number | null
+          reserved_meters: number | null
+          sale_unit: string | null
+          stock_unit: string | null
+          variant_active: boolean | null
+          variant_id: string | null
+          variant_name: string | null
+          weight_per_bar_kg: number | null
+          weight_per_meter_kg: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_items_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_templates_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "product_linhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_purchase_requirements_summary: {
         Row: {
           cancelled_at: string | null
@@ -9580,6 +9695,7 @@ export type Database = {
           aliquota_is: number | null
           aliquota_iss: number | null
           bar_length_mm: number | null
+          category_id: string | null
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
@@ -9597,6 +9713,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           is_commercial_area_material: boolean
+          line_id: string | null
           linha: string | null
           name: string
           ncm: string | null
@@ -10772,6 +10889,7 @@ export type Database = {
           _variant_type: string
         }
         Returns: {
+          aluminum_color_id: string | null
           attribute_signature: string | null
           attributes: Json
           company_id: string
@@ -10809,6 +10927,7 @@ export type Database = {
           _value: number
         }
         Returns: {
+          aluminum_color_id: string | null
           attribute_signature: string | null
           attributes: Json
           company_id: string
@@ -10845,6 +10964,7 @@ export type Database = {
           _value: number
         }
         Returns: {
+          aluminum_color_id: string | null
           attribute_signature: string | null
           attributes: Json
           company_id: string
@@ -10943,6 +11063,44 @@ export type Database = {
       set_company_material_combination_active: {
         Args: { _active: boolean; _company_id: string; _definition_id: string }
         Returns: Json
+      }
+      set_company_profile_variant_active: {
+        Args: {
+          _aluminum_color_id: string
+          _company_id: string
+          _company_item_id: string
+          _cost?: number
+          _is_active: boolean
+          _sale_price?: number
+        }
+        Returns: {
+          aluminum_color_id: string | null
+          attribute_signature: string | null
+          attributes: Json
+          company_id: string
+          company_item_id: string
+          cost: number | null
+          created_at: string
+          glass_color: string | null
+          glass_thickness_mm: number | null
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          markup_percent: number | null
+          pricing_basis: string
+          profile_color: string | null
+          profile_finish: string | null
+          sale_price: number | null
+          updated_at: string
+          variant_definition_id: string | null
+          variant_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_item_variants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_product_parametric_rule_active: {
         Args: { _change_reason: string; _is_active: boolean; _rule_id: string }

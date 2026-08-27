@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +24,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight, MapPin, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,9 @@ interface StockItem {
   purchase_unit?: string | null;
   consumption_unit?: string | null;
   nominal_length_mm?: number | null;
+  variant_id?: string | null;
+  variant_name?: string | null;
+  weight_per_meter_kg?: number | null;
   company_item?: {
     id: string;
     name?: string;
@@ -113,7 +116,7 @@ export function RegistrarMovimentoDialog({
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
 
   // Modo de entrada específico por tipo
-  const [inputMode, setInputMode] = useState<'unit' | 'sheet' | 'piece' | 'bar' | 'linear'>('unit');
+  const [inputMode, setInputMode] = useState<'unit' | 'sheet' | 'piece' | 'bar' | 'linear' | 'weight'>('unit');
   const [sheetWidth, setSheetWidth] = useState<string>('');
   const [sheetHeight, setSheetHeight] = useState<string>('');
   const [pieceWidth, setPieceWidth] = useState<string>('');
@@ -121,8 +124,7 @@ export function RegistrarMovimentoDialog({
   const [pieceQty, setPieceQty] = useState<string>('1');
   const [linearMeters, setLinearMeters] = useState<string>('');
   const [locationId, setLocationId] = useState('');
-  const [newLocationName, setNewLocationName] = useState('');
-  const [newLocationCode, setNewLocationCode] = useState('');
+  const [selectedColorId, setSelectedColorId] = useState('');
   const [totalCost, setTotalCost] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [documentReference, setDocumentReference] = useState('');
@@ -134,6 +136,16 @@ export function RegistrarMovimentoDialog({
     enabled: open && !!currentCompany?.id,
   });
   const usableLocations = (locationsQuery.data || []).filter((location) => !location.needs_review);
+  const defaultLocation = usableLocations.find((location) => location.code === 'DEFAULT_STOCK');
+  const colorsQuery = useQuery({
+    queryKey: ['inventory-aluminum-colors'],
+    queryFn: () => estoqueService.fetchAluminumColors(),
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (open && defaultLocation?.id) setLocationId(defaultLocation.id);
+  }, [open, defaultLocation?.id]);
 
   const isEntrada = tipo === 'entrada';
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
@@ -145,6 +157,7 @@ export function RegistrarMovimentoDialog({
   const rawUnit = (selectedStockItem?.consumption_unit || selectedStockItem?.company_item?.unit || selectedStockItem?.item_template?.unit || '').toLowerCase().trim();
   const barLengthMm = selectedStockItem?.nominal_length_mm || selectedStockItem?.company_item?.bar_length_mm || selectedStockItem?.item_template?.bar_length_mm || 0;
   const barLengthM = barLengthMm > 0 ? barLengthMm / 1000 : 0;
+  const weightPerMeter = Number(selectedStockItem?.weight_per_meter_kg || 0);
 
   const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
   const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
@@ -251,12 +264,26 @@ export function RegistrarMovimentoDialog({
           heightMm: null,
         };
       }
+      if (inputMode === 'weight') {
+        const kg = parseFloat(quantidade) || 0;
+        const meters = weightPerMeter > 0 ? kg / weightPerMeter : 0;
+        return {
+          quantity: meters,
+          originalQuantity: kg,
+          originalUnit: 'KG',
+          storageUnit: 'kg',
+          summary: kg && weightPerMeter > 0 ? `${kg} kg = ${meters.toFixed(3)} m` : '',
+          autoNote: '',
+          widthMm: null,
+          heightMm: null,
+        };
+      }
     }
 
     // Padrão: unidade simples
     const q = parseFloat(quantidade) || 0;
     return { quantity: q, originalQuantity: q, originalUnit: storageUnit, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '', widthMm: null, heightMm: null };
-  }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit]);
+  }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit, weightPerMeter]);
 
 
   // Filtrar itens por busca
@@ -342,30 +369,6 @@ export function RegistrarMovimentoDialog({
     });
   };
 
-  const createLocationMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentCompany?.id || !newLocationName.trim() || !newLocationCode.trim()) {
-        throw new Error('MISSING_LOCATION');
-      }
-      const { data, error } = await supabase.rpc('create_stock_location', {
-        _company_id: currentCompany.id,
-        _name: newLocationName.trim(),
-        _code: newLocationCode.trim(),
-        _kind: 'POSITION',
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: async (id) => {
-      await locationsQuery.refetch();
-      setLocationId(id);
-      setNewLocationName('');
-      setNewLocationCode('');
-      toast.success('Localização criada.');
-    },
-    onError: (error: unknown) => toast.error(operationalErrorMessage(error, 'Não foi possível criar a localização.')),
-  });
-
   const movimentoMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !selectedItem || !motivo || !locationId) {
@@ -380,12 +383,24 @@ export function RegistrarMovimentoDialog({
       const stockItem = stockItems.find(item => item.id === selectedItem);
       if (!stockItem) throw new Error('Item não encontrado');
 
-      if (!isEntrada && qtd > stockItem.quantity) {
-        throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity} — tentando ${qtd.toFixed(3)}`);
+      const availableQuantity = Math.max(0, stockItem.quantity - stockItem.reserved_quantity);
+      if (!isEntrada && qtd > availableQuantity) {
+        throw new Error(`Estoque insuficiente. Disponível: ${availableQuantity} — tentando ${qtd.toFixed(3)}`);
       }
 
       const companyItemId = stockItem.company_item_id ?? stockItem.company_item?.id;
       if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
+      let variantId = stockItem.variant_id || undefined;
+      if (isEntrada && isProfile && !variantId) {
+        if (!selectedColorId) throw new Error('Selecione a cor/variante do perfil.');
+        const variant = await estoqueService.setProfileVariantActive({
+          companyId: currentCompany.id,
+          companyItemId,
+          colorId: selectedColorId,
+          active: true,
+        });
+        variantId = variant?.id;
+      }
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
       const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
       const { data, error } = await supabase.rpc('record_physical_stock_movement', {
@@ -396,6 +411,7 @@ export function RegistrarMovimentoDialog({
         _original_unit: computed.originalUnit,
         _location_id: locationId,
         _reason: finalDescription,
+        _variant_id: variantId,
         _idempotency_key: crypto.randomUUID(),
         _lot_code: lotCode.trim(),
         _supplier_name: supplierName.trim() || undefined,
@@ -440,8 +456,7 @@ export function RegistrarMovimentoDialog({
     setPieceQty('1');
     setLinearMeters('');
     setLocationId('');
-    setNewLocationName('');
-    setNewLocationCode('');
+    setSelectedColorId('');
     setTotalCost('');
     setSupplierName('');
     setDocumentReference('');
@@ -725,10 +740,34 @@ export function RegistrarMovimentoDialog({
                         <Button type="button" size="sm" variant={inputMode === 'linear' ? 'default' : 'outline'} onClick={() => setInputMode('linear')}>
                           Metro linear (com retalho)
                         </Button>
+                        {weightPerMeter > 0 && (
+                          <Button type="button" size="sm" variant={inputMode === 'weight' ? 'default' : 'outline'} onClick={() => setInputMode('weight')}>
+                            Por kg
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
+
+                {isEntrada && isProfile && !selectedStockItem.variant_id && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Cor / variante *</Label>
+                    <Select value={selectedColorId} onValueChange={setSelectedColorId}>
+                      <SelectTrigger aria-label="Cor do perfil">
+                        <SelectValue placeholder="Selecione a cor do perfil" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(colorsQuery.data || []).map((color) => (
+                          <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      O saldo legado sem cor permanece separado e não será reclassificado automaticamente.
+                    </p>
+                  </div>
+                )}
 
                 {/* Peça cortada (vidro) */}
                 {isGlass && inputMode === 'piece' && (
@@ -784,6 +823,16 @@ export function RegistrarMovimentoDialog({
                         Convertido para barras de {barLengthM} m — o resto é registrado como retalho na observação.
                       </p>
                     )}
+                  </div>
+                )}
+
+                {isProfile && inputMode === 'weight' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Peso recebido (kg)</Label>
+                    <Input type="number" min="0.001" step="0.001" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="Ex: 48.6" />
+                    <p className="text-[11px] text-muted-foreground">
+                      Conversão usando {weightPerMeter.toLocaleString('pt-BR')} kg/m.
+                    </p>
                   </div>
                 )}
 
@@ -844,41 +893,11 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
-            <div className="rounded-lg border p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <Label>Localização física *</Label>
-              </div>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger aria-label="Localização física">
-                  <SelectValue placeholder={locationsQuery.isLoading ? 'Carregando localizações...' : 'Selecione depósito / posição'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {usableLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name} · {location.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {usableLocations.length === 0 && !locationsQuery.isLoading && (
-                <p className="text-xs text-amber-700">
-                  O saldo legado está em revisão. Crie uma localização real antes de registrar novo movimento.
-                </p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
-                <Input value={newLocationName} onChange={(event) => setNewLocationName(event.target.value)} placeholder="Ex.: Depósito A / Prateleira P04" />
-                <Input value={newLocationCode} onChange={(event) => setNewLocationCode(event.target.value)} placeholder="Ex.: DEP-A-P04" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => createLocationMutation.mutate()}
-                  disabled={!newLocationName.trim() || !newLocationCode.trim() || createLocationMutation.isPending}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Criar
-                </Button>
-              </div>
-            </div>
+            {!defaultLocation && !locationsQuery.isLoading && (
+              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                A localização operacional interna não está disponível. Atualize a página ou contate o administrador.
+              </p>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">

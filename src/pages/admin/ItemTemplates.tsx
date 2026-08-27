@@ -49,6 +49,8 @@ interface ItemTemplate {
   type: 'glass' | 'profile' | 'accessory' | 'service';
   unit: string;
   linha: string | null;
+  category_id: string | null;
+  line_id: string | null;
   default_price: number;
   weight_per_meter: number | null;
   weight_per_bar: number | null;
@@ -149,7 +151,7 @@ export default function ItemTemplates() {
       
       let query = supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at', { count: 'exact' });
+        .select('id, name, description, type, unit, linha, category_id, line_id, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at', { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -342,6 +344,11 @@ export default function ItemTemplates() {
         type: data.type,
         unit: data.unit,
         linha: data.linha || null,
+        category_id: itemTypes?.find((type) => type.slug === data.type)?.id || null,
+        line_id: (allProductLinhas || []).find((line) =>
+          line.slug.toLowerCase() === data.linha.toLowerCase()
+          || line.name.toLowerCase() === data.linha.toLowerCase()
+        )?.id || null,
         default_price: parseFloat(data.default_price) || 0,
         specifications: specsBase,
         image_url: imageUrl,
@@ -562,7 +569,7 @@ export default function ItemTemplates() {
     (async () => {
       const { data, error } = await supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at')
+        .select('id, name, description, type, unit, linha, category_id, line_id, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at')
         .eq('id', editIdFromUrl)
         .maybeSingle();
       if (cancelled) return;

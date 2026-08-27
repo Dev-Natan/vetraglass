@@ -68,6 +68,11 @@ interface StockItemCardProps {
   showActivateBtn?: boolean;
 }
 
+function formatEquivalent(value: number | null | undefined, unit: string) {
+  if (value == null) return null;
+  return `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${unit}`;
+}
+
 export const StockItemCard = memo(function StockItemCard({
   item,
   onEdit,
@@ -129,6 +134,11 @@ export const StockItemCard = memo(function StockItemCard({
                 Personalizado
               </Badge>
             )}
+            {item.variant_name && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {item.variant_name}
+              </Badge>
+            )}
             {item.allow_fractional && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 flex items-center gap-1" title="Venda fracionada habilitada">
                 <Scissors className="w-3 h-3" />
@@ -158,6 +168,15 @@ export const StockItemCard = memo(function StockItemCard({
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
               <MapPin className="w-3 h-3" />
               {item.locations.map((location) => `${location.name}${location.needs_review ? ' (revisar)' : ''}`).join(' · ')}
+            </p>
+          )}
+          {(item.line_name || item.nominal_length_mm || item.weight_per_meter_kg) && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {[
+                item.line_name ? `Linha: ${item.line_name}` : null,
+                item.nominal_length_mm ? `Barra: ${Number(item.nominal_length_mm) / 1000} m` : null,
+                item.weight_per_meter_kg ? `Peso: ${Number(item.weight_per_meter_kg).toLocaleString('pt-BR')} kg/m` : null,
+              ].filter(Boolean).join(' · ')}
             </p>
           )}
           <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
@@ -224,6 +243,13 @@ export const StockItemCard = memo(function StockItemCard({
           <p className="text-xs text-muted-foreground whitespace-nowrap">
             Disponível: {Math.max(0, item.quantity - item.reserved_quantity).toFixed(3)} {item.consumption_unit || item.item_template?.unit}
           </p>
+          {[formatEquivalent(item.on_hand_bars, 'barras'), formatEquivalent(item.on_hand_meters, 'm'), formatEquivalent(item.on_hand_kg, 'kg')]
+            .filter(Boolean).length > 0 && (
+            <p className="text-xs text-muted-foreground whitespace-nowrap">
+              {[formatEquivalent(item.on_hand_bars, 'barras'), formatEquivalent(item.on_hand_meters, 'm'), formatEquivalent(item.on_hand_kg, 'kg')]
+                .filter(Boolean).join(' · ')}
+            </p>
+          )}
           {minQty > 0 && (
             <p className={`text-xs ${(isLowStock || isZeroStock) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
               Mín: {item.min_quantity}
@@ -248,7 +274,8 @@ export const StockItemCard = memo(function StockItemCard({
             variant={item.is_active !== false ? 'outline' : 'default'}
             size="icon"
             className="shrink-0"
-            onClick={(e) => onToggleActive(e, item.id, item.is_active !== false)}
+            onClick={(e) => item.company_item_id && onToggleActive(e, item.company_item_id, item.is_active !== false)}
+            disabled={!item.company_item_id}
             title={item.is_active !== false ? 'Desativar item' : 'Ativar item'}
           >
             <Power className="w-4 h-4" />
@@ -265,6 +292,10 @@ export const StockItemCard = memo(function StockItemCard({
     prevProps.item.package_quantity === nextProps.item.package_quantity &&
     prevProps.item.reserved_quantity === nextProps.item.reserved_quantity &&
     prevProps.item.inventory_value === nextProps.item.inventory_value &&
+    prevProps.item.variant_name === nextProps.item.variant_name &&
+    prevProps.item.on_hand_bars === nextProps.item.on_hand_bars &&
+    prevProps.item.on_hand_meters === nextProps.item.on_hand_meters &&
+    prevProps.item.on_hand_kg === nextProps.item.on_hand_kg &&
     prevProps.item.is_active === nextProps.item.is_active &&
     prevProps.item.min_quantity === nextProps.item.min_quantity &&
     prevProps.item.priceInfo?.cost === nextProps.item.priceInfo?.cost &&

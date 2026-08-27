@@ -81,8 +81,9 @@ export default function Estoque() {
     return activeItems
       .filter(it => {
         const name = (it.item_template?.name ?? it.company_item?.name ?? '').toLowerCase();
-        const linha = (it.item_template?.linha ?? it.company_item?.linha ?? '').toLowerCase();
-        return name.includes(q) || linha.includes(q);
+        const linha = (it.line_name ?? it.item_template?.linha ?? it.company_item?.linha ?? '').toLowerCase();
+        const variant = (it.variant_name ?? '').toLowerCase();
+        return name.includes(q) || linha.includes(q) || variant.includes(q);
       })
       .slice(0, 25);
   }, [activeItems, debouncedSearch]);
@@ -98,8 +99,8 @@ export default function Estoque() {
     const perfis = { items: 0, qty: 0 };
 
     for (const it of activeItems) {
-      const linha = (it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
-      const type = it.company_item?.type ?? it.item_template?.type ?? '';
+      const linha = (it.line_name ?? it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
+      const type = it.category_code ?? it.company_item?.type ?? it.item_template?.type ?? '';
       const qty = it.quantity || 0;
 
       if (type === 'glass' || type === 'vidro') {
@@ -157,6 +158,20 @@ export default function Estoque() {
     return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, linhasVidros, diversosSemLinha, vidrosSemLinha };
   }, [activeItems, activeLinhaKeys, productLinhas]);
 
+  const categoryCards = useMemo(() => {
+    const categories = new Map<string, { code: string; name: string; items: number; quantity: number; lines: Set<string> }>();
+    activeItems.forEach((item) => {
+      const code = (item.category_code || item.company_item?.type || item.item_template?.type || 'other').toLowerCase();
+      const name = item.category_name || ({ profile: 'Perfis', glass: 'Vidros', accessory: 'Acessórios', sheet: 'Chaparia', service: 'Serviços' } as Record<string, string>)[code] || code;
+      const current = categories.get(code) || { code, name, items: 0, quantity: 0, lines: new Set<string>() };
+      current.items += 1;
+      current.quantity += Number(item.quantity || 0);
+      if (item.line_name) current.lines.add(item.line_name);
+      categories.set(code, current);
+    });
+    return Array.from(categories.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [activeItems]);
+
   const headerTitle =
     view === 'root' ? 'Estoque'
     : view === 'perfis' ? 'Perfis · Selecione a linha'
@@ -170,8 +185,8 @@ export default function Estoque() {
     : 'Selecione a linha dos acessórios/diversos.';
 
   function goToItem(it: StockItem) {
-    const linha = (it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
-    const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
+    const linha = (it.line_name ?? it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
+    const type = (it.category_code ?? it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
     let tipo = 'diversos';
     if (type === 'glass' || type === 'vidro') tipo = 'vidro';
     else if (type === 'perfil' || type === 'profile') tipo = 'perfil';
@@ -300,9 +315,9 @@ export default function Estoque() {
                       <div className="space-y-1">
                         {searchResults.map((it) => {
                           const name = it.item_template?.name ?? it.company_item?.name ?? 'Item';
-                          const linha = it.item_template?.linha ?? it.company_item?.linha;
+                          const linha = it.line_name ?? it.item_template?.linha ?? it.company_item?.linha;
                           const unit = it.item_template?.unit ?? it.company_item?.unit ?? '';
-                          const type = it.item_template?.type ?? it.company_item?.type ?? '';
+                          const type = it.category_name ?? it.item_template?.type ?? it.company_item?.type ?? '';
                           const min = Number(it.min_quantity ?? 0);
                           const isLow = min > 0 && it.quantity <= min;
                           return (
@@ -346,34 +361,19 @@ export default function Estoque() {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : view === 'root' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StockCard
-              onClick={() => setView('vidros')}
-              icon={<GlassWater className="w-6 h-6" />}
-              title="Vidros"
-              subtitle={`${stats.vidros.items} item(s) · ${stats.vidros.qty.toFixed(2)} em saldo`}
-              badge={`${stats.linhasVidros.length} linha(s)`}
-              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
-              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
-            />
-            <StockCard
-              onClick={() => setView('perfis')}
-              icon={<Blocks className="w-6 h-6" />}
-              title="Perfis"
-              subtitle={`${stats.perfis.items} item(s) · ${stats.perfis.qty.toFixed(2)} em saldo`}
-              badge={`${stats.linhasPerfil.length} linha(s)`}
-              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
-              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
-            />
-            <StockCard
-              onClick={() => setView('diversos')}
-              icon={<Package className="w-6 h-6" />}
-              title="Acessórios / Diversos"
-              subtitle={`${stats.diversos.items} item(s) · ${stats.diversos.qty.toFixed(2)} em saldo`}
-              badge={`${stats.linhasDiversos.length} linha(s)`}
-              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
-              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categoryCards.map((category) => (
+              <StockCard
+                key={category.code}
+                onClick={() => setView(category.code === 'profile' ? 'perfis' : category.code === 'glass' ? 'vidros' : 'diversos')}
+                icon={category.code === 'profile' ? <Blocks className="w-6 h-6" /> : category.code === 'glass' ? <GlassWater className="w-6 h-6" /> : <Package className="w-6 h-6" />}
+                title={category.name}
+                subtitle={`${category.items} item(ns)/variante(s) · ${category.quantity.toFixed(2)} em saldo`}
+                badge={`${category.lines.size} linha(s)`}
+                onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
+                onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
+              />
+            ))}
           </div>
         ) : view === 'perfis' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -551,5 +551,20 @@ function StockCard({
   );
 
   if (to) return <Link to={to} className="group">{inner}</Link>;
-  return <button type="button" onClick={onClick} className="group text-left w-full">{inner}</button>;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+      className="group text-left w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      {inner}
+    </div>
+  );
 }

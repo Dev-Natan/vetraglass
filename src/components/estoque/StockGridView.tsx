@@ -67,6 +67,7 @@ const StockGridCard = memo(function StockGridCard({
       <p className="font-medium text-sm text-center line-clamp-2 mb-1">
         {item.item_template?.name ?? item.company_item?.name ?? 'Item'}
       </p>
+      {item.variant_name && <p className="text-xs text-muted-foreground mb-1">{item.variant_name}</p>}
 
       {/* Quantity */}
       <p className={`text-lg font-bold ${(isZeroStock || isLowStock) ? 'text-destructive' : ''}`}>
@@ -90,7 +91,8 @@ const StockGridCard = memo(function StockGridCard({
         variant={item.is_active !== false ? 'outline' : 'default'}
         size="sm"
         className="absolute bottom-2 right-2 h-7 w-7 p-0"
-        onClick={(e) => onToggleActive(e, item.id, item.is_active !== false)}
+        onClick={(e) => item.company_item_id && onToggleActive(e, item.company_item_id, item.is_active !== false)}
+        disabled={!item.company_item_id}
         title={item.is_active !== false ? 'Desativar' : 'Ativar'}
       >
         <Power className="w-3 h-3" />

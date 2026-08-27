@@ -69,27 +69,42 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     queryKey: ['company-items-for-quote', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('company_items')
-        .select(`
-          id,
-          name,
-          type,
-          unit,
-          cost,
-          sale_price,
-          image_url,
-          linha,
-          is_custom,
-          item_template_id,
-          company_stock (quantity)
-        `)
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('name');
-      
+      const [itemsResult, physicalResult] = await Promise.all([
+        supabase
+          .from('company_items')
+          .select(`
+            id,
+            name,
+            type,
+            unit,
+            cost,
+            sale_price,
+            image_url,
+            linha,
+            is_custom,
+            item_template_id
+          `)
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('inventory_variant_summary')
+          .select('company_item_id,on_hand_canonical,canonical_unit')
+          .eq('company_id', currentCompany.id),
+      ]);
+      const { data, error } = itemsResult;
       if (error) throw error;
-      return data || [];
+      const { data: physical, error: physicalError } = physicalResult;
+      if (physicalError) throw physicalError;
+      const stockByItem = new Map<string, number>();
+      for (const row of physical || []) {
+        const canonical = Number(row.on_hand_canonical || 0);
+        const display = row.canonical_unit === 'MM' ? canonical / 1000
+          : row.canonical_unit === 'MM2' ? canonical / 1_000_000
+          : row.canonical_unit === 'G' ? canonical / 1000 : canonical;
+        stockByItem.set(row.company_item_id, (stockByItem.get(row.company_item_id) || 0) + display);
+      }
+      return (data || []).map(item => ({ ...item, physical_stock_quantity: stockByItem.get(item.id) || 0 }));
     },
     enabled: !!currentCompany?.id
   });
@@ -127,7 +142,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
         image_url: ci.image_url,
         linha: ci.linha,
         is_custom: ci.is_custom,
-        stock_quantity: (ci.company_stock as any)?.[0]?.quantity || 0,
+        stock_quantity: ci.physical_stock_quantity,
         source: 'company',
         item_template_id: ci.item_template_id,
       });
@@ -334,19 +349,6 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       if (insertError) throw insertError;
 
-      // Also create stock entry
-      await supabase
-        .from('company_stock')
-        .insert({
-          company_id: currentCompany.id,
-          item_template_id: templateId,
-          company_item_id: newItem.id,
-          quantity: 0,
-          min_quantity: 0,
-          is_active: true,
-          allow_fractional: tmpl.type === 'profile',
-        });
-
       onAdd({
         company_item_id: newItem.id,
         name: displayName,
@@ -364,9 +366,9 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
 
       toast.success('Item adicionado ao catálogo da empresa automaticamente');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating company item:', err);
-      toast.error('Erro ao adicionar item: ' + (err.message || 'Tente novamente'));
+      toast.error('Erro ao adicionar item: ' + (err instanceof Error ? err.message : 'Tente novamente'));
     } finally {
       setIsCreatingItem(false);
     }
