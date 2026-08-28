@@ -18,6 +18,10 @@ export interface ItemPricingData {
   salePricePerKg: string;
   salePricePerMeter: string;
   saleMarginPercent: string;
+  costUnit: 'M' | 'BAR' | 'KG';
+  saleUnit: 'M' | 'BAR' | 'KG';
+  costValue: string;
+  saleValue: string;
   // Unit-based (accessories, components, services)
   costPerUnit: string;
   salePricePerUnit: string;
@@ -54,6 +58,10 @@ export const defaultPricingData: ItemPricingData = {
   salePricePerKg: '',
   salePricePerMeter: '',
   saleMarginPercent: '30',
+  costUnit: 'M',
+  saleUnit: 'M',
+  costValue: '',
+  saleValue: '',
   costPerUnit: '',
   salePricePerUnit: '',
   costPerSqm: '',
@@ -108,14 +116,18 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
 
   const barLengthM = safeNum(data.barLengthMm) / 1000;
   const weightKg = safeNum(data.weightKg);
-  const costPerBar = safeNum(data.costPerBar);
-  const costPerKg = safeNum(data.costPerKg);
-  const margin = safeNum(data.saleMarginPercent);
+  const weightPerMeter = safeNum(data.weightPerMeter)
+    || (weightKg > 0 && barLengthM > 0 ? weightKg / barLengthM : 0);
+
+  const toPerMeter = (value: number, basis: 'M' | 'BAR' | 'KG') => {
+    if (basis === 'BAR') return barLengthM > 0 ? value / barLengthM : 0;
+    if (basis === 'KG') return weightPerMeter > 0 ? value * weightPerMeter : 0;
+    return value;
+  };
 
   useEffect(() => {
     const updates: Partial<ItemPricingData> = {};
-    const mult = margin > 0 ? 1 + margin / 100 : 1;
-
+    const marginMultiplier = 1 + safeNum(data.saleMarginPercent) / 100;
     if (isProfile) {
       // Sincroniza comprimento linear (novo) → barLengthMm (legado)
       const compLinear = safeNum(data.comprimentoLinearMm);
@@ -126,44 +138,36 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
       if (weightKg > 0 && barLengthM > 0) {
         updates.weightPerMeter = (weightKg / barLengthM).toFixed(3);
       }
-      // Derive costs
-      let derivedCostPerKg = costPerKg;
-      let derivedCostPerBar = costPerBar;
-      if (costPerBar > 0 && weightKg > 0) {
-        derivedCostPerKg = costPerBar / weightKg;
-        updates.costPerKg = derivedCostPerKg.toFixed(2);
-      } else if (costPerKg > 0 && weightKg > 0) {
-        derivedCostPerBar = costPerKg * weightKg;
-        updates.costPerBar = derivedCostPerBar.toFixed(2);
-      }
-      if (derivedCostPerBar > 0 && barLengthM > 0) {
-        updates.costPerMeter = (derivedCostPerBar / barLengthM).toFixed(2);
-      }
-      if (margin > 0) {
-        const cBar = safeNum(updates.costPerBar ?? data.costPerBar);
-        const cKg = safeNum(updates.costPerKg ?? data.costPerKg);
-        const cMeter = safeNum(updates.costPerMeter ?? data.costPerMeter);
-        if (cBar > 0) updates.salePricePerBar = (cBar * mult).toFixed(2);
-        if (cKg > 0) updates.salePricePerKg = (cKg * mult).toFixed(2);
-        if (cMeter > 0) updates.salePricePerMeter = (cMeter * mult).toFixed(2);
-      }
+      const costMeter = toPerMeter(safeNum(data.costValue), data.costUnit);
+      const saleMeter = toPerMeter(safeNum(data.saleValue), data.saleUnit);
+      updates.costPerMeter = costMeter > 0 ? costMeter.toFixed(4) : '';
+      updates.costPerBar = costMeter > 0 && barLengthM > 0 ? (costMeter * barLengthM).toFixed(2) : '';
+      updates.costPerKg = costMeter > 0 && weightPerMeter > 0 ? (costMeter / weightPerMeter).toFixed(2) : '';
+      updates.salePricePerMeter = saleMeter > 0 ? saleMeter.toFixed(4) : '';
+      updates.salePricePerBar = saleMeter > 0 && barLengthM > 0 ? (saleMeter * barLengthM).toFixed(2) : '';
+      updates.salePricePerKg = saleMeter > 0 && weightPerMeter > 0 ? (saleMeter / weightPerMeter).toFixed(2) : '';
+      updates.saleMarginPercent = costMeter > 0 && saleMeter > 0
+        ? (((saleMeter / costMeter) - 1) * 100).toFixed(2)
+        : '';
     } else if (isGlass) {
       const costSqm = safeNum(data.costPerSqm);
+      const margin = safeNum(data.saleMarginPercent);
       if (costSqm > 0 && margin > 0) {
-        updates.salePricePerSqm = (costSqm * mult).toFixed(2);
+        updates.salePricePerSqm = (costSqm * marginMultiplier).toFixed(2);
       }
       if (costSqm > 0) {
         updates.costPerMeter = costSqm.toFixed(2);
-        updates.salePricePerMeter = (costSqm * mult).toFixed(2);
+        updates.salePricePerMeter = (costSqm * marginMultiplier).toFixed(2);
       }
     } else {
       // Unit-based — usa precoUnitario (novo) como fonte primária
       const precoUnit = safeNum(data.precoUnitario) || safeNum(data.costPerUnit);
+      const margin = safeNum(data.saleMarginPercent);
       if (precoUnit > 0) {
         if (data.costPerUnit !== precoUnit.toFixed(2)) updates.costPerUnit = precoUnit.toFixed(2);
-        if (margin > 0) updates.salePricePerUnit = (precoUnit * mult).toFixed(2);
+        if (margin > 0) updates.salePricePerUnit = (precoUnit * marginMultiplier).toFixed(2);
         updates.costPerBar = precoUnit.toFixed(2);
-        updates.salePricePerBar = (precoUnit * mult).toFixed(2);
+        updates.salePricePerBar = (precoUnit * marginMultiplier).toFixed(2);
       }
     }
 
@@ -175,7 +179,9 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
       onChange({ ...data, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.barLengthMm, data.weightKg, data.costPerBar, data.costPerKg, data.saleMarginPercent, data.costPerUnit, data.costPerSqm, data.precoUnitario, data.comprimentoLinearMm, isProfile, isGlass, isUnit]);
+  }, [data.barLengthMm, data.weightKg, data.weightPerMeter, data.costUnit, data.saleUnit,
+    data.costValue, data.saleValue, data.saleMarginPercent, data.costPerUnit, data.costPerSqm,
+    data.precoUnitario, data.comprimentoLinearMm, isProfile, isGlass, isUnit]);
 
   const update = (field: keyof ItemPricingData, value: string) => {
     onChange({ ...data, [field]: value });
@@ -221,52 +227,52 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
             </div>
           </div>
 
-          {/* Custo */}
+          {/* Custo: uma única base editável */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Calculator className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Preços de Custo</span>
+              <span className="text-xs font-medium text-muted-foreground">Compra / Custo</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Custo por Barra (R$)</Label>
-                <Input type="number" min="0" step="0.01" value={data.costPerBar} onChange={(e) => update('costPerBar', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+                <Label className="text-xs">Unidade principal de custo</Label>
+                <Select value={data.costUnit} onValueChange={(value: 'M' | 'BAR' | 'KG') => update('costUnit', value)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="M">Metro</SelectItem><SelectItem value="BAR">Barra</SelectItem><SelectItem value="KG">Kg</SelectItem></SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Custo por Kg (R$)</Label>
-                <Input type="number" min="0" step="0.01" value={data.costPerKg} onChange={(e) => update('costPerKg', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Custo por Metro (R$)</Label>
-                <Input type="number" readOnly value={data.costPerMeter} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+                <Label className="text-xs">Custo por {data.costUnit === 'BAR' ? 'barra' : data.costUnit === 'KG' ? 'kg' : 'metro'} (R$)</Label>
+                <Input type="number" min="0" step="0.01" value={data.costValue} onChange={(e) => update('costValue', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">Equivalências: R$ {data.costPerMeter || '—'}/m · R$ {data.costPerBar || '—'}/barra · R$ {data.costPerKg || '—'}/kg</p>
           </div>
 
-          {/* Markup e venda */}
+          {/* Venda: uma única base editável */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">Markup sobre custo e preços de venda</span>
+              <span className="text-xs font-medium text-muted-foreground">Venda</span>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Markup sobre custo (%)</Label>
-                <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
+                <Label className="text-xs">Venda por</Label>
+                <Select value={data.saleUnit} onValueChange={(value: 'M' | 'BAR' | 'KG') => update('saleUnit', value)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="M">Metro</SelectItem><SelectItem value="BAR">Barra</SelectItem><SelectItem value="KG">Kg</SelectItem></SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Venda/Barra</Label>
-                <Input type="number" readOnly value={data.salePricePerBar} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+                <Label className="text-xs">Preço por {data.saleUnit === 'BAR' ? 'barra' : data.saleUnit === 'KG' ? 'kg' : 'metro'} (R$)</Label>
+                <Input type="number" min="0" step="0.01" value={data.saleValue} onChange={(e) => update('saleValue', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Venda/Kg</Label>
-                <Input type="number" readOnly value={data.salePricePerKg} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Venda/Metro</Label>
-                <Input type="number" readOnly value={data.salePricePerMeter} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+                <Label className="text-xs text-muted-foreground">Markup derivado</Label>
+                <Input readOnly value={data.saleMarginPercent ? `${data.saleMarginPercent}%` : ''} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">Equivalências: R$ {data.salePricePerMeter || '—'}/m · R$ {data.salePricePerBar || '—'}/barra · R$ {data.salePricePerKg || '—'}/kg</p>
           </div>
         </>
       )}

@@ -230,8 +230,12 @@ export default function Estoque() {
                     <DollarSign className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xl font-bold truncate">{formatBRL(kpis.totalValue)}</p>
-                    <p className="text-xs text-muted-foreground">Total investido em estoque</p>
+                    <p className="text-xl font-bold truncate">
+                      {kpis.unknownValuationCount > 0 ? '—' : formatBRL(kpis.totalValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {kpis.unknownValuationCount > 0 ? 'Custo físico não disponível' : 'Total investido em estoque'}
+                    </p>
                   </div>
                 </CardContent>
               </Card>

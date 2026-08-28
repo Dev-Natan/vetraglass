@@ -78,6 +78,15 @@ export default function EstoqueLinha() {
     companyItemId?: string | null;
     isCustomItem?: boolean;
     stockId?: string;
+    initialProfile?: {
+      type?: string | null;
+      line?: string | null;
+      cost?: number | null;
+      salePrice?: number | null;
+      barLengthMm?: number | null;
+      weightPerMeter?: number | null;
+      weightKg?: number | null;
+    };
   } | null>(null);
   const [historyItem, setHistoryItem] = useState<StockItem | null>(null);
 
@@ -95,12 +104,9 @@ export default function EstoqueLinha() {
 
   const {
     activeItems,
-    inactiveItems,
-    lowStockItems,
     itemTemplates,
     isLoading,
     error: loadError,
-    kpis,
   } = useStockData({ companyId: currentCompany?.id });
 
   const { data: itemTypes } = useItemTypes();
@@ -224,6 +230,13 @@ export default function EstoqueLinha() {
 
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
+  const pageKpis = useMemo(() => ({
+    totalItems: filteredItems.length,
+    totalValue: filteredItems.reduce((total, item) => total + Number(item.inventory_value || 0), 0),
+    unknownValuationCount: filteredItems.filter(item => item.quantity > 0 && item.average_unit_cost == null).length,
+    lowStockCount: filteredItems.filter(item => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0).length,
+    zeroStockCount: outOfStockItems.length,
+  }), [filteredItems, outOfStockItems.length]);
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
     const isCustom = item.company_item?.is_custom ?? false;
@@ -235,6 +248,15 @@ export default function EstoqueLinha() {
       companyItemId: item.company_item_id,
       isCustomItem: isCustom,
       stockId: undefined,
+      initialProfile: {
+        type: item.company_item?.type ?? item.item_template?.type,
+        line: item.company_item?.linha ?? item.line_name ?? item.item_template?.linha,
+        cost: item.priceInfo?.cost ?? item.company_item?.cost,
+        salePrice: item.priceInfo?.price ?? item.company_item?.sale_price,
+        barLengthMm: item.company_item?.bar_length_mm ?? item.nominal_length_mm ?? item.item_template?.bar_length_mm,
+        weightPerMeter: item.company_item?.weight_per_meter ?? item.weight_per_meter_kg ?? item.item_template?.weight_per_meter,
+        weightKg: item.company_item?.weight_kg ?? item.weight_per_bar_kg ?? item.item_template?.weight_per_bar,
+      },
     });
     setPriceDialogOpen(true);
   }, []);
@@ -299,10 +321,11 @@ export default function EstoqueLinha() {
         </div>
 
         <StockKPIs
-          totalItems={kpis.totalItems}
-          totalValue={kpis.totalValue}
-          lowStockCount={kpis.lowStockCount}
-          zeroStockCount={kpis.zeroStockCount}
+          totalItems={pageKpis.totalItems}
+          totalValue={pageKpis.totalValue}
+          unknownValuationCount={pageKpis.unknownValuationCount}
+          lowStockCount={pageKpis.lowStockCount}
+          zeroStockCount={pageKpis.zeroStockCount}
         />
 
         <Tabs value={mainTab} onValueChange={setMainTab}>
@@ -477,6 +500,7 @@ export default function EstoqueLinha() {
         itemUnit={selectedItem?.unit}
         stockId={selectedItem?.stockId}
         isCustomItem={selectedItem?.isCustomItem}
+        initialProfile={selectedItem?.initialProfile}
       />
 
       <RegistrarMovimentoDialog

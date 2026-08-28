@@ -21,17 +21,16 @@ function formatQuantityDisplay(item: StockItem) {
   const barLengthMm = item.nominal_length_mm ?? item.company_item?.bar_length_mm ?? item.item_template?.bar_length_mm;
   const type = item.item_template?.type || item.company_item?.type || '';
 
-  // Profiles with bar_length_mm: show "X barras de Y m = Z m"
+  // Perfis: metro é a autoridade física; barras e peso são equivalências matemáticas.
   if (barLengthMm && barLengthMm > 0 && (type === 'profile' || rawUnit === 'barra' || rawUnit === 'barras')) {
     const barLengthM = barLengthMm / 1000;
     const totalMeters = Number(item.canonical_quantity || 0) / 1000;
     const bars = Number(item.package_quantity || 0);
-    const fmtQty = Number.isInteger(bars) ? bars : bars.toFixed(2);
     const fmtTotal = Number.isInteger(totalMeters) ? totalMeters : totalMeters.toFixed(2);
     const fmtBar = Number.isInteger(barLengthM) ? barLengthM : barLengthM.toFixed(2);
     return {
-      primary: `${fmtQty} ${bars === 1 ? 'barra' : 'barras'}`,
-      detail: `de ${fmtBar} m = ${fmtTotal} m`,
+      primary: `${fmtTotal} m`,
+      detail: `barra nominal de ${fmtBar} m · ≈ ${Number(bars).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} barras`,
     };
   }
 
@@ -218,8 +217,11 @@ export const StockItemCard = memo(function StockItemCard({
                 Custo médio físico: R$ {Number(item.average_unit_cost).toFixed(2)}/{item.consumption_unit}
               </span>
             )}
-            {item.inventory_value != null && (
+            {item.inventory_value != null && item.average_unit_cost != null && (
               <span className="font-medium">Valor físico: R$ {Number(item.inventory_value).toFixed(2)}</span>
+            )}
+            {item.quantity > 0 && item.average_unit_cost == null && (
+              <span className="text-muted-foreground">Custo físico não disponível</span>
             )}
           </div>
         </div>
@@ -246,7 +248,7 @@ export const StockItemCard = memo(function StockItemCard({
           {[formatEquivalent(item.on_hand_bars, 'barras'), formatEquivalent(item.on_hand_meters, 'm'), formatEquivalent(item.on_hand_kg, 'kg')]
             .filter(Boolean).length > 0 && (
             <p className="text-xs text-muted-foreground whitespace-nowrap">
-              {[formatEquivalent(item.on_hand_bars, 'barras'), formatEquivalent(item.on_hand_meters, 'm'), formatEquivalent(item.on_hand_kg, 'kg')]
+              {[item.on_hand_bars == null ? null : `≈ ${formatEquivalent(item.on_hand_bars, 'barras')}`, formatEquivalent(item.on_hand_kg, 'kg')]
                 .filter(Boolean).join(' · ')}
             </p>
           )}

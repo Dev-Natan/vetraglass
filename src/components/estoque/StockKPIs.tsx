@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 interface StockKPIsProps {
   totalItems: number;
   totalValue: number;
+  unknownValuationCount: number;
   lowStockCount: number;
   zeroStockCount: number;
 }
@@ -12,6 +13,7 @@ interface StockKPIsProps {
 export const StockKPIs = memo(function StockKPIs({
   totalItems,
   totalValue,
+  unknownValuationCount,
   lowStockCount,
   zeroStockCount,
 }: StockKPIsProps) {
@@ -47,8 +49,12 @@ export const StockKPIs = memo(function StockKPIs({
               <DollarSign className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-              <p className="text-xs text-muted-foreground">Valor em Estoque</p>
+              <p className="text-2xl font-bold">
+                {unknownValuationCount > 0 ? '—' : formatCurrency(totalValue)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {unknownValuationCount > 0 ? 'Custo físico não disponível' : 'Valor em Estoque'}
+              </p>
             </div>
           </div>
         </CardContent>

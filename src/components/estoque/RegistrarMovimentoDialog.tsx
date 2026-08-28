@@ -162,6 +162,23 @@ export function RegistrarMovimentoDialog({
   const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
   const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
 
+  const activeProfileVariantsQuery = useQuery({
+    queryKey: ['movement-profile-variants', currentCompany?.id, selectedStockItem?.company_item_id],
+    queryFn: async () => {
+      if (!currentCompany?.id || !selectedStockItem?.company_item_id) return [];
+      const { data, error } = await supabase
+        .from('company_item_variants')
+        .select('id,aluminum_color_id')
+        .eq('company_id', currentCompany.id)
+        .eq('company_item_id', selectedStockItem.company_item_id)
+        .eq('is_active', true)
+        .not('aluminum_color_id', 'is', null);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && isProfile && !selectedStockItem?.variant_id && !!currentCompany?.id && !!selectedStockItem?.company_item_id,
+  });
+
   // Ao trocar de item, definir modo padrão
   const handleSelectItem = (id: string) => {
     setSelectedItem(id);
@@ -184,6 +201,7 @@ export function RegistrarMovimentoDialog({
     setPieceQty('1');
     setLinearMeters('');
     setQuantidade('');
+    setSelectedColorId('');
   };
 
   // Produz o contrato físico enviado ao banco; quantidade nunca viaja sem unidade.
@@ -391,15 +409,11 @@ export function RegistrarMovimentoDialog({
       const companyItemId = stockItem.company_item_id ?? stockItem.company_item?.id;
       if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
       let variantId = stockItem.variant_id || undefined;
-      if (isEntrada && isProfile && !variantId) {
+      if (isProfile && !variantId) {
         if (!selectedColorId) throw new Error('Selecione a cor/variante do perfil.');
-        const variant = await estoqueService.setProfileVariantActive({
-          companyId: currentCompany.id,
-          companyItemId,
-          colorId: selectedColorId,
-          active: true,
-        });
-        variantId = variant?.id;
+        const variant = (activeProfileVariantsQuery.data || []).find((entry) => entry.aluminum_color_id === selectedColorId);
+        if (!variant) throw new Error('PROFILE_VARIANT_NOT_CONFIGURED');
+        variantId = variant.id;
       }
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
       const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
@@ -750,7 +764,7 @@ export function RegistrarMovimentoDialog({
                   </div>
                 </div>
 
-                {isEntrada && isProfile && !selectedStockItem.variant_id && (
+                {isProfile && !selectedStockItem.variant_id && (
                   <div className="space-y-1">
                     <Label className="text-xs">Cor / variante *</Label>
                     <Select value={selectedColorId} onValueChange={setSelectedColorId}>
@@ -758,13 +772,14 @@ export function RegistrarMovimentoDialog({
                         <SelectValue placeholder="Selecione a cor do perfil" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(colorsQuery.data || []).map((color) => (
-                          <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
-                        ))}
+                        {(activeProfileVariantsQuery.data || []).map((variant) => {
+                          const color = (colorsQuery.data || []).find((entry) => entry.id === variant.aluminum_color_id);
+                          return <SelectItem key={variant.id} value={variant.aluminum_color_id!}>{color?.name || 'Cor cadastrada'}</SelectItem>;
+                        })}
                       </SelectContent>
                     </Select>
                     <p className="text-[11px] text-muted-foreground">
-                      O saldo legado sem cor permanece separado e não será reclassificado automaticamente.
+                      Selecione uma variante já ativada na configuração. O saldo legado sem cor permanece separado.
                     </p>
                   </div>
                 )}

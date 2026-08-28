@@ -3879,6 +3879,7 @@ export type Database = {
           consumption_to_canonical_factor: number | null
           consumption_unit: string
           cost_policy: string
+          cost_unit: string | null
           created_at: string
           default_height_mm: number | null
           default_width_mm: number | null
@@ -3900,6 +3901,7 @@ export type Database = {
           consumption_to_canonical_factor?: number | null
           consumption_unit: string
           cost_policy?: string
+          cost_unit?: string | null
           created_at?: string
           default_height_mm?: number | null
           default_width_mm?: number | null
@@ -3921,6 +3923,7 @@ export type Database = {
           consumption_to_canonical_factor?: number | null
           consumption_unit?: string
           cost_policy?: string
+          cost_unit?: string | null
           created_at?: string
           default_height_mm?: number | null
           default_width_mm?: number | null
@@ -4457,6 +4460,7 @@ export type Database = {
           stock_reservation_id: string | null
           unit: string
           updated_at: string
+          variant_id: string | null
         }
         Insert: {
           company_id: string
@@ -4484,6 +4488,7 @@ export type Database = {
           stock_reservation_id?: string | null
           unit?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Update: {
           company_id?: string
@@ -4511,6 +4516,7 @@ export type Database = {
           stock_reservation_id?: string | null
           unit?: string
           updated_at?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -4581,6 +4587,13 @@ export type Database = {
             columns: ["stock_reservation_id"]
             isOneToOne: false
             referencedRelation: "stock_reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -5820,6 +5833,9 @@ export type Database = {
           os_id: string
           product_id: string | null
           product_name: string
+          profile_color_code: string | null
+          profile_color_id: string | null
+          profile_color_name: string | null
           quantity: number
           quote_item_id: string | null
           recalculation_required: boolean | null
@@ -5857,6 +5873,9 @@ export type Database = {
           os_id: string
           product_id?: string | null
           product_name: string
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
@@ -5894,6 +5913,9 @@ export type Database = {
           os_id?: string
           product_id?: string | null
           product_name?: string
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
@@ -5913,6 +5935,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ordens_servico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "admin_aluminum_colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_variant_summary"
+            referencedColumns: ["aluminum_color_id"]
           },
           {
             foreignKeyName: "os_items_quote_item_id_fkey"
@@ -5954,6 +5990,7 @@ export type Database = {
           unit: string | null
           vao_height_b: number | null
           vao_width_b: number | null
+          variant_id: string | null
           waste_mm: number | null
           waste_percent: number | null
         }
@@ -5980,6 +6017,7 @@ export type Database = {
           unit?: string | null
           vao_height_b?: number | null
           vao_width_b?: number | null
+          variant_id?: string | null
           waste_mm?: number | null
           waste_percent?: number | null
         }
@@ -6006,6 +6044,7 @@ export type Database = {
           unit?: string | null
           vao_height_b?: number | null
           vao_width_b?: number | null
+          variant_id?: string | null
           waste_mm?: number | null
           waste_percent?: number | null
         }
@@ -6050,6 +6089,13 @@ export type Database = {
             columns: ["purchase_order_item_id"]
             isOneToOne: false
             referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_materials_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "company_item_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -7488,6 +7534,9 @@ export type Database = {
           panels_count: number | null
           parametric_snapshot_version: number | null
           product_template_id: string | null
+          profile_color_code: string | null
+          profile_color_id: string | null
+          profile_color_name: string | null
           quantity: number
           quote_id: string
           sides_count: number | null
@@ -7530,6 +7579,9 @@ export type Database = {
           panels_count?: number | null
           parametric_snapshot_version?: number | null
           product_template_id?: string | null
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           quote_id: string
           sides_count?: number | null
@@ -7572,6 +7624,9 @@ export type Database = {
           panels_count?: number | null
           parametric_snapshot_version?: number | null
           product_template_id?: string | null
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           quote_id?: string
           sides_count?: number | null
@@ -7611,6 +7666,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_templates"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "admin_aluminum_colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_variant_summary"
+            referencedColumns: ["aluminum_color_id"]
           },
           {
             foreignKeyName: "quote_items_quote_id_fkey"
@@ -7977,6 +8046,9 @@ export type Database = {
           item_unit: string
           notes: string | null
           product_template_id: string | null
+          profile_color_code: string | null
+          profile_color_id: string | null
+          profile_color_name: string | null
           quantity: number
           sale_id: string
           snapshot_version: number | null
@@ -7998,6 +8070,9 @@ export type Database = {
           item_unit: string
           notes?: string | null
           product_template_id?: string | null
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           sale_id: string
           snapshot_version?: number | null
@@ -8019,6 +8094,9 @@ export type Database = {
           item_unit?: string
           notes?: string | null
           product_template_id?: string | null
+          profile_color_code?: string | null
+          profile_color_id?: string | null
+          profile_color_name?: string | null
           quantity?: number
           sale_id?: string
           snapshot_version?: number | null
@@ -8048,6 +8126,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_templates"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "admin_aluminum_colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_profile_color_id_fkey"
+            columns: ["profile_color_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_variant_summary"
+            referencedColumns: ["aluminum_color_id"]
           },
           {
             foreignKeyName: "sale_items_sale_id_fkey"
@@ -10160,6 +10252,16 @@ export type Database = {
         Args: { _company_id: string; _family_id: string }
         Returns: Json
       }
+      get_company_product_profile_colors: {
+        Args: { _company_id: string; _company_product_id: string }
+        Returns: {
+          color_code: string
+          color_id: string
+          color_name: string
+          hex_color: string
+          sort_order: number
+        }[]
+      }
       get_cutting_plan_items: {
         Args: { _company_id?: string; _template_id: string }
         Returns: {
@@ -11042,6 +11144,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_company_profile_configuration: {
+        Args: {
+          _allow_fractional?: boolean
+          _canonical_cost_per_meter: number
+          _canonical_sale_per_meter: number
+          _company_id: string
+          _company_item_id: string
+          _cost_unit: string
+          _is_active?: boolean
+          _metadata?: Json
+          _min_stock?: number
+          _sale_unit: string
+        }
+        Returns: Json
       }
       save_composition_item: {
         Args: { _company_id: string; _item_id: string; _patch: Json }

@@ -43,6 +43,7 @@ interface StockDataResult {
   kpis: {
     totalItems: number;
     totalValue: number;
+    unknownValuationCount: number;
     lowStockCount: number;
     zeroStockCount: number;
   };
@@ -160,6 +161,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     
     // Physical valuation is intentionally independent from commercial pricing.
     const totalValue = activeItems.reduce((acc, item) => acc + Number(item.inventory_value || 0), 0);
+    const unknownValuationCount = activeItems.filter(
+      item => item.quantity > 0 && item.average_unit_cost == null
+    ).length;
     
     const lowStockCount = lowStockItems.length;
     
@@ -168,6 +172,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     return {
       totalItems,
       totalValue,
+      unknownValuationCount,
       lowStockCount,
       zeroStockCount,
     };

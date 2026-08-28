@@ -36,7 +36,9 @@ export const estoqueService = {
         line_code: row.line_code,
         line_name: row.line_name,
         variant_id: row.variant_id,
-        variant_name: row.variant_name,
+        variant_name: row.variant_name || (String(row.legacy_type || '').toLowerCase() === 'profile' && !row.variant_id
+          ? 'Cor não definida — saldo legado'
+          : null),
         aluminum_color_id: row.aluminum_color_id,
         color_code: row.color_code,
         quantity: canonicalToDisplay(onHandCanonical, canonicalUnit),
@@ -55,6 +57,12 @@ export const estoqueService = {
         on_hand_kg: row.on_hand_kg,
         average_unit_cost: row.average_cost_per_canonical,
         inventory_value: row.inventory_value,
+        priceInfo: row.company_item_id ? {
+          id: row.company_item_id,
+          item_template_id: row.item_template_id || '',
+          cost: row.commercial_cost,
+          price: Number(row.commercial_sale_price || 0),
+        } : null,
         unit_status: row.legacy_status as StockItem['unit_status'],
         reserved_quantity: canonicalToDisplay(reservedCanonical, canonicalUnit),
         reserved_canonical: reservedCanonical,

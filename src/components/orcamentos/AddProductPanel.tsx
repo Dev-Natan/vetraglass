@@ -55,6 +55,14 @@ interface CanonicalPricingSnapshot {
   [key: string]: unknown;
 }
 
+interface ProfileColorOption {
+  color_id: string;
+  color_code: string;
+  color_name: string;
+  hex_color: string | null;
+  sort_order: number;
+}
+
 function describePricingError(error: unknown): string {
   if (!error || typeof error !== 'object') return 'Não foi possível calcular o preço.';
   const candidate = error as { message?: string; details?: string };
@@ -514,13 +522,26 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     },
     enabled: !!currentCompany?.id && pricingVariantItemIds.length > 0,
   });
-  const profileAvailableColors = useMemo(() => Array.from(new Set(canonicalVariants
-    .filter(row => row.variant_type === 'PROFILE' && row.profile_color)
-    .map(row => row.profile_color as string))).sort(), [canonicalVariants]);
+  const { data: profileAvailableColors = [] } = useQuery({
+    queryKey: ['phase4b1a-product-profile-colors', currentCompany?.id, companyProduct?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_company_product_profile_colors', {
+        _company_id: currentCompany!.id,
+        _company_product_id: companyProduct!.id,
+      });
+      if (error) throw error;
+      return (data ?? []) as ProfileColorOption[];
+    },
+    enabled: mode === 'quote' && !!currentCompany?.id && !!companyProduct?.id,
+    staleTime: 30_000,
+  });
+  const selectedProfileColor = profileAvailableColors.find(
+    (color) => color.color_id === selectedAluminumColor,
+  ) ?? null;
   const profileFinishOptions = useMemo(() => Array.from(new Set(canonicalVariants
     .filter(row => row.variant_type === 'PROFILE' && row.profile_finish
-      && (!selectedAluminumColor || row.profile_color === selectedAluminumColor))
-    .map(row => row.profile_finish as string))).sort(), [canonicalVariants, selectedAluminumColor]);
+      && (!selectedProfileColor || row.aluminum_color_id === selectedProfileColor.color_id))
+    .map(row => row.profile_finish as string))).sort(), [canonicalVariants, selectedProfileColor]);
   const hasProfileColorPrices = profileAvailableColors.length > 0;
   const glassTypeOptions = useMemo(() => Array.from(new Set(canonicalVariants
     .filter(row => row.variant_type === 'GLASS' && row.glass_type)
@@ -571,7 +592,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     quantity: quantity || 1,
     line: selectedProduct?.linha || null,
     glass: null,
-    profile_color: selectedAluminumColor || null,
+    profile_color: selectedProfileColor?.color_name || null,
     glass_color: selectedGlassColor || null,
     variants: parametricVariants,
     fulfillmentMode: selectedProduct?.fulfillment_mode || 'PRODUCTION',
@@ -583,9 +604,12 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     glass_color: selectedGlassColor || null,
     glass_thickness_mm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
     glass_finish: 'PADRAO',
-    profile_color: selectedAluminumColor || null,
+    profile_color_id: selectedProfileColor?.color_id || null,
+    profile_color_code: selectedProfileColor?.color_code || null,
+    profile_color_name: selectedProfileColor?.color_name || null,
+    profile_color: selectedProfileColor?.color_name || null,
     profile_finish: selectedProfileFinish || null,
-  }), [selectedGlassType, selectedGlassColor, selectedGlassThickness, selectedAluminumColor, selectedProfileFinish]);
+  }), [selectedGlassType, selectedGlassColor, selectedGlassThickness, selectedProfileColor, selectedProfileFinish]);
   const requiresGlassVariant = canonicalVariants.some(row => row.variant_type === 'GLASS');
   const requiresProfileVariant = canonicalVariants.some(row => row.variant_type === 'PROFILE');
   const requiresGlassType = canonicalVariants.some(row => row.variant_type === 'GLASS' && row.glass_type);
@@ -650,7 +674,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
     // For aluminum-priced products, the color name comes from the price option
     // For other products, it comes from the simple selector
-    const aluminumColorName = selectedAluminumColor;
+    const aluminumColorName = selectedProfileColor?.color_name;
 
     onAdd({
       product_template_id: cuttingPlanProductId,
@@ -1202,8 +1226,16 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg z-50">
-                        {profileAvailableColors.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        {profileAvailableColors.map((color) => (
+                          <SelectItem key={color.color_id} value={color.color_id}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="h-3 w-3 rounded-full border"
+                                style={{ backgroundColor: color.hex_color || undefined }}
+                              />
+                              {color.color_name}
+                            </span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
