@@ -9,6 +9,14 @@ function canonicalToDisplay(quantity: number, unit: string | null): number {
 }
 
 export const estoqueService = {
+  async ensureCompanyCatalog(companyId: string) {
+    const { data, error } = await supabase.rpc('ensure_company_catalog', {
+      _company_id: companyId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   async fetchStockItems(companyId: string): Promise<StockItem[]> {
     const { data, error } = await supabase
       .from('inventory_variant_summary')
@@ -90,9 +98,9 @@ export const estoqueService = {
   async fetchCompanyItems(companyId: string) {
     const { data, error } = await supabase
       .from('company_items')
-      .select('id, name, type, unit, image_url, linha, is_custom, cost, sale_price, bar_length_mm, weight_per_meter, weight_kg')
+      .select('id, item_template_id, name, code, catalog_origin, type, unit, image_url, linha, is_custom, is_active, cost, sale_price, bar_length_mm, weight_per_meter, weight_kg')
       .eq('company_id', companyId)
-      .eq('is_active', true);
+      .order('name');
 
     if (error) throw error;
     return data || [];
@@ -133,6 +141,17 @@ export const estoqueService = {
       .select('id, name, slug, hex_color, sort_order')
       .eq('is_active', true)
       .order('sort_order');
+    if (error) throw error;
+    return data || [];
+  },
+
+  async fetchCompanyColors(companyId: string) {
+    const { data, error } = await supabase
+      .from('company_colors')
+      .select('id, admin_color_id, name, code, hex_color, catalog_origin')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .order('name');
     if (error) throw error;
     return data || [];
   },

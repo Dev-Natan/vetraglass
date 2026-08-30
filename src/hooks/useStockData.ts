@@ -55,6 +55,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     queryKey: ['company-stock', companyId],
     queryFn: async () => {
       if (!companyId) return [];
+      await estoqueService.ensureCompanyCatalog(companyId);
       return estoqueService.fetchStockItems(companyId);
     },
 
@@ -110,15 +111,15 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       priceInfo: stock.item_template_id ? pricesMap.get(stock.item_template_id) || null : null,
     }));
 
-    const existingTemplateIds = new Set(existingStockItems.map(s => s.item_template_id).filter(Boolean));
+    const existingCompanyItemIds = new Set(existingStockItems.map(s => s.company_item_id).filter(Boolean));
 
-    // Add templates that are not in stock as virtual items
-    const virtualItems = templatesQuery.data
-      .filter(t => !existingTemplateIds.has(t.id))
-      .map(t => ({
-        id: `virtual-${t.id}`,
-        item_template_id: t.id,
-        company_item_id: null,
+    // Every tenant item is operational even before its first physical movement.
+    const virtualItems = (companyItemsQuery.data || [])
+      .filter(item => !existingCompanyItemIds.has(item.id))
+      .map(item => ({
+        id: `virtual-${item.id}`,
+        item_template_id: item.item_template_id,
+        company_item_id: item.id,
         company_id: companyId || '',
         quantity: 0,
         canonical_quantity: 0,
@@ -126,11 +127,11 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
         reserved_quantity: 0,
         min_quantity: 0,
         location: null,
-        is_active: true,
-        allow_fractional: t.type === 'profile',
+        is_active: item.is_active,
+        allow_fractional: item.type === 'profile',
         updated_at: new Date().toISOString(),
-        item_template: t,
-        company_item: null,
+        item_template: item.item_template_id ? templatesMap.get(item.item_template_id) || null : null,
+        company_item: item,
         priceInfo: null,
       } as StockItem));
 

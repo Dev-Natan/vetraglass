@@ -54,7 +54,7 @@ export default function Produtos() {
         .select('linha_slug')
         .eq('company_id', currentCompany.id);
       if (error) throw error;
-      return (data || []).map((r: any) => (r.linha_slug as string).toLowerCase());
+      return (data || []).map((row) => row.linha_slug.toLowerCase());
     },
     enabled: !!currentCompany?.id,
   });
@@ -77,6 +77,8 @@ export default function Produtos() {
     queryKey: ['company-products', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
+      const { error: catalogError } = await supabase.rpc('ensure_company_catalog', { _company_id: currentCompany.id });
+      if (catalogError) throw catalogError;
       const { data, error } = await supabase
         .from('company_products')
         .select('id, product_template_id, is_active, linha, is_custom, category')
@@ -173,7 +175,7 @@ export default function Produtos() {
           <div>
             <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">Produtos</h1>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              {filteredLinhas.length} linhas {showActive ? 'ativas' : 'inativas'}
+              {filteredLinhas.length} linhas {showActive ? 'disponíveis' : 'ocultas'}
               {hasEnabledFilter && <span className="ml-1">· {enabledSet.size} linhas habilitadas</span>}
             </p>
           </div>
@@ -188,13 +190,13 @@ export default function Produtos() {
             onClick={() => setShowActive(true)}
             className={`flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium transition-colors ${showActive ? 'bg-sky-500 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
           >
-            Ativos
+            Disponíveis
           </button>
           <button
             onClick={() => setShowActive(false)}
             className={`flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium transition-colors ${!showActive ? 'bg-gray-400 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
           >
-            Inativos
+            Ocultos
           </button>
         </div>
 

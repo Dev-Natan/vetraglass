@@ -24,6 +24,7 @@ type ProductTemplate = {
   linha: string | null;
   image_url: string | null;
   is_active: boolean;
+  has_cutting_plan: boolean;
 };
 
 type DisplayProduct = {
@@ -84,36 +85,17 @@ export default function ProdutosLinha() {
     queryKey: ['company-products', currentCompany?.id, 'detailed'],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
+      const { error: catalogError } = await supabase.rpc('ensure_company_catalog', { _company_id: currentCompany.id });
+      if (catalogError) throw catalogError;
       const { data, error } = await supabase
         .from('company_products')
         .select('id, product_template_id, is_active, commercial_name, description, category, linha, image_url, is_custom, base_price')
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
-      return (data || []) as any[];
+      return data || [];
     },
     enabled: !!currentCompany?.id,
-  });
-
-  // Quick Activation Mutation
-  const quickActivateMutation = useMutation({
-    mutationFn: async (productTemplateId: string) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      
-      const { error } = await supabase.rpc('activate_product_template_for_company', {
-        _company_id: currentCompany.id,
-        _product_template_id: productTemplateId,
-      });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      toast.success('Produto ativado para venda!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao ativar: ' + error.message);
-    },
   });
 
   // Deactivate product
@@ -156,7 +138,7 @@ export default function ProdutosLinha() {
       toast.success('Produto reabilitado!');
     },
     onError: (error) => {
-      toast.error('Erro ao reativar: ' + error.message);
+      toast.error('Erro ao reexibir: ' + error.message);
     },
   });
 
@@ -183,7 +165,6 @@ export default function ProdutosLinha() {
 
   const filteredProducts = useMemo((): DisplayProduct[] => {
     const searchLower = searchTerm.toLowerCase();
-    const templateIdsInCompany = new Set(companyProducts.map(cp => cp.product_template_id));
     
     // 1. Start with company products that match filters
     const companyFiltered = companyProducts
@@ -220,34 +201,9 @@ export default function ProdutosLinha() {
           base_price: cp.base_price,
           companyProductId: cp.id,
           productTemplateId: cp.product_template_id || undefined,
-          has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
+          has_cutting_plan: template?.has_cutting_plan ?? true,
         };
       });
-
-    // 2. Add templates not yet in company as "Inativos"
-    if (!showActive) {
-      const missingTemplates = (products || [])
-        .filter(p => {
-          const notInCompany = !templateIdsInCompany.has(p.id);
-          const matchesSearch = p.name.toLowerCase().includes(searchLower);
-          const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-          return notInCompany && matchesSearch && matchesCategory;
-        })
-        .map((p): DisplayProduct => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          category: p.category,
-          linha: p.linha,
-          image_url: p.image_url,
-          is_active: false,
-          is_custom: false,
-          productTemplateId: p.id,
-          has_cutting_plan: (p as any).has_cutting_plan ?? true,
-        }));
-      
-      return [...companyFiltered, ...missingTemplates];
-    }
 
     return companyFiltered;
   }, [products, companyProducts, searchTerm, selectedCategory, showActive, currentLinha]);
@@ -301,7 +257,7 @@ export default function ProdutosLinha() {
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Ativos
+            Disponíveis
           </button>
           <button
             onClick={() => setShowActive(false)}
@@ -311,7 +267,7 @@ export default function ProdutosLinha() {
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Inativos
+            Ocultos
           </button>
         </div>
 
@@ -349,8 +305,6 @@ export default function ProdutosLinha() {
                   onClick={() => {
                     if (product.companyProductId) {
                       navigate(`/produtos/empresa/editar/${product.companyProductId}`);
-                    } else if (product.productTemplateId) {
-                      quickActivateMutation.mutate(product.productTemplateId);
                     }
                   }}
                   onKeyDown={(e) => {
@@ -376,7 +330,7 @@ export default function ProdutosLinha() {
                     <h3 className="font-semibold text-sky-700 uppercase text-sm line-clamp-2">{product.name}</h3>
                     <div className="flex flex-wrap gap-1">
                       {product.is_custom && <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
-                      {!product.is_active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                      {!product.is_active && <Badge variant="outline" className="text-[10px]">Oculto</Badge>}
                       {product.has_cutting_plan ? (
                         <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 gap-1">
                           <Scissors className="w-3 h-3" /> Plano de Corte
@@ -401,21 +355,14 @@ export default function ProdutosLinha() {
                           <DropdownMenuItem
                             onClick={() => deactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
                           >
-                            <PowerOff className="w-4 h-4 mr-2" /> Desativar
+                            <PowerOff className="w-4 h-4 mr-2" /> Ocultar
                           </DropdownMenuItem>
                         )}
                         {product.companyProductId && !product.is_active && (
                           <DropdownMenuItem
                             onClick={() => reactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
                           >
-                            <Power className="w-4 h-4 mr-2" /> Ativar
-                          </DropdownMenuItem>
-                        )}
-                        {!product.companyProductId && product.productTemplateId && (
-                          <DropdownMenuItem
-                            onClick={() => quickActivateMutation.mutate(product.productTemplateId!)}
-                          >
-                            <Power className="w-4 h-4 mr-2" /> Ativar
+                            <Power className="w-4 h-4 mr-2" /> Reexibir
                           </DropdownMenuItem>
                         )}
                         {product.is_custom && product.companyProductId && (

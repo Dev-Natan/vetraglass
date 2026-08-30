@@ -540,7 +540,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   ) ?? null;
   const profileFinishOptions = useMemo(() => Array.from(new Set(canonicalVariants
     .filter(row => row.variant_type === 'PROFILE' && row.profile_finish
-      && (!selectedProfileColor || row.aluminum_color_id === selectedProfileColor.color_id))
+      && (!selectedProfileColor || row.company_color_id === selectedProfileColor.color_id))
     .map(row => row.profile_finish as string))).sort(), [canonicalVariants, selectedProfileColor]);
   const hasProfileColorPrices = profileAvailableColors.length > 0;
   const glassTypeOptions = useMemo(() => Array.from(new Set(canonicalVariants
@@ -604,7 +604,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     glass_color: selectedGlassColor || null,
     glass_thickness_mm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
     glass_finish: 'PADRAO',
-    profile_color_id: selectedProfileColor?.color_id || null,
+    profile_company_color_id: selectedProfileColor?.color_id || null,
+    profile_color_id: null,
     profile_color_code: selectedProfileColor?.color_code || null,
     profile_color_name: selectedProfileColor?.color_name || null,
     profile_color: selectedProfileColor?.color_name || null,

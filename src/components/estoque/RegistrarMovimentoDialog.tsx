@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +38,7 @@ interface StockItem {
   item_template_id: string | null;
   company_item_id?: string | null;
   quantity: number;
+  reserved_quantity?: number;
   canonical_quantity?: number;
   canonical_unit?: string | null;
   package_quantity?: number;
@@ -55,6 +56,8 @@ interface StockItem {
     type?: string;
     linha?: string | null;
     bar_length_mm?: number | null;
+    cost?: number | null;
+    sale_price?: number | null;
   } | null;
   item_template?: {
     id: string;
@@ -123,29 +126,42 @@ export function RegistrarMovimentoDialog({
   const [pieceHeight, setPieceHeight] = useState<string>('');
   const [pieceQty, setPieceQty] = useState<string>('1');
   const [linearMeters, setLinearMeters] = useState<string>('');
-  const [locationId, setLocationId] = useState('');
   const [selectedColorId, setSelectedColorId] = useState('');
+  const [newColorName, setNewColorName] = useState('');
+  const [newColorCode, setNewColorCode] = useState('');
   const [totalCost, setTotalCost] = useState('');
+  const [newSalePrice, setNewSalePrice] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [documentReference, setDocumentReference] = useState('');
   const [lotCode, setLotCode] = useState('');
 
-  const locationsQuery = useQuery({
-    queryKey: ['stock-locations', currentCompany?.id],
-    queryFn: () => estoqueService.fetchLocations(currentCompany!.id),
+  const colorsQuery = useQuery({
+    queryKey: ['company-colors', currentCompany?.id],
+    queryFn: () => estoqueService.fetchCompanyColors(currentCompany!.id),
     enabled: open && !!currentCompany?.id,
   });
-  const usableLocations = (locationsQuery.data || []).filter((location) => !location.needs_review);
-  const defaultLocation = usableLocations.find((location) => location.code === 'DEFAULT_STOCK');
-  const colorsQuery = useQuery({
-    queryKey: ['inventory-aluminum-colors'],
-    queryFn: () => estoqueService.fetchAluminumColors(),
-    enabled: open,
+  const createColorMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id || !newColorName.trim() || !newColorCode.trim()) {
+        throw new Error('Informe nome e código da nova cor.');
+      }
+      const { data, error } = await supabase.rpc('create_private_company_color', {
+        _company_id: currentCompany.id,
+        _name: newColorName.trim(),
+        _code: newColorCode.trim().toUpperCase(),
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (color) => {
+      setSelectedColorId(color.id);
+      setNewColorName('');
+      setNewColorCode('');
+      await colorsQuery.refetch();
+      toast.success('Cor própria adicionada para esta empresa.');
+    },
+    onError: (error: unknown) => toast.error(operationalErrorMessage(error, 'Erro ao criar cor.')),
   });
-
-  useEffect(() => {
-    if (open && defaultLocation?.id) setLocationId(defaultLocation.id);
-  }, [open, defaultLocation?.id]);
 
   const isEntrada = tipo === 'entrada';
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
@@ -161,23 +177,6 @@ export function RegistrarMovimentoDialog({
 
   const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
   const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
-
-  const activeProfileVariantsQuery = useQuery({
-    queryKey: ['movement-profile-variants', currentCompany?.id, selectedStockItem?.company_item_id],
-    queryFn: async () => {
-      if (!currentCompany?.id || !selectedStockItem?.company_item_id) return [];
-      const { data, error } = await supabase
-        .from('company_item_variants')
-        .select('id,aluminum_color_id')
-        .eq('company_id', currentCompany.id)
-        .eq('company_item_id', selectedStockItem.company_item_id)
-        .eq('is_active', true)
-        .not('aluminum_color_id', 'is', null);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: open && isProfile && !selectedStockItem?.variant_id && !!currentCompany?.id && !!selectedStockItem?.company_item_id,
-  });
 
   // Ao trocar de item, definir modo padrão
   const handleSelectItem = (id: string) => {
@@ -202,6 +201,8 @@ export function RegistrarMovimentoDialog({
     setLinearMeters('');
     setQuantidade('');
     setSelectedColorId('');
+    setNewColorName('');
+    setNewColorCode('');
   };
 
   // Produz o contrato físico enviado ao banco; quantidade nunca viaja sem unidade.
@@ -389,7 +390,7 @@ export function RegistrarMovimentoDialog({
 
   const movimentoMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !selectedItem || !motivo || !locationId) {
+      if (!currentCompany?.id || !selectedItem || !motivo) {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
@@ -408,29 +409,27 @@ export function RegistrarMovimentoDialog({
 
       const companyItemId = stockItem.company_item_id ?? stockItem.company_item?.id;
       if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
-      let variantId = stockItem.variant_id || undefined;
+      const variantId = stockItem.variant_id || undefined;
       if (isProfile && !variantId) {
         if (!selectedColorId) throw new Error('Selecione a cor/variante do perfil.');
-        const variant = (activeProfileVariantsQuery.data || []).find((entry) => entry.aluminum_color_id === selectedColorId);
-        if (!variant) throw new Error('PROFILE_VARIANT_NOT_CONFIGURED');
-        variantId = variant.id;
       }
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
       const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
-      const { data, error } = await supabase.rpc('record_physical_stock_movement', {
+      const { data, error } = await supabase.rpc('record_tenant_stock_movement', {
         _company_id: currentCompany.id,
         _company_item_id: companyItemId,
         _direction: isEntrada ? 'IN' : 'OUT',
         _original_quantity: computed.originalQuantity,
         _original_unit: computed.originalUnit,
-        _location_id: locationId,
         _reason: finalDescription,
+        _company_color_id: selectedColorId || undefined,
         _variant_id: variantId,
         _idempotency_key: crypto.randomUUID(),
         _lot_code: lotCode.trim(),
         _supplier_name: supplierName.trim() || undefined,
         _document_reference: documentReference.trim() || undefined,
         _total_cost: isEntrada && totalCost ? Number(totalCost) : undefined,
+        _new_sale_price: isEntrada && newSalePrice ? Number(newSalePrice) : undefined,
         _width_mm: computed.widthMm || undefined,
         _height_mm: computed.heightMm || undefined,
       });
@@ -469,9 +468,9 @@ export function RegistrarMovimentoDialog({
     setPieceHeight('');
     setPieceQty('1');
     setLinearMeters('');
-    setLocationId('');
     setSelectedColorId('');
     setTotalCost('');
+    setNewSalePrice('');
     setSupplierName('');
     setDocumentReference('');
     setLotCode('');
@@ -772,15 +771,23 @@ export function RegistrarMovimentoDialog({
                         <SelectValue placeholder="Selecione a cor do perfil" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(activeProfileVariantsQuery.data || []).map((variant) => {
-                          const color = (colorsQuery.data || []).find((entry) => entry.id === variant.aluminum_color_id);
-                          return <SelectItem key={variant.id} value={variant.aluminum_color_id!}>{color?.name || 'Cor cadastrada'}</SelectItem>;
-                        })}
+                        {(colorsQuery.data || []).map((color) => (
+                          <SelectItem key={color.id} value={color.id}>
+                            {color.name}{color.catalog_origin === 'PRIVATE' ? ' · própria' : ''}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="text-[11px] text-muted-foreground">
-                      Selecione uma variante já ativada na configuração. O saldo legado sem cor permanece separado.
+                      A variante é resolvida automaticamente para esta empresa. Não é necessária ativação prévia.
                     </p>
+                    <div className="grid grid-cols-[1fr_7rem_auto] gap-2 pt-2">
+                      <Input value={newColorName} onChange={(event) => setNewColorName(event.target.value)} placeholder="Nova cor própria" />
+                      <Input value={newColorCode} onChange={(event) => setNewColorCode(event.target.value)} placeholder="Código" />
+                      <Button type="button" variant="outline" disabled={createColorMutation.isPending} onClick={() => createColorMutation.mutate()}>
+                        Adicionar
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -858,6 +865,14 @@ export function RegistrarMovimentoDialog({
                     <span className="font-medium text-primary">{computed.summary}</span>
                   </div>
                 )}
+                {selectedStockItem && computed.quantity > 0 && (
+                  <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs sm:grid-cols-4">
+                    <div><span className="text-muted-foreground">Saldo atual</span><strong className="block">{selectedStockItem.quantity.toLocaleString('pt-BR')}</strong></div>
+                    <div><span className="text-muted-foreground">Saldo projetado</span><strong className="block">{(selectedStockItem.quantity + (isEntrada ? computed.quantity : -computed.quantity)).toLocaleString('pt-BR')}</strong></div>
+                    <div><span className="text-muted-foreground">Custo atual</span><strong className="block">{Number(selectedStockItem.company_item?.cost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
+                    <div><span className="text-muted-foreground">Venda atual</span><strong className="block">{Number(selectedStockItem.company_item?.sale_price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -908,12 +923,6 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
-            {!defaultLocation && !locationsQuery.isLoading && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-                A localização operacional interna não está disponível. Atualize a página ou contate o administrador.
-              </p>
-            )}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="lotCode">Lote</Label>
@@ -932,6 +941,10 @@ export function RegistrarMovimentoDialog({
                   <div className="space-y-2">
                     <Label htmlFor="totalCost">Custo total da entrada</Label>
                     <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newSalePrice">Novo preço de venda</Label>
+                    <Input id="newSalePrice" type="number" min="0" step="0.01" value={newSalePrice} onChange={(event) => setNewSalePrice(event.target.value)} placeholder="Opcional — não altera se vazio" />
                   </div>
                 </>
               )}
@@ -957,7 +970,7 @@ export function RegistrarMovimentoDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={!selectedItem || !motivo || !locationId || computed.quantity <= 0 || movimentoMutation.isPending}
+              disabled={!selectedItem || !motivo || computed.quantity <= 0 || movimentoMutation.isPending}
               className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
               {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}

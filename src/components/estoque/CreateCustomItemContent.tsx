@@ -54,6 +54,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   const invalidateStock = useInvalidateStock();
   
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [linha, setLinha] = useState('');
@@ -92,6 +93,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
       const minQty = parseFloat(minQuantity) || 0;
 
       if (!name.trim()) throw new Error('Nome do item é obrigatório');
+      if (!code.trim()) throw new Error('Código do item é obrigatório');
       if (!category) throw new Error('Categoria é obrigatória');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
@@ -113,14 +115,35 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
         codigo_servico: fiscalData.codigo_servico || null,
         aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
       };
-      const { data, error } = await supabase.rpc('save_company_item_configuration', {
-        _company_id: currentCompany.id, _company_item_id: null, _item_template_id: null,
-        _name: name.trim(), _item_type: category, _stock_unit: unit,
-        _pricing_unit: isProfile ? 'm' : isGlass ? 'm²' : unit,
-        _cost: costValue, _basis: 'SALE_PRICE', _value: salePriceValue,
-        _target_stock: quantityNum, _min_stock: minQty, _location: undefined,
-        _allow_fractional: unit === 'm' || unit === 'ml' || unit === 'm²' || unit === 'kg' || unit === 'l' || isProfile,
-        _is_active: true, _metadata: metadata,
+      const nominalLength = pNum(pricingData.barLengthMm);
+      if (isProfile && !nominalLength) throw new Error('Informe o comprimento nominal da barra.');
+      const isMass = unit === 'kg';
+      const canonicalUnit = isProfile ? 'MM' : isGlass ? 'MM2' : isMass ? 'G' : 'UNIT';
+      const purchaseUnit = isProfile ? 'BAR' : isGlass ? 'M2' : isMass ? 'KG' : 'UNIT';
+      const stockUnit = isProfile ? 'M' : isGlass ? 'M2' : isMass ? 'KG' : 'UNIT';
+      const factor = isProfile ? nominalLength! : isGlass ? 1_000_000 : isMass ? 1_000 : 1;
+      const stockFactor = isProfile ? 1_000 : factor;
+      const { data, error } = await supabase.rpc('create_private_item_with_opening_stock', {
+        _company_id: currentCompany.id,
+        _name: name.trim(),
+        _code: code.trim().toUpperCase(),
+        _type: category,
+        _purchase_unit: purchaseUnit,
+        _stock_unit: stockUnit,
+        _consumption_unit: stockUnit,
+        _canonical_unit: canonicalUnit,
+        _purchase_factor: factor,
+        _stock_factor: stockFactor,
+        _consumption_factor: stockFactor,
+        _initial_quantity: quantityNum,
+        _total_cost: costValue * quantityNum,
+        _sale_price: salePriceValue,
+        _idempotency_key: crypto.randomUUID(),
+        _nominal_length_mm: nominalLength || undefined,
+        _description: description.trim() || undefined,
+        _line: linha,
+        _image_url: imageUrl || undefined,
+        _metadata: { ...metadata, min_quantity: minQty },
       });
       if (error) throw error;
       return data;
@@ -166,6 +189,12 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
         <div className="space-y-2">
           <Label htmlFor="custom-name">Nome do Item *</Label>
           <Input id="custom-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Parafuso Especial 5mm" required />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="custom-code">Código interno *</Label>
+          <Input id="custom-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ex: PAR-ESP-5" required />
+          <p className="text-xs text-muted-foreground">O código é único somente dentro da sua empresa.</p>
         </div>
 
         <div className="space-y-2">
