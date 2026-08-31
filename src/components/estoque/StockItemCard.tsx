@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle, History } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle, History, TrendingDown, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -64,6 +64,7 @@ interface StockItemCardProps {
   onEdit: (item: StockItem) => void;
   onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
   onViewHistory?: (item: StockItem) => void;
+  onRegisterMovement?: (item: StockItem, type: 'entrada' | 'saida') => void;
   showActivateBtn?: boolean;
 }
 
@@ -77,6 +78,7 @@ export const StockItemCard = memo(function StockItemCard({
   onEdit,
   onToggleActive,
   onViewHistory,
+  onRegisterMovement,
   showActivateBtn = true,
 }: StockItemCardProps) {
   const qtyDisplay = formatQuantityDisplay(item);
@@ -271,6 +273,30 @@ export const StockItemCard = memo(function StockItemCard({
           </Button>
         )}
 
+        {onRegisterMovement && (
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={(event) => { event.stopPropagation(); onRegisterMovement(item, 'entrada'); }}
+              title="Registrar entrada deste item"
+            >
+              <TrendingUp className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={(event) => { event.stopPropagation(); onRegisterMovement(item, 'saida'); }}
+              disabled={item.quantity <= 0}
+              title="Registrar saída deste item"
+            >
+              <TrendingDown className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
         {showActivateBtn && (
           <Button
             variant={item.is_active !== false ? 'outline' : 'default'}
@@ -308,6 +334,7 @@ export const StockItemCard = memo(function StockItemCard({
     prevProps.item.item_template?.default_price === nextProps.item.item_template?.default_price &&
     prevProps.item.item_template?.default_sale_price === nextProps.item.item_template?.default_sale_price &&
     prevProps.item.company_item?.bar_length_mm === nextProps.item.company_item?.bar_length_mm &&
+    prevProps.onRegisterMovement === nextProps.onRegisterMovement &&
     prevProps.showActivateBtn === nextProps.showActivateBtn
   );
 });

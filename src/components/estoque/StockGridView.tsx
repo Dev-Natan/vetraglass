@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, AlertTriangle, Power, Sparkles } from 'lucide-react';
+import { Package, AlertTriangle, Power, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { StockItem } from '@/types/estoque';
@@ -8,16 +8,19 @@ interface StockGridViewProps {
   items: StockItem[];
   onEdit: (item: StockItem) => void;
   onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+  onRegisterMovement?: (item: StockItem, type: 'entrada' | 'saida') => void;
 }
 
 const StockGridCard = memo(function StockGridCard({
   item,
   onEdit,
   onToggleActive,
+  onRegisterMovement,
 }: {
   item: StockItem;
   onEdit: (item: StockItem) => void;
   onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+  onRegisterMovement?: (item: StockItem, type: 'entrada' | 'saida') => void;
 }) {
   const isLowStock = item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0;
   const isZeroStock = item.quantity === 0;
@@ -87,6 +90,17 @@ const StockGridCard = memo(function StockGridCard({
       )}
 
       {/* Toggle Button */}
+      {onRegisterMovement && (
+        <div className="absolute bottom-2 left-2 flex gap-1">
+          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={(event) => { event.stopPropagation(); onRegisterMovement(item, 'entrada'); }} title="Registrar entrada deste item">
+            <TrendingUp className="w-3 h-3" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={(event) => { event.stopPropagation(); onRegisterMovement(item, 'saida'); }} disabled={item.quantity <= 0} title="Registrar saída deste item">
+            <TrendingDown className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+
       <Button
         variant={item.is_active !== false ? 'outline' : 'default'}
         size="sm"
@@ -112,6 +126,7 @@ export const StockGridView = memo(function StockGridView({
   items,
   onEdit,
   onToggleActive,
+  onRegisterMovement,
 }: StockGridViewProps) {
   if (items.length === 0) {
     return (
@@ -133,6 +148,7 @@ export const StockGridView = memo(function StockGridView({
           item={item}
           onEdit={onEdit}
           onToggleActive={onToggleActive}
+          onRegisterMovement={onRegisterMovement}
         />
       ))}
     </div>

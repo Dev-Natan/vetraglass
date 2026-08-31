@@ -307,6 +307,109 @@ SELECT pg_temp.ok(EXISTS(
 ),'XP200_FORMULA');
 SELECT pg_temp.ok(2*(2100-30)=4140,'XP200_RESULT');
 
+-- Final stock movement hotfix acceptance (T61-T70).
+-- T61: an explicit legacy NULL balance exits without asking for a color.
+INSERT INTO public.stock_locations(company_id,name,code,kind,needs_review)
+VALUES (
+  (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+  'Legacy review fixture','LEGACY_REVIEW_T61','WAREHOUSE',true
+);
+UPDATE public.physical_stock_balances
+SET location_id=(
+      SELECT id FROM public.stock_locations
+      WHERE company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a')
+        AND code='LEGACY_REVIEW_T61'
+    ),
+    needs_review=true
+WHERE company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='click_a')
+  AND variant_id IS NULL;
+SELECT public.record_tenant_stock_movement(
+  (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+  (SELECT v FROM phase4b1b_ctx WHERE k='click_a'),
+  'OUT',16,'BAR','T61 legacy full exit',NULL,NULL,NULL,NULL,NULL,gen_random_uuid()
+);
+SELECT pg_temp.ok(
+  COALESCE((SELECT sum(canonical_quantity) FROM public.physical_stock_balances
+    WHERE company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='click_a')
+      AND variant_id IS NULL),0)=0
+  AND EXISTS(SELECT 1 FROM public.stock_movements
+    WHERE company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='click_a')
+      AND type='saida' AND variant_id IS NULL AND original_quantity=16 AND original_unit='BAR'
+      AND location_id=(
+        SELECT id FROM public.stock_locations
+        WHERE company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a')
+          AND code='LEGACY_REVIEW_T61'
+      )),
+  'T61','legacy stock exits without color reclassification'
+);
+
+INSERT INTO phase4b1b_ctx
+SELECT 'variant_a',id FROM public.company_item_variants
+WHERE company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='item_a')
+  AND company_color_id=(SELECT v FROM phase4b1b_ctx WHERE k='color_a');
+SELECT public.record_tenant_stock_movement(
+  (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+  (SELECT v FROM phase4b1b_ctx WHERE k='item_a'),
+  'OUT',1,'BAR','T62 existing variant exit',NULL,
+  (SELECT v FROM phase4b1b_ctx WHERE k='variant_a'),NULL,NULL,NULL,gen_random_uuid()
+);
+SELECT pg_temp.ok(EXISTS(
+  SELECT 1 FROM public.stock_movements
+  WHERE company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='item_a')
+    AND variant_id=(SELECT v FROM phase4b1b_ctx WHERE k='variant_a')
+    AND type='saida' AND original_quantity=1
+),'T62','existing variant identity reaches the physical movement');
+
+DO $$
+DECLARE v_bronze uuid;
+BEGIN
+  SELECT cc.id INTO v_bronze FROM public.company_colors cc
+  JOIN public.admin_aluminum_colors ac ON ac.id=cc.admin_color_id
+  WHERE cc.company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a') AND ac.slug='bronze';
+  BEGIN
+    PERFORM public.record_tenant_stock_movement(
+      (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+      (SELECT v FROM phase4b1b_ctx WHERE k='click_a'),
+      'OUT',1,'BAR','T63 forbidden variant creation',v_bronze,NULL,NULL,NULL,NULL,gen_random_uuid()
+    );
+    PERFORM pg_temp.ok(false,'T63','exit created/resolved a missing variant');
+  EXCEPTION WHEN foreign_key_violation THEN
+    PERFORM pg_temp.ok(SQLERRM='EXISTING_VARIANT_REQUIRED','T63',SQLERRM);
+  END;
+END $$;
+
+SELECT public.record_tenant_stock_movement(
+  (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+  (SELECT v FROM phase4b1b_ctx WHERE k='click_a'),
+  'IN',1,'BAR','T64 bronze entry',
+  (SELECT cc.id FROM public.company_colors cc JOIN public.admin_aluminum_colors ac ON ac.id=cc.admin_color_id
+   WHERE cc.company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a') AND ac.slug='bronze'),
+  NULL,NULL,22.5,NULL,gen_random_uuid()
+);
+SELECT pg_temp.ok((SELECT count(*) FROM public.company_item_variants civ
+  JOIN public.company_colors cc ON cc.id=civ.company_color_id
+  JOIN public.admin_aluminum_colors ac ON ac.id=cc.admin_color_id
+  WHERE civ.company_item_id=(SELECT v FROM phase4b1b_ctx WHERE k='click_a') AND ac.slug='bronze')=1,
+  'T64','entry resolves the missing variant exactly once');
+
+SELECT pg_temp.ok((SELECT count(*) FROM public.admin_aluminum_colors WHERE slug='branco')=1,'T65');
+SELECT pg_temp.ok((SELECT count(*) FROM public.admin_aluminum_colors WHERE slug='preto')=1,'T66');
+SELECT pg_temp.ok((SELECT count(*) FROM public.admin_aluminum_colors WHERE slug='bronze')=1,'T67');
+SELECT pg_temp.ok((SELECT count(*) FROM public.admin_aluminum_colors WHERE slug='amadeirado')=1,'T68');
+SELECT pg_temp.ok((SELECT count(*) FROM public.admin_aluminum_colors WHERE slug='fosco')=1,'T69');
+
+SELECT public.phase4b1b_materialize_company_catalog((SELECT v FROM phase4b1b_ctx WHERE k='company_a'));
+SELECT public.phase4b1b_materialize_company_catalog((SELECT v FROM phase4b1b_ctx WHERE k='company_a'));
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.company_colors cc JOIN public.admin_aluminum_colors ac ON ac.id=cc.admin_color_id
+   WHERE cc.company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a')
+     AND ac.slug IN ('branco','preto','bronze','amadeirado','fosco'))=5
+  AND (SELECT count(*) FROM public.company_colors cc JOIN public.admin_aluminum_colors ac ON ac.id=cc.admin_color_id
+   WHERE cc.company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_b')
+     AND ac.slug IN ('branco','preto','bronze','amadeirado','fosco'))=5,
+  'T70','global color materialization is tenant-wide and idempotent'
+);
+
 SELECT jsonb_build_object(
   'passed',(SELECT count(*) FROM phase4b1b_results WHERE passed),
   'failed',(SELECT count(*) FROM phase4b1b_results WHERE NOT passed),

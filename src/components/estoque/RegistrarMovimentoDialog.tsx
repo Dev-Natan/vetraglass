@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -48,6 +49,9 @@ interface StockItem {
   variant_id?: string | null;
   variant_name?: string | null;
   weight_per_meter_kg?: number | null;
+  on_hand_bars?: number | null;
+  on_hand_meters?: number | null;
+  on_hand_kg?: number | null;
   company_item?: {
     id: string;
     name?: string;
@@ -77,6 +81,8 @@ interface RegistrarMovimentoDialogProps {
   onOpenChange: (open: boolean) => void;
   tipo: 'entrada' | 'saida';
   stockItems: StockItem[];
+  initialStockItemId?: string | null;
+  lockInitialItem?: boolean;
 }
 
 const motivosEntrada = [
@@ -103,6 +109,8 @@ export function RegistrarMovimentoDialog({
   onOpenChange,
   tipo,
   stockItems,
+  initialStockItemId = null,
+  lockInitialItem = false,
 }: RegistrarMovimentoDialogProps) {
   const { currentCompany } = useAuth();
   const invalidateStock = useInvalidateStock();
@@ -134,6 +142,8 @@ export function RegistrarMovimentoDialog({
   const [supplierName, setSupplierName] = useState('');
   const [documentReference, setDocumentReference] = useState('');
   const [lotCode, setLotCode] = useState('');
+  const [updateSalePrice, setUpdateSalePrice] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const colorsQuery = useQuery({
     queryKey: ['company-colors', currentCompany?.id],
@@ -179,7 +189,7 @@ export function RegistrarMovimentoDialog({
   const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
 
   // Ao trocar de item, definir modo padrão
-  const handleSelectItem = (id: string) => {
+  const handleSelectItem = useCallback((id: string) => {
     setSelectedItem(id);
     const it = stockItems.find(x => x.id === id);
     const t = (it?.company_item?.type || it?.item_template?.type || '').toLowerCase();
@@ -203,7 +213,13 @@ export function RegistrarMovimentoDialog({
     setSelectedColorId('');
     setNewColorName('');
     setNewColorCode('');
-  };
+  }, [stockItems]);
+
+  useEffect(() => {
+    if (open && initialStockItemId && stockItems.some((item) => item.id === initialStockItemId)) {
+      handleSelectItem(initialStockItemId);
+    }
+  }, [handleSelectItem, initialStockItemId, open, stockItems]);
 
   // Produz o contrato físico enviado ao banco; quantidade nunca viaja sem unidade.
   const computed = useMemo(() => {
@@ -410,7 +426,7 @@ export function RegistrarMovimentoDialog({
       const companyItemId = stockItem.company_item_id ?? stockItem.company_item?.id;
       if (!companyItemId) throw new Error('MISSING_COMPANY_ITEM');
       const variantId = stockItem.variant_id || undefined;
-      if (isProfile && !variantId) {
+      if (isEntrada && isProfile && !variantId) {
         if (!selectedColorId) throw new Error('Selecione a cor/variante do perfil.');
       }
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
@@ -422,7 +438,7 @@ export function RegistrarMovimentoDialog({
         _original_quantity: computed.originalQuantity,
         _original_unit: computed.originalUnit,
         _reason: finalDescription,
-        _company_color_id: selectedColorId || undefined,
+        _company_color_id: isEntrada ? (selectedColorId || undefined) : undefined,
         _variant_id: variantId,
         _idempotency_key: crypto.randomUUID(),
         _lot_code: lotCode.trim(),
@@ -474,6 +490,8 @@ export function RegistrarMovimentoDialog({
     setSupplierName('');
     setDocumentReference('');
     setLotCode('');
+    setUpdateSalePrice(false);
+    setDetailsOpen(false);
     onOpenChange(false);
   };
 
@@ -518,7 +536,26 @@ export function RegistrarMovimentoDialog({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Seção de Seleção de Item */}
-            <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+            {lockInitialItem && selectedStockItem && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium">
+                      {selectedStockItem.company_item?.name || selectedStockItem.item_template?.name}
+                      {isProfile && ` · ${selectedStockItem.variant_name || 'Cor não definida — saldo legado'}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Identidade física já selecionada pelo estoque.
+                    </p>
+                  </div>
+                  <Badge variant="secondary">
+                    {selectedStockItem.quantity.toLocaleString('pt-BR')} {selectedStockItem.consumption_unit || selectedStockItem.company_item?.unit || selectedStockItem.item_template?.unit}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            <div className={cn("border rounded-lg p-4 bg-muted/30 space-y-4", lockInitialItem && "hidden")}>
               {/* Busca e Filtros */}
               <div className="space-y-3">
                 {/* Busca */}
@@ -763,7 +800,17 @@ export function RegistrarMovimentoDialog({
                   </div>
                 </div>
 
-                {isProfile && !selectedStockItem.variant_id && (
+                {!isEntrada && isProfile && (
+                  <div className="rounded-md border bg-background px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">Variante física: </span>
+                    <strong>{selectedStockItem.variant_name || 'Cor não definida — saldo legado'}</strong>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      A saída consome somente esta identidade existente e nunca cria uma nova variante.
+                    </p>
+                  </div>
+                )}
+
+                {isEntrada && isProfile && !selectedStockItem.variant_id && (
                   <div className="space-y-1">
                     <Label className="text-xs">Cor / variante *</Label>
                     <Select value={selectedColorId} onValueChange={setSelectedColorId}>
@@ -868,7 +915,14 @@ export function RegistrarMovimentoDialog({
                 {selectedStockItem && computed.quantity > 0 && (
                   <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs sm:grid-cols-4">
                     <div><span className="text-muted-foreground">Saldo atual</span><strong className="block">{selectedStockItem.quantity.toLocaleString('pt-BR')}</strong></div>
-                    <div><span className="text-muted-foreground">Saldo projetado</span><strong className="block">{(selectedStockItem.quantity + (isEntrada ? computed.quantity : -computed.quantity)).toLocaleString('pt-BR')}</strong></div>
+                    <div><span className="text-muted-foreground">Movimento</span><strong className="block">{isEntrada ? '+' : '-'}{computed.quantity.toLocaleString('pt-BR')}</strong></div>
+                    <div><span className="text-muted-foreground">Após</span><strong className="block">{(selectedStockItem.quantity + (isEntrada ? computed.quantity : -computed.quantity)).toLocaleString('pt-BR')}</strong></div>
+                    <div><span className="text-muted-foreground">Status</span><strong className="block">{(() => { const projected = selectedStockItem.quantity + (isEntrada ? computed.quantity : -computed.quantity); return projected > 0 ? 'EM ESTOQUE' : projected === 0 ? 'SEM ESTOQUE' : 'NEGATIVO'; })()}</strong></div>
+                    {isProfile && weightPerMeter > 0 && (
+                      <div className="col-span-2 text-muted-foreground sm:col-span-4">
+                        Equivalência: {computed.quantity.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} m · {(computed.quantity * weightPerMeter).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                      </div>
+                    )}
                     <div><span className="text-muted-foreground">Custo atual</span><strong className="block">{Number(selectedStockItem.company_item?.cost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
                     <div><span className="text-muted-foreground">Venda atual</span><strong className="block">{Number(selectedStockItem.company_item?.sale_price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
                   </div>
@@ -923,44 +977,56 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="lotCode">Lote</Label>
-                <Input id="lotCode" value={lotCode} onChange={(event) => setLotCode(event.target.value)} placeholder="Opcional" />
+            {isEntrada && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="totalCost">Custo desta entrada</Label>
+                  <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
+                </div>
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="updateSalePrice">Atualizar preço de venda</Label>
+                    <Switch id="updateSalePrice" checked={updateSalePrice} onCheckedChange={(checked) => { setUpdateSalePrice(checked); if (!checked) setNewSalePrice(''); }} />
+                  </div>
+                  {!updateSalePrice ? (
+                    <p className="text-xs text-muted-foreground">Manter preço atual.</p>
+                  ) : (
+                    <Input aria-label="Novo preço de venda" type="number" min="0" step="0.01" value={newSalePrice} onChange={(event) => setNewSalePrice(event.target.value)} placeholder="R$ 0,00" />
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="documentReference">Documento</Label>
-                <Input id="documentReference" value={documentReference} onChange={(event) => setDocumentReference(event.target.value)} placeholder="NF, pedido ou referência" />
-              </div>
-              {isEntrada && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="supplierName">Fornecedor</Label>
-                    <Input id="supplierName" value={supplierName} onChange={(event) => setSupplierName(event.target.value)} placeholder="Opcional" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="totalCost">Custo total da entrada</Label>
-                    <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newSalePrice">Novo preço de venda</Label>
-                    <Input id="newSalePrice" type="number" min="0" step="0.01" value={newSalePrice} onChange={(event) => setNewSalePrice(event.target.value)} placeholder="Opcional — não altera se vazio" />
-                  </div>
-                </>
-              )}
-            </div>
+            )}
 
-
-            <div className="space-y-2">
-              <Label htmlFor="observacao">Observação</Label>
-              <Textarea
-                id="observacao"
-                value={observacao}
-                onChange={(e) => setObservacao(e.target.value)}
-                placeholder="Detalhes adicionais sobre esta movimentação..."
-                rows={2}
-              />
-            </div>
+            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="rounded-md border">
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="ghost" className="w-full justify-between">
+                  Mais detalhes
+                  {detailsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 border-t p-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="lotCode">Lote</Label>
+                    <Input id="lotCode" value={lotCode} onChange={(event) => setLotCode(event.target.value)} placeholder="Opcional" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="documentReference">Documento</Label>
+                    <Input id="documentReference" value={documentReference} onChange={(event) => setDocumentReference(event.target.value)} placeholder="NF, pedido ou referência" />
+                  </div>
+                  {isEntrada && (
+                    <div className="space-y-2">
+                      <Label htmlFor="supplierName">Fornecedor</Label>
+                      <Input id="supplierName" value={supplierName} onChange={(event) => setSupplierName(event.target.value)} placeholder="Opcional" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="observacao">Observação</Label>
+                  <Textarea id="observacao" value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Detalhes adicionais sobre esta movimentação..." rows={2} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           {/* Footer fixo */}
@@ -973,7 +1039,7 @@ export function RegistrarMovimentoDialog({
               disabled={!selectedItem || !motivo || computed.quantity <= 0 || movimentoMutation.isPending}
               className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
-              {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}
+              {movimentoMutation.isPending ? 'Processando...' : isEntrada ? 'Registrar Entrada' : 'Registrar Saída'}
             </Button>
           </DialogFooter>
         </form>

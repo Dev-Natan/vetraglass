@@ -69,6 +69,7 @@ export default function EstoqueLinha() {
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
   const [saidaDialogOpen, setSaidaDialogOpen] = useState(false);
+  const [movementItemId, setMovementItemId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState('estoque');
   const [selectedItem, setSelectedItem] = useState<{
     id: string | null;
@@ -261,6 +262,22 @@ export default function EstoqueLinha() {
     setPriceDialogOpen(true);
   }, []);
 
+  const handleRegisterMovement = useCallback((item: StockItem, type: 'entrada' | 'saida') => {
+    setMovementItemId(item.id);
+    if (type === 'entrada') setEntradaDialogOpen(true);
+    else setSaidaDialogOpen(true);
+  }, []);
+
+  const handleEntradaOpenChange = useCallback((open: boolean) => {
+    setEntradaDialogOpen(open);
+    if (!open) setMovementItemId(null);
+  }, []);
+
+  const handleSaidaOpenChange = useCallback((open: boolean) => {
+    setSaidaDialogOpen(open);
+    if (!open) setMovementItemId(null);
+  }, []);
+
   const handleToggleActive = useCallback((e: React.MouseEvent, stockId: string, currentActive: boolean) => {
     e.stopPropagation();
     toggleActiveMutation.mutate({ stockId, isActive: !currentActive });
@@ -305,11 +322,11 @@ export default function EstoqueLinha() {
           </div>
 
           <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
+            <Button variant="outline" className="gap-2" onClick={() => { setMovementItemId(null); setSaidaDialogOpen(true); }}>
               <TrendingDown className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Saída</span>
             </Button>
-            <Button variant="outline" className="gap-2" onClick={() => setEntradaDialogOpen(true)}>
+            <Button variant="outline" className="gap-2" onClick={() => { setMovementItemId(null); setEntradaDialogOpen(true); }}>
               <TrendingUp className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Entrada</span>
             </Button>
@@ -429,11 +446,11 @@ export default function EstoqueLinha() {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   ) : viewMode === 'grid' ? (
-                    <StockGridView items={inStockItems} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} />
+                    <StockGridView items={inStockItems} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onRegisterMovement={handleRegisterMovement} />
                   ) : inStockItems.length > 0 ? (
                     <div className="space-y-2">
                       {inStockItems.map((item) => (
-                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} />
+                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} onRegisterMovement={handleRegisterMovement} />
                       ))}
                     </div>
                   ) : (
@@ -459,11 +476,11 @@ export default function EstoqueLinha() {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   ) : viewMode === 'grid' ? (
-                    <StockGridView items={outOfStockItems} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} />
+                    <StockGridView items={outOfStockItems} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onRegisterMovement={handleRegisterMovement} />
                   ) : outOfStockItems.length > 0 ? (
                     <div className="space-y-2">
                       {outOfStockItems.map((item) => (
-                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} />
+                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} onRegisterMovement={handleRegisterMovement} />
                       ))}
                     </div>
                   ) : (
@@ -505,16 +522,20 @@ export default function EstoqueLinha() {
 
       <RegistrarMovimentoDialog
         open={entradaDialogOpen}
-        onOpenChange={setEntradaDialogOpen}
+        onOpenChange={handleEntradaOpenChange}
         tipo="entrada"
         stockItems={activeItems}
+        initialStockItemId={movementItemId}
+        lockInitialItem={!!movementItemId}
       />
 
       <RegistrarMovimentoDialog
         open={saidaDialogOpen}
-        onOpenChange={setSaidaDialogOpen}
+        onOpenChange={handleSaidaOpenChange}
         tipo="saida"
         stockItems={activeItems}
+        initialStockItemId={movementItemId}
+        lockInitialItem={!!movementItemId}
       />
       <ItemHistoricoDialog
         open={!!historyItem}

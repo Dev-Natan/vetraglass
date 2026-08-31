@@ -54,7 +54,7 @@ const motivoLabels: Record<string, string> = {
 // Configuração de badges por tipo de referência
 const referenceConfig: Record<string, { 
   label: string; 
-  icon: React.ComponentType<any>; 
+  icon: React.ComponentType<{ className?: string }>;
   className: string;
 }> = {
   purchase_order: { 
@@ -118,9 +118,12 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
           reference_id,
           reference_type,
           quantity,
+          original_quantity,
+          original_unit,
+          canonical_quantity,
+          canonical_unit,
           created_by,
-          created_at,
-          profiles:created_by (full_name)
+          created_at
         `)
         .eq('company_id', currentCompany.id)
         .gte('created_at', dateRange.start.toISOString())
@@ -128,7 +131,22 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      const rows = data || [];
+      const creatorIds = Array.from(new Set(
+        rows.map(row => row.created_by).filter((id): id is string => !!id),
+      ));
+      const { data: creators } = creatorIds.length > 0
+        ? await supabase.from('profiles').select('id, full_name').in('id', creatorIds)
+        : { data: [] };
+      const creatorNames = new Map(
+        (creators || []).map(profile => [profile.id, profile.full_name]),
+      );
+
+      return rows.map(row => ({
+        ...row,
+        created_by_name: row.created_by ? creatorNames.get(row.created_by) : null,
+      }));
     },
     enabled: !!currentCompany?.id,
   });
@@ -305,7 +323,7 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
                       </TableCell>
                       <TableCell>
                         {(() => {
-                          const refType = (mov as any).reference_type || 'manual';
+                          const refType = mov.reference_type || 'manual';
                           const config = referenceConfig[refType] || referenceConfig.manual;
                           const IconComponent = config.icon;
                           return (
@@ -332,7 +350,9 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         <span className={mov.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                          {mov.type === 'entrada' ? '+' : '-'}{mov.quantity} {mov.item_unit}
+                          {mov.type === 'entrada' ? '+' : '-'}
+                          {mov.original_quantity ?? mov.quantity}{' '}
+                          {mov.original_unit || mov.item_unit}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -344,7 +364,7 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
                         {mov.description || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {(mov.profiles as any)?.full_name || 'Sistema'}
+                        {mov.created_by_name || 'Sistema'}
                       </TableCell>
                     </TableRow>
                   ))}
