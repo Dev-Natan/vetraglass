@@ -1,574 +1,317 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Boxes, Layers, ChevronRight, GlassWater, Package, Loader2, Info,
-  Blocks, ArrowLeft, History, Search, Plus, Minus, DollarSign,
-  AlertTriangle, Ruler, X,
+  AlertTriangle,
+  ArrowLeft,
+  Blocks,
+  Boxes,
+  ChevronRight,
+  CircleDollarSign,
+  GlassWater,
+  History,
+  Layers,
+  Loader2,
+  Package,
+  PackageCheck,
+  PackageX,
+  Plus,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useStockData } from '@/hooks/useStockData';
-import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
-import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
-import { useDebounce } from '@/hooks/useDebounce';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
+import { useStockData } from '@/hooks/useStockData';
 import type { StockItem } from '@/types/estoque';
 
-const VIDROS_KEY = '__vidros__';
-const DIVERSOS_KEY = '__diversos__';
-const PERFIS_KEY = '__perfis__';
+const CATEGORY_KEY = '__categoria__';
 
-function slug(s: string) {
-  return encodeURIComponent(s);
+const encode = (value: string) => encodeURIComponent(value);
+const normalize = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
+const itemType = (item: StockItem) => normalize(item.category_code ?? item.company_item?.type ?? item.item_template?.type);
+const itemLine = (item: StockItem) => {
+  const lineId = item.line_id ?? item.item_template?.line_id;
+  return lineId ? (item.line_name ?? item.item_template?.linha ?? item.company_item?.linha ?? '').trim() : '';
+};
+const itemName = (item: StockItem) => item.company_item?.name ?? item.item_template?.name ?? 'Item sem nome';
+
+const money = (value: number) => new Intl.NumberFormat('pt-BR', {
+  style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0,
+}).format(value || 0);
+const countLabel = (value: number, singular: string, plural: string) => `${value} ${value === 1 ? singular : plural}`;
+
+function categoryIcon(code: string) {
+  if (['profile', 'perfil'].includes(code)) return <Blocks className="h-5 w-5" />;
+  if (['glass', 'vidro'].includes(code)) return <GlassWater className="h-5 w-5" />;
+  return <Package className="h-5 w-5" />;
 }
-
-function formatBRL(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(value || 0);
-}
-
-type View = 'root' | 'perfis' | 'diversos' | 'vidros';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
   const navigate = useNavigate();
   useModuleTutorialTrigger('estoque');
 
-  const [view, setView] = useState<View>('root');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 200);
-  const [movDialog, setMovDialog] = useState<null | { tipo: 'entrada' | 'saida' }>(null);
+  const [movement, setMovement] = useState<'entrada' | 'saida' | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const debouncedSearch = useDebounce(search, 200);
 
   const { activeItems, isLoading, kpis } = useStockData({ companyId: currentCompany?.id });
-  const { data: productLinhas } = useCompanyLinhas();
 
-  const activeLinhaKeys = useMemo(() => {
-    const set = new Set<string>();
-    (productLinhas || []).forEach(l => {
-      if (l.slug) set.add(l.slug.toLowerCase());
-      if (l.name) set.add(l.name.toLowerCase());
+  const categories = useMemo(() => {
+    const result = new Map<string, {
+      code: string; name: string; items: number; inStock: number; quantity: number; lines: Set<string>;
+    }>();
+    activeItems.forEach((item) => {
+      const code = itemType(item) || 'other';
+      const name = item.category_name || ({
+        profile: 'Perfis', glass: 'Vidros', accessory: 'Acessórios', sheet: 'Chaparia', service: 'Serviços',
+      } as Record<string, string>)[code] || code;
+      const current = result.get(code) ?? { code, name, items: 0, inStock: 0, quantity: 0, lines: new Set<string>() };
+      current.items += 1;
+      if (item.quantity > 0) current.inStock += 1;
+      current.quantity += Number(item.quantity || 0);
+      const line = itemLine(item);
+      if (line) current.lines.add(line);
+      result.set(code, current);
     });
-    return set;
-  }, [productLinhas]);
-
-  // Extra KPI: m² de vidro disponível vs reservado
-  const glassArea = useMemo(() => {
-    let available = 0;
-    let reserved = 0;
-    for (const it of activeItems) {
-      const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
-      const unit = (it.company_item?.unit ?? it.item_template?.unit ?? '').toLowerCase();
-      if (type === 'glass' || type === 'vidro' || unit === 'm2') {
-        const reservedQty = Number(it.reserved_quantity || 0);
-        available += Math.max(0, (it.quantity || 0) - reservedQty);
-        reserved += reservedQty;
-      }
-    }
-    return { available, reserved };
+    return Array.from(result.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [activeItems]);
 
-  // Busca global (só ativa com >=2 caracteres)
+  const currentCategory = categories.find((category) => category.code === selectedCategory) ?? null;
+
+  const categoryLines = useMemo(() => {
+    if (!selectedCategory) return [];
+    const grouped = new Map<string, { name: string; items: number; inStock: number; quantity: number }>();
+    activeItems.filter((item) => itemType(item) === selectedCategory).forEach((item) => {
+      const line = itemLine(item);
+      if (!line) return;
+      const current = grouped.get(line) ?? { name: line, items: 0, inStock: 0, quantity: 0 };
+      current.items += 1;
+      if (item.quantity > 0) current.inStock += 1;
+      current.quantity += Number(item.quantity || 0);
+      grouped.set(line, current);
+    });
+    return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [activeItems, selectedCategory]);
+
   const searchResults = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return activeItems
-      .filter(it => {
-        const name = (it.item_template?.name ?? it.company_item?.name ?? '').toLowerCase();
-        const linha = (it.line_name ?? it.item_template?.linha ?? it.company_item?.linha ?? '').toLowerCase();
-        const variant = (it.variant_name ?? '').toLowerCase();
-        return name.includes(q) || linha.includes(q) || variant.includes(q);
-      })
-      .slice(0, 25);
+    const query = debouncedSearch.trim().toLowerCase();
+    if (query.length < 2) return [];
+    return activeItems.filter((item) => [
+      itemName(item), item.company_item?.code, item.category_name, item.category_code,
+      item.line_name, item.line_code, item.variant_name, item.color_code,
+    ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query))).slice(0, 30);
   }, [activeItems, debouncedSearch]);
 
-  const stats = useMemo(() => {
-    const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
-    const byLinhaDiversos = new Map<string, { items: number; qty: number }>();
-    const byLinhaVidros = new Map<string, { items: number; qty: number }>();
-    const vidros = { items: 0, qty: 0 };
-    const vidrosSemLinha = { items: 0, qty: 0 };
-    const diversos = { items: 0, qty: 0 };
-    const diversosSemLinha = { items: 0, qty: 0 };
-    const perfis = { items: 0, qty: 0 };
+  const inStockCount = activeItems.filter((item) => item.quantity > 0).length;
 
-    for (const it of activeItems) {
-      const linha = (it.line_name ?? it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
-      const type = it.category_code ?? it.company_item?.type ?? it.item_template?.type ?? '';
-      const qty = it.quantity || 0;
-
-      if (type === 'glass' || type === 'vidro') {
-        vidros.items++;
-        vidros.qty += qty;
-        if (!linha) {
-          vidrosSemLinha.items++;
-          vidrosSemLinha.qty += qty;
-        } else if (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase())) {
-          const cur = byLinhaVidros.get(linha) ?? { items: 0, qty: 0 };
-          cur.items++;
-          cur.qty += qty;
-          byLinhaVidros.set(linha, cur);
-        }
-        continue;
-      }
-
-      if (type === 'perfil' || type === 'profile') {
-        perfis.items++;
-        perfis.qty += qty;
-        if (linha && (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase()))) {
-          const cur = byLinhaPerfil.get(linha) ?? { items: 0, qty: 0 };
-          cur.items++;
-          cur.qty += qty;
-          byLinhaPerfil.set(linha, cur);
-        }
-        continue;
-      }
-
-      diversos.items++;
-      diversos.qty += qty;
-      if (!linha) {
-        diversosSemLinha.items++;
-        diversosSemLinha.qty += qty;
-      } else if (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase())) {
-        const cur = byLinhaDiversos.get(linha) ?? { items: 0, qty: 0 };
-        cur.items++;
-        cur.qty += qty;
-        byLinhaDiversos.set(linha, cur);
-      }
-    }
-
-    const linhasPerfil = (productLinhas || [])
-      .map(l => ({ name: l.name, ...(byLinhaPerfil.get(l.name) ?? { items: 0, qty: 0 }) }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-
-    const linhasDiversos = (productLinhas || [])
-      .map(l => ({ name: l.name, ...(byLinhaDiversos.get(l.name) ?? { items: 0, qty: 0 }) }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-
-    const linhasVidros = (productLinhas || [])
-      .map(l => ({ name: l.name, ...(byLinhaVidros.get(l.name) ?? { items: 0, qty: 0 }) }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-
-    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, linhasVidros, diversosSemLinha, vidrosSemLinha };
-  }, [activeItems, activeLinhaKeys, productLinhas]);
-
-  const categoryCards = useMemo(() => {
-    const categories = new Map<string, { code: string; name: string; items: number; quantity: number; lines: Set<string> }>();
-    activeItems.forEach((item) => {
-      const code = (item.category_code || item.company_item?.type || item.item_template?.type || 'other').toLowerCase();
-      const name = item.category_name || ({ profile: 'Perfis', glass: 'Vidros', accessory: 'Acessórios', sheet: 'Chaparia', service: 'Serviços' } as Record<string, string>)[code] || code;
-      const current = categories.get(code) || { code, name, items: 0, quantity: 0, lines: new Set<string>() };
-      current.items += 1;
-      current.quantity += Number(item.quantity || 0);
-      if (item.line_name) current.lines.add(item.line_name);
-      categories.set(code, current);
-    });
-    return Array.from(categories.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [activeItems]);
-
-  const headerTitle =
-    view === 'root' ? 'Estoque'
-    : view === 'perfis' ? 'Perfis · Selecione a linha'
-    : view === 'vidros' ? 'Vidros · Selecione a linha'
-    : 'Acessórios / Diversos · Selecione a linha';
-
-  const headerSubtitle =
-    view === 'root' ? 'Escolha uma categoria para gerenciar entradas, saídas e saldos.'
-    : view === 'perfis' ? 'Selecione a linha do perfil (Suprema, Temperados, etc.).'
-    : view === 'vidros' ? 'Selecione a linha do vidro (Temperados, Comum, etc.).'
-    : 'Selecione a linha dos acessórios/diversos.';
-
-  function goToItem(it: StockItem) {
-    const linha = (it.line_name ?? it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
-    const type = (it.category_code ?? it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
-    let tipo = 'diversos';
-    if (type === 'glass' || type === 'vidro') tipo = 'vidro';
-    else if (type === 'perfil' || type === 'profile') tipo = 'perfil';
-    const key = linha || (tipo === 'vidro' ? VIDROS_KEY : tipo === 'perfil' ? PERFIS_KEY : DIVERSOS_KEY);
-    navigate(`/estoque/linha/${slug(key)}?tipo=${tipo}`);
+  function openItem(item: StockItem) {
+    const line = itemLine(item);
+    const type = itemType(item);
+    if (line) navigate(`/estoque/linha/${encode(line)}?tipo=${encode(type)}`);
+    else navigate(`/estoque/linha/${encode(CATEGORY_KEY)}?tipo=${encode(type)}&categoria=${encode(item.category_name ?? type)}`);
     setSearch('');
+  }
+
+  function openCategory(code: string, name: string) {
+    const category = categories.find((entry) => entry.code === code);
+    if (category && category.lines.size > 0) setSelectedCategory(code);
+    else navigate(`/estoque/linha/${encode(CATEGORY_KEY)}?tipo=${encode(code)}&categoria=${encode(name)}`);
   }
 
   return (
     <MainLayout>
-      <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {view !== 'root' && (
-              <Button variant="ghost" size="icon" onClick={() => setView('root')}>
-                <ArrowLeft className="w-5 h-5" />
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+        <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+          <div className="flex items-start gap-3">
+            {selectedCategory && (
+              <Button variant="ghost" size="icon" onClick={() => setSelectedCategory(null)} aria-label="Voltar às categorias">
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <Boxes className="w-7 h-7 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              {selectedCategory ? categoryIcon(selectedCategory) : <Boxes className="h-6 w-6" />}
+            </div>
             <div>
-              <h1 className="text-2xl font-bold">{headerTitle}</h1>
-              <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {currentCategory ? `Estoque · ${currentCategory.name}` : 'Estoque'}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {currentCategory ? 'Selecione uma linha para acessar seus itens e variantes.' : 'Gerencie entradas, saídas e saldos da empresa.'}
+              </p>
             </div>
           </div>
-          {(view === 'perfis' || view === 'vidros' || view === 'diversos') && (
-            <Button className="gap-2 w-full sm:w-auto" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="w-4 h-4" />
-              {view === 'perfis' ? 'Nova Linha / Perfil' : view === 'vidros' ? 'Novo Vidro / Linha' : 'Novo Item / Linha'}
-            </Button>
+          {selectedCategory && (
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setMovement('entrada')}><TrendingUp className="mr-2 h-4 w-4" />Registrar entrada</Button>
+              <Button variant="outline" onClick={() => setMovement('saida')}><TrendingDown className="mr-2 h-4 w-4" />Registrar saída</Button>
+            </div>
           )}
+        </header>
 
-        </div>
-
-        {view === 'root' && (
+        {!selectedCategory && (
           <>
-            {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-green-500/10 text-green-600 flex items-center justify-center shrink-0">
-                    <DollarSign className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl font-bold truncate">
-                      {kpis.unknownValuationCount > 0 ? '—' : formatBRL(kpis.totalValue)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {kpis.unknownValuationCount > 0 ? 'Custo físico não disponível' : 'Total investido em estoque'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className={kpis.lowStockCount > 0 ? 'border-destructive/60' : ''}>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${kpis.lowStockCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-xl font-bold ${kpis.lowStockCount > 0 ? 'text-destructive' : ''}`}>
-                      {kpis.lowStockCount}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Itens em alerta de reposição</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Ruler className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl font-bold truncate">
-                      {glassArea.available.toFixed(2)} m²
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Vidros disponíveis · {glassArea.reserved.toFixed(2)} m² reservados em OS
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Kpi icon={<CircleDollarSign />} label="Valor em estoque" value={kpis.unknownValuationCount ? 'A revisar' : money(kpis.totalValue)} />
+              <Kpi icon={<PackageCheck />} label="Com estoque" value={String(inStockCount)} tone="success" />
+              <Kpi icon={<PackageX />} label="Sem estoque" value={String(kpis.zeroStockCount)} />
+              <Kpi icon={<AlertTriangle />} label="Reposição" value={String(kpis.lowStockCount)} tone={kpis.lowStockCount ? 'danger' : 'default'} />
+            </section>
 
-            {/* Atalhos fixos próximos aos KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StockCard
-                to="/estoque/historico"
-                icon={<History className="w-6 h-6" />}
-                title="Histórico de Movimentações"
-                subtitle="Todas as entradas e saídas — quem, quando, quanto e por quê."
-                badge="Ver histórico"
-              />
-              <StockCard
-                to="/estoque/retalhos"
-                icon={<Boxes className="w-6 h-6" />}
-                title="Banco de Retalhos"
-                subtitle="Sobras úteis de chapas e barras para reaproveitar."
-                badge="Ver retalhos"
-              />
-            </div>
-
-            {/* Global search */}
-            <div className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <section className="relative flex flex-col gap-2 lg:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar qualquer item do estoque (vidro, perfil, acessório)…"
-                  className="pl-9 pr-9 h-11"
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar item, código ou descrição..."
+                  className="h-11 pl-9 pr-10"
                 />
                 {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
-                    aria-label="Limpar busca"
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2" onClick={() => setSearch('')}>
+                    <X className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex">
+                <Button onClick={() => setMovement('entrada')}><TrendingUp className="mr-2 h-4 w-4" />Registrar entrada</Button>
+                <Button variant="outline" onClick={() => setMovement('saida')}><TrendingDown className="mr-2 h-4 w-4" />Registrar saída</Button>
+                <Button variant="outline" asChild><Link to="/estoque/historico"><History className="mr-2 h-4 w-4" />Histórico</Link></Button>
+              </div>
               {debouncedSearch.trim().length >= 2 && (
-                <Card className="absolute z-20 top-full left-0 right-0 mt-2 max-h-96 overflow-y-auto shadow-lg">
+                <Card className="absolute left-0 right-0 top-12 z-30 mt-2 max-h-[420px] overflow-y-auto shadow-xl lg:right-[430px]">
                   <CardContent className="p-2">
                     {searchResults.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-6">
-                        Nenhum item encontrado para "{debouncedSearch}".
-                      </p>
-                    ) : (
-                      <div className="space-y-1">
-                        {searchResults.map((it) => {
-                          const name = it.item_template?.name ?? it.company_item?.name ?? 'Item';
-                          const linha = it.line_name ?? it.item_template?.linha ?? it.company_item?.linha;
-                          const unit = it.item_template?.unit ?? it.company_item?.unit ?? '';
-                          const type = it.category_name ?? it.item_template?.type ?? it.company_item?.type ?? '';
-                          const min = Number(it.min_quantity ?? 0);
-                          const isLow = min > 0 && it.quantity <= min;
-                          return (
-                            <button
-                              key={it.id}
-                              type="button"
-                              onClick={() => goToItem(it)}
-                              className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left"
-                            >
-                              <Package className="w-4 h-4 text-muted-foreground shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{name}</p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {type || '—'}{linha ? ` · ${linha}` : ''}
-                                </p>
-                              </div>
-                              <Badge variant={isLow ? 'destructive' : 'outline'} className="shrink-0">
-                                {Number(it.quantity).toFixed(2)} {unit}
-                              </Badge>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                      <p className="py-8 text-center text-sm text-muted-foreground">Nenhum item encontrado.</p>
+                    ) : searchResults.map((item) => (
+                      <button key={item.id} type="button" onClick={() => openItem(item)} className="flex w-full items-center gap-3 rounded-md p-3 text-left hover:bg-muted">
+                        <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{itemName(item)}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {[item.company_item?.code, item.category_name, item.line_name, item.variant_name || item.color_code].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                        <Badge variant={item.quantity > 0 ? 'outline' : 'secondary'}>{item.quantity > 0 ? 'Em estoque' : 'Sem estoque'}</Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    ))}
                   </CardContent>
                 </Card>
               )}
-            </div>
-
-            <Card className="p-4 bg-primary/5 border-primary/20 flex gap-3">
-              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                Qualquer alteração de saldo reflete imediatamente no badge <strong>Em Estoque</strong> em Meus Preços.
-              </div>
-            </Card>
+            </section>
           </>
         )}
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : view === 'root' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categoryCards.map((category) => (
-              <StockCard
-                key={category.code}
-                onClick={() => setView(category.code === 'profile' ? 'perfis' : category.code === 'glass' ? 'vidros' : 'diversos')}
-                icon={category.code === 'profile' ? <Blocks className="w-6 h-6" /> : category.code === 'glass' ? <GlassWater className="w-6 h-6" /> : <Package className="w-6 h-6" />}
-                title={category.name}
-                subtitle={`${category.items} item(ns)/variante(s) · ${category.quantity.toFixed(2)} em saldo`}
-                badge={`${category.lines.size} linha(s)`}
-                onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
-                onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
-              />
-            ))}
-          </div>
-        ) : view === 'perfis' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <StockCard
-              to={`/estoque/linha/${slug(PERFIS_KEY)}?tipo=perfil`}
-              icon={<Blocks className="w-6 h-6" />}
-              title="Todos os Perfis"
-              subtitle={`${stats.perfis.items} perfil(is) · ${stats.perfis.qty.toFixed(2)} m em saldo`}
-              badge="Ver tudo"
-            />
-            {stats.linhasPerfil.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhuma linha habilitada. Use <strong>Gerenciar Linhas</strong> em Produtos para ativá-las.
-                </CardContent>
-              </Card>
-            ) : (
-              stats.linhasPerfil.map(l => (
-                <StockCard
-                  key={l.name}
-                  to={`/estoque/linha/${slug(l.name)}?tipo=perfil`}
-                  icon={<Layers className="w-6 h-6" />}
-                  title={l.name}
-                  subtitle={`${l.items} perfil(s) · ${l.qty.toFixed(2)} em saldo`}
-                  badge={`${l.items} itens`}
+          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : selectedCategory && currentCategory ? (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div><h2 className="font-semibold">Linhas e subcategorias</h2><p className="text-sm text-muted-foreground">Somente linhas vinculadas a {currentCategory.name.toLowerCase()}.</p></div>
+              <Button variant="outline" asChild>
+                <Link to={`/estoque/linha/${encode(CATEGORY_KEY)}?tipo=${encode(currentCategory.code)}&categoria=${encode(currentCategory.name)}`}>Ver todos</Link>
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {categoryLines.map((line) => (
+                <NavigationCard
+                  key={line.name}
+                  to={`/estoque/linha/${encode(line.name)}?tipo=${encode(currentCategory.code)}`}
+                  icon={<Layers className="h-5 w-5" />}
+                  title={line.name}
+                  description={`${countLabel(line.items, 'item ou variante', 'itens ou variantes')}`}
+                  meta={`${countLabel(line.inStock, 'item com saldo', 'itens com saldo')}`}
                 />
-              ))
-            )}
-          </div>
-        ) : view === 'vidros' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-
-            <StockCard
-              to={`/estoque/linha/${slug(VIDROS_KEY)}`}
-              icon={<GlassWater className="w-6 h-6" />}
-              title="Todos os Vidros"
-              subtitle={`${stats.vidros.items} item(s) · ${stats.vidros.qty.toFixed(2)} em saldo`}
-              badge="Ver tudo"
-            />
-            {stats.vidrosSemLinha.items > 0 && (
-              <StockCard
-                to={`/estoque/linha/${slug(VIDROS_KEY)}?semlinha=1`}
-                icon={<GlassWater className="w-6 h-6" />}
-                title="Sem linha específica"
-                subtitle={`${stats.vidrosSemLinha.items} item(s) · ${stats.vidrosSemLinha.qty.toFixed(2)} em saldo`}
-                badge="Genéricos"
-              />
-            )}
-            {stats.linhasVidros.map(l => (
-              <StockCard
-                key={l.name}
-                to={`/estoque/linha/${slug(l.name)}?tipo=vidro`}
-                icon={<Layers className="w-6 h-6" />}
-                title={l.name}
-                subtitle={`${l.items} vidro(s) · ${l.qty.toFixed(2)} em saldo`}
-                badge={`${l.items} itens`}
-              />
-            ))}
-            {stats.linhasVidros.length === 0 && stats.vidrosSemLinha.items === 0 && (
-              <Card className="col-span-full">
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhum vidro cadastrado.
-                </CardContent>
-              </Card>
-            )}
-          </div>
+              ))}
+              {currentCategory.items > categoryLines.reduce((total, line) => total + line.items, 0) && (
+                <NavigationCard
+                  to={`/estoque/linha/${encode(CATEGORY_KEY)}?tipo=${encode(currentCategory.code)}&categoria=${encode(currentCategory.name)}`}
+                  icon={<Package className="h-5 w-5" />}
+                  title="Sem linha específica"
+                  description="Itens vinculados diretamente à categoria"
+                  meta="Ver itens"
+                />
+              )}
+            </div>
+          </section>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <StockCard
-              to={`/estoque/linha/${slug(DIVERSOS_KEY)}`}
-              icon={<Package className="w-6 h-6" />}
-              title="Sem linha específica"
-              subtitle={`${stats.diversosSemLinha.items} item(s) · ${stats.diversosSemLinha.qty.toFixed(2)} em saldo`}
-              badge="Genéricos"
-            />
-            {stats.linhasDiversos.map(l => (
-              <StockCard
-                key={l.name}
-                to={`/estoque/linha/${slug(l.name)}?tipo=diversos`}
-                icon={<Layers className="w-6 h-6" />}
-                title={l.name}
-                subtitle={`${l.items} item(s) · ${l.qty.toFixed(2)} em saldo`}
-                badge={`${l.items} itens`}
-              />
-            ))}
-            {stats.linhasDiversos.length === 0 && stats.diversosSemLinha.items === 0 && (
-              <Card className="col-span-full">
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhum item de acessórios/diversos cadastrado.
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <section className="space-y-4">
+            <div><h2 className="font-semibold">Categorias</h2><p className="text-sm text-muted-foreground">Navegue pela estrutura canônica do catálogo da empresa.</p></div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {categories.map((category) => (
+                <NavigationCard
+                  key={category.code}
+                  onClick={() => openCategory(category.code, category.name)}
+                  icon={categoryIcon(category.code)}
+                  title={category.name}
+                  description={countLabel(category.items, 'item ou variante', 'itens ou variantes')}
+                  meta={`${countLabel(category.lines.size, 'linha', 'linhas')} · ${countLabel(category.inStock, 'item com saldo', 'itens com saldo')}`}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {!selectedCategory && (
+          <section className="border-t pt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div><h2 className="font-semibold">Ferramentas</h2><p className="text-sm text-muted-foreground">Consultas e cadastros auxiliares do estoque.</p></div>
+              <Button variant="ghost" onClick={() => setAddDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar item</Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <NavigationCard to="/estoque/historico" icon={<History className="h-5 w-5" />} title="Histórico de movimentações" description="Entradas, saídas, autoria e motivo." meta="Consultar" />
+              <NavigationCard to="/estoque/retalhos" icon={<Boxes className="h-5 w-5" />} title="Banco de retalhos" description="Sobras reaproveitáveis de chapas e barras." meta="Consultar" />
+            </div>
+          </section>
         )}
       </div>
 
-      {movDialog && (
-        <RegistrarMovimentoDialog
-          open={!!movDialog}
-          onOpenChange={(o) => { if (!o) setMovDialog(null); }}
-          tipo={movDialog.tipo}
-          stockItems={activeItems}
-        />
+      {movement && (
+        <RegistrarMovimentoDialog open tipo={movement} stockItems={activeItems} onOpenChange={(open) => !open && setMovement(null)} />
       )}
-
-      <UnifiedAddItemDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        defaultTab="custom"
-      />
+      <UnifiedAddItemDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} defaultTab="custom" />
     </MainLayout>
   );
 }
 
+function Kpi({ icon, label, value, tone = 'default' }: { icon: React.ReactNode; label: string; value: string; tone?: 'default' | 'success' | 'danger' }) {
+  return (
+    <Card className={tone === 'danger' ? 'border-destructive/50' : ''}>
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg [&>svg]:h-4 [&>svg]:w-4 ${tone === 'success' ? 'bg-emerald-500/10 text-emerald-600' : tone === 'danger' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>{icon}</div>
+        <div className="min-w-0"><p className="truncate text-lg font-bold">{value}</p><p className="truncate text-xs text-muted-foreground">{label}</p></div>
+      </CardContent>
+    </Card>
+  );
+}
 
-function StockCard({
-  to, onClick, icon, title, subtitle, badge, onQuickEntrada, onQuickSaida,
-}: {
-  to?: string;
-  onClick?: () => void;
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  badge: string;
-  onQuickEntrada?: () => void;
-  onQuickSaida?: () => void;
+function NavigationCard({ to, onClick, icon, title, description, meta }: {
+  to?: string; onClick?: () => void; icon: React.ReactNode; title: string; description: string; meta: string;
 }) {
-  const hasQuick = !!(onQuickEntrada || onQuickSaida);
-  const inner = (
-    <Card className="h-full transition-all hover:border-primary/60 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
-      <CardContent className="p-5 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-base truncate group-hover:text-primary">{title}</h3>
-            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline" className="text-[10px]">{badge}</Badge>
-            {hasQuick && (
-              <div className="flex items-center gap-1 ml-auto">
-                {onQuickEntrada && (
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="h-7 w-7"
-                    title="Registrar entrada"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickEntrada(); }}
-                  >
-                    <Plus className="w-3.5 h-3.5 text-green-600" />
-                  </Button>
-                )}
-                {onQuickSaida && (
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="h-7 w-7"
-                    title="Registrar saída"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickSaida(); }}
-                  >
-                    <Minus className="w-3.5 h-3.5 text-destructive" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+  const content = (
+    <Card className="h-full transition-colors hover:border-primary/50 hover:bg-muted/20">
+      <CardContent className="flex items-start gap-3 p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2"><h3 className="truncate font-semibold">{title}</h3><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></div>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
+          <Badge variant="outline" className="mt-2 text-[10px]">{meta}</Badge>
         </div>
       </CardContent>
     </Card>
   );
-
-  if (to) return <Link to={to} className="group">{inner}</Link>;
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick?.();
-        }
-      }}
-      className="group text-left w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      {inner}
-    </div>
-  );
+  if (to) return <Link to={to} className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{content}</Link>;
+  return <button type="button" onClick={onClick} className="rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{content}</button>;
 }

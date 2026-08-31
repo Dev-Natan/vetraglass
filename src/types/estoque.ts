@@ -68,6 +68,7 @@ export interface StockItem {
   } | null;
   company_item?: {
     id: string;
+    code?: string | null;
     name: string;
     type: string;
     unit: string;
