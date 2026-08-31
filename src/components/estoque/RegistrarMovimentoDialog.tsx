@@ -38,6 +38,7 @@ interface StockItem {
   id: string;
   item_template_id: string | null;
   company_item_id?: string | null;
+  category_id?: string | null;
   quantity: number;
   reserved_quantity?: number;
   canonical_quantity?: number;
@@ -188,6 +189,20 @@ export function RegistrarMovimentoDialog({
   const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
   const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
 
+  const pricingQuery = useQuery({
+    queryKey: ['stock-entry-pricing', currentCompany?.id, selectedStockItem?.company_item_id, selectedStockItem?.variant_id],
+    enabled: open && isEntrada && !!currentCompany?.id && !!selectedStockItem?.company_item_id && !!selectedStockItem?.category_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_company_pricing_items', {
+        _company_id: currentCompany!.id,
+        _category_id: selectedStockItem!.category_id!,
+      });
+      if (error) throw error;
+      return (data ?? []).find((row) => row.company_item_id === selectedStockItem!.company_item_id
+        && (row.variant_id ?? null) === (selectedStockItem!.variant_id ?? null)) ?? null;
+    },
+  });
+
   // Ao trocar de item, definir modo padrão
   const handleSelectItem = useCallback((id: string) => {
     setSelectedItem(id);
@@ -320,6 +335,23 @@ export function RegistrarMovimentoDialog({
     return { quantity: q, originalQuantity: q, originalUnit: storageUnit, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '', widthMm: null, heightMm: null };
   }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit, weightPerMeter]);
 
+  const acquisitionUnitCost = Number(totalCost) || 0;
+  const entryTotalCost = acquisitionUnitCost > 0 && computed.originalQuantity > 0
+    ? acquisitionUnitCost * computed.originalQuantity
+    : 0;
+  const weightPerBar = barLengthM > 0 && weightPerMeter > 0 ? barLengthM * weightPerMeter : 0;
+  const profileCosts = useMemo(() => {
+    if (!isProfile || acquisitionUnitCost <= 0) return null;
+    if (inputMode === 'bar') return { bar: acquisitionUnitCost, meter: barLengthM > 0 ? acquisitionUnitCost / barLengthM : null, kg: weightPerBar > 0 ? acquisitionUnitCost / weightPerBar : null };
+    if (inputMode === 'linear') return { bar: barLengthM > 0 ? acquisitionUnitCost * barLengthM : null, meter: acquisitionUnitCost, kg: weightPerMeter > 0 ? acquisitionUnitCost / weightPerMeter : null };
+    if (inputMode === 'weight') return { bar: weightPerBar > 0 ? acquisitionUnitCost * weightPerBar : null, meter: weightPerMeter > 0 ? acquisitionUnitCost * weightPerMeter : null, kg: acquisitionUnitCost };
+    return null;
+  }, [acquisitionUnitCost, barLengthM, inputMode, isProfile, weightPerBar, weightPerMeter]);
+  const effectiveMarkup = pricingQuery.data?.pricing_mode === 'AUTO' && pricingQuery.data.markup_percent != null
+    ? Number(pricingQuery.data.markup_percent)
+    : null;
+  const saleMultiplier = effectiveMarkup == null ? null : 1 + effectiveMarkup / 100;
+
 
   // Filtrar itens por busca
   const filteredItems = useMemo(() => {
@@ -431,7 +463,7 @@ export function RegistrarMovimentoDialog({
       }
       const reasonLabel = motivos.find(entry => entry.value === motivo)?.label ?? motivo;
       const finalDescription = [reasonLabel, computed.autoNote, observacao].filter(Boolean).join(' — ');
-      const { data, error } = await supabase.rpc('record_tenant_stock_movement', {
+      const { data, error } = await supabase.rpc('record_tenant_stock_movement_with_pricing', {
         _company_id: currentCompany.id,
         _company_item_id: companyItemId,
         _direction: isEntrada ? 'IN' : 'OUT',
@@ -444,7 +476,7 @@ export function RegistrarMovimentoDialog({
         _lot_code: lotCode.trim(),
         _supplier_name: supplierName.trim() || undefined,
         _document_reference: documentReference.trim() || undefined,
-        _total_cost: isEntrada && totalCost ? Number(totalCost) : undefined,
+        _total_cost: isEntrada && entryTotalCost > 0 ? entryTotalCost : undefined,
         _new_sale_price: isEntrada && newSalePrice ? Number(newSalePrice) : undefined,
         _width_mm: computed.widthMm || undefined,
         _height_mm: computed.heightMm || undefined,
@@ -978,20 +1010,28 @@ export function RegistrarMovimentoDialog({
             </div>
 
             {isEntrada && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="totalCost">Custo desta entrada</Label>
-                  <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="totalCost">{isProfile && inputMode === 'bar' ? 'Custo por barra' : isProfile && inputMode === 'weight' ? 'Custo por kg' : isProfile && inputMode === 'linear' ? 'Custo por metro' : 'Custo por unidade informada'}</Label>
+                    <Input id="totalCost" type="number" min="0" step="0.01" value={totalCost} onChange={(event) => setTotalCost(event.target.value)} placeholder="R$ 0,00" />
+                    <p className="text-xs text-muted-foreground">Custo total da entrada: {entryTotalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  </div>
+                  <div className="rounded-md border bg-primary/5 p-3 text-sm">
+                    <p className="font-medium">Política comercial</p>
+                    {pricingQuery.isLoading ? <p className="text-muted-foreground">Calculando…</p> : pricingQuery.data?.pricing_mode === 'MANUAL' ? <p className="text-muted-foreground">Preço manual atual preservado. A entrada não exige informar venda novamente.</p> : effectiveMarkup == null ? <p className="text-muted-foreground">Preço automático indisponível. Defina uma política em Meus Preços.</p> : <><p>Markup sobre custo: <strong>{effectiveMarkup.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</strong></p><p className="text-xs text-muted-foreground">{pricingQuery.data?.pricing_source === 'ITEM_OVERRIDE' ? 'Regra personalizada do item' : pricingQuery.data?.pricing_source === 'COMPANY_DEFAULT' ? 'Padrão da empresa' : 'Política da categoria'}</p></>}
+                  </div>
                 </div>
+                {profileCosts ? <div className="grid grid-cols-1 gap-2 rounded-md border p-3 text-sm sm:grid-cols-3"><div><span className="text-muted-foreground">Custo/barra</span><strong className="block">{profileCosts.bar == null ? '—' : profileCosts.bar.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>{saleMultiplier != null && profileCosts.bar != null ? <span className="text-xs text-muted-foreground">Venda { (profileCosts.bar * saleMultiplier).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }</span> : null}</div><div><span className="text-muted-foreground">Custo/m</span><strong className="block">{profileCosts.meter == null ? '—' : profileCosts.meter.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>{saleMultiplier != null && profileCosts.meter != null ? <span className="text-xs text-muted-foreground">Venda { (profileCosts.meter * saleMultiplier).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }</span> : null}</div><div><span className="text-muted-foreground">Custo/kg</span><strong className="block">{profileCosts.kg == null ? '—' : profileCosts.kg.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>{saleMultiplier != null && profileCosts.kg != null ? <span className="text-xs text-muted-foreground">Venda { (profileCosts.kg * saleMultiplier).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }</span> : null}</div></div> : null}
                 <div className="space-y-2 rounded-md border p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="updateSalePrice">Atualizar preço de venda</Label>
+                    <Label htmlFor="updateSalePrice">Alterar preço deste item</Label>
                     <Switch id="updateSalePrice" checked={updateSalePrice} onCheckedChange={(checked) => { setUpdateSalePrice(checked); if (!checked) setNewSalePrice(''); }} />
                   </div>
                   {!updateSalePrice ? (
-                    <p className="text-xs text-muted-foreground">Manter preço atual.</p>
+                    <p className="text-xs text-muted-foreground">O fluxo normal usa a política automática da empresa. Preço manual é uma exceção.</p>
                   ) : (
-                    <Input aria-label="Novo preço de venda" type="number" min="0" step="0.01" value={newSalePrice} onChange={(event) => setNewSalePrice(event.target.value)} placeholder="R$ 0,00" />
+                    <Input aria-label="Preço manual do item" type="number" min="0" step="0.01" value={newSalePrice} onChange={(event) => setNewSalePrice(event.target.value)} placeholder="Preço manual" />
                   )}
                 </div>
               </div>

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Layers3, Loader2, Power, Save, Search } from 'lucide-react';
+import { ArrowLeft, Calculator, Layers3, Loader2, Power, Save, Search, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,8 @@ type Attribute = { id: string; code: string; label: string; data_type: string; r
 type CombinationStatus = 'INACTIVE' | 'ACTIVE_UNPRICED' | 'ACTIVE_READY';
 type Combination = { definition_id: string; attribute_signature: string; sort_order: number; option_ids: string[]; option_labels: string[]; attributes: Record<string, unknown>; company_variant_id: string | null; company_active: boolean; cost: number | null; markup_percent: number | null; sale_price: number | null; status: CombinationStatus };
 type FamilyCatalog = { family: Family; attributes: Attribute[]; combinations: Combination[] };
+type PricingCategory = { category_id: string; category_code: string; category_name: string; item_count: number; markup_percent: number | null; apply_automatically: boolean; is_active: boolean; margin_percent: number | null };
+type PricingItem = { company_item_id: string; variant_id: string | null; item_code: string | null; item_name: string; variant_name: string | null; catalog_origin: string; cost_policy: string; pricing_mode: string; effective_cost: number | null; markup_percent: number | null; sale_price: number | null; pricing_source: string; pricing_unit: string | null; bar_length_mm: number | null; weight_per_meter: number | null };
 
 function asFamily(row: Record<string, unknown>): Family {
   return { id: String(row.id), code: String(row.code), name: String(row.name), description: row.description == null ? null : String(row.description), pricing_basis: String(row.pricing_basis), pricing_unit: String(row.pricing_unit), sort_order: Number(row.sort_order), global_combinations: Number(row.global_combinations), active_combinations: Number(row.active_combinations), priced_combinations: Number(row.priced_combinations) };
@@ -46,10 +50,94 @@ export default function MeusPrecos() {
   const visibleFamilies = useMemo(() => { const term = familySearch.trim().toLocaleLowerCase('pt-BR'); return (familiesQuery.data ?? []).filter((family) => !term || `${family.name} ${family.description ?? ''}`.toLocaleLowerCase('pt-BR').includes(term)); }, [familiesQuery.data, familySearch]);
   const invalidate = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['material-families-activation', companyId] }), queryClient.invalidateQueries({ queryKey: ['material-family-combinations', companyId, selectedFamilyId] })]); };
   if (!companyId) return <MainLayout><div className="p-6">Selecione uma empresa.</div></MainLayout>;
-  return <MainLayout><div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6"><div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Ative somente os materiais que utiliza e informe os preços da sua empresa.</p></div>
-    {familiesQuery.isLoading ? <Loading /> : familiesQuery.error ? <ErrorCard error={familiesQuery.error} /> : !selectedFamilyId ? <><SearchBox value={familySearch} onChange={setFamilySearch} placeholder="Buscar matéria-prima" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visibleFamilies.map((family) => <Card key={family.id} className="flex flex-col"><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{family.name}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{family.description}</p></div><Layers3 className="h-5 w-5 text-primary" /></div></CardHeader><CardContent className="flex flex-1 flex-col gap-4"><Badge className="w-fit" variant="secondary">Preço por {family.pricing_unit}</Badge><div className="grid grid-cols-3 gap-2"><Metric label="Disponíveis" value={family.global_combinations} /><Metric label="Ativas" value={family.active_combinations} /><Metric label="Precificadas" value={family.priced_combinations} /></div><Button className="mt-auto w-full" onClick={() => setSelectedFamilyId(family.id)}>Abrir catálogo</Button></CardContent></Card>)}{visibleFamilies.length === 0 ? <Empty text="Nenhuma família encontrada." /> : null}</div></> : catalogQuery.isLoading ? <Loading /> : catalogQuery.error ? <ErrorCard error={catalogQuery.error} /> : catalogQuery.data ? <FamilyDetail companyId={companyId} catalog={catalogQuery.data} mayEdit={mayEdit} canSeeCosts={permissions.canSeeCosts()} canSeePrices={permissions.canSeePrices()} onBack={() => setSelectedFamilyId(null)} onChanged={invalidate} /> : null}
+  return <MainLayout><div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6"><div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Defina como o Vetra calcula os preços de venda da sua empresa.</p></div>
+    <PricingPolicyCenter companyId={companyId} mayEdit={mayEdit} />
+    <section className="space-y-4"><div><h2 className="text-xl font-semibold">Catálogo comercial por área</h2><p className="text-sm text-muted-foreground">Materiais com preço fixado por m² continuam independentes das políticas automáticas.</p></div>{familiesQuery.isLoading ? <Loading /> : familiesQuery.error ? <ErrorCard error={familiesQuery.error} /> : !selectedFamilyId ? <><SearchBox value={familySearch} onChange={setFamilySearch} placeholder="Buscar matéria-prima" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visibleFamilies.map((family) => <Card key={family.id} className="flex flex-col"><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{family.name}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{family.description}</p></div><Layers3 className="h-5 w-5 text-primary" /></div></CardHeader><CardContent className="flex flex-1 flex-col gap-4"><Badge className="w-fit" variant="secondary">Preço por {family.pricing_unit}</Badge><div className="grid grid-cols-3 gap-2"><Metric label="Disponíveis" value={family.global_combinations} /><Metric label="Ativas" value={family.active_combinations} /><Metric label="Precificadas" value={family.priced_combinations} /></div><Button className="mt-auto w-full" onClick={() => setSelectedFamilyId(family.id)}>Abrir catálogo</Button></CardContent></Card>)}{visibleFamilies.length === 0 ? <Empty text="Nenhuma família encontrada." /> : null}</div></> : catalogQuery.isLoading ? <Loading /> : catalogQuery.error ? <ErrorCard error={catalogQuery.error} /> : catalogQuery.data ? <FamilyDetail companyId={companyId} catalog={catalogQuery.data} mayEdit={mayEdit} canSeeCosts={permissions.canSeeCosts()} canSeePrices={permissions.canSeePrices()} onBack={() => setSelectedFamilyId(null)} onChanged={invalidate} /> : null}</section>
   </div></MainLayout>;
 }
+
+function PricingPolicyCenter({ companyId, mayEdit }: { companyId: string; mayEdit: boolean }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<PricingCategory | 'DEFAULT' | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<PricingCategory | null>(null);
+  const categoriesQuery = useQuery({
+    queryKey: ['company-pricing-categories', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_company_pricing_categories', { _company_id: companyId });
+      if (error) throw error;
+      return (data ?? []).map((row) => ({ ...row, markup_percent: row.markup_percent == null ? null : Number(row.markup_percent), margin_percent: row.margin_percent == null ? null : Number(row.margin_percent) })) as PricingCategory[];
+    },
+  });
+  const defaultQuery = useQuery({
+    queryKey: ['company-pricing-default', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('company_pricing_policies').select('*').eq('company_id', companyId).is('category_id', null).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const itemsQuery = useQuery({
+    queryKey: ['company-pricing-items', companyId, selectedCategory?.category_id],
+    enabled: !!selectedCategory,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_company_pricing_items', { _company_id: companyId, _category_id: selectedCategory!.category_id });
+      if (error) throw error;
+      return (data ?? []) as PricingItem[];
+    },
+  });
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['company-pricing-categories', companyId] }),
+      queryClient.invalidateQueries({ queryKey: ['company-pricing-default', companyId] }),
+      queryClient.invalidateQueries({ queryKey: ['company-pricing-items', companyId] }),
+    ]);
+  };
+  const defaultMarkup = defaultQuery.data?.markup_percent == null ? null : Number(defaultQuery.data.markup_percent);
+  return <section className="space-y-4">
+    <div className="flex items-start gap-3"><Calculator className="mt-1 h-5 w-5 text-primary" /><div><h2 className="text-xl font-semibold">Política de preços</h2><p className="text-sm text-muted-foreground">Markup sobre custo por categoria. Preços manuais e documentos históricos não são recalculados.</p></div></div>
+    {categoriesQuery.isLoading || defaultQuery.isLoading ? <Loading /> : categoriesQuery.error || defaultQuery.error ? <ErrorCard error={categoriesQuery.error ?? defaultQuery.error} /> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <PolicyCard name="Padrão da empresa" count={(categoriesQuery.data ?? []).reduce((total, row) => total + Number(row.item_count), 0)} markup={defaultMarkup} active={Boolean(defaultQuery.data?.is_active)} onOpen={() => setEditing('DEFAULT')} onItems={undefined} mayEdit={mayEdit} />
+      {(categoriesQuery.data ?? []).map((category) => <PolicyCard key={category.category_id} name={category.category_name} count={category.item_count} markup={category.markup_percent} active={category.is_active} onOpen={() => setEditing(category)} onItems={() => setSelectedCategory(category)} mayEdit={mayEdit} />)}
+    </div>}
+    {selectedCategory ? <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle>Itens · {selectedCategory.category_name}</CardTitle><p className="text-sm text-muted-foreground">A origem da regra e o modo pertencem exclusivamente à empresa atual.</p></div><Button variant="outline" onClick={() => setSelectedCategory(null)}>Fechar itens</Button></div></CardHeader><CardContent>{itemsQuery.isLoading ? <Loading /> : itemsQuery.error ? <ErrorCard error={itemsQuery.error} /> : <div className="space-y-3">{(itemsQuery.data ?? []).map((item) => <PricingItemRow key={`${item.company_item_id}-${item.variant_id ?? 'base'}`} companyId={companyId} item={item} mayEdit={mayEdit} onChanged={refresh} />)}{itemsQuery.data?.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum item operacional nesta categoria.</p> : null}</div>}</CardContent></Card> : null}
+    <PolicyDialog companyId={companyId} target={editing} defaultMarkup={defaultMarkup} onClose={() => setEditing(null)} onSaved={refresh} />
+  </section>;
+}
+
+function PolicyCard({ name, count, markup, active, onOpen, onItems, mayEdit }: { name: string; count: number; markup: number | null; active: boolean; onOpen: () => void; onItems?: () => void; mayEdit: boolean }) {
+  const margin = markup == null ? null : (markup / (100 + markup)) * 100;
+  return <Card><CardHeader><CardTitle className="text-base">{name}</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-2 gap-3"><Metric label="Itens" value={count} /><div><p className="text-xs text-muted-foreground">Status</p><Badge variant={active ? 'default' : 'outline'}>{active && markup != null ? 'Configurada' : 'Sem política'}</Badge></div></div><div><p className="text-sm text-muted-foreground">Markup sobre custo</p><p className="text-2xl font-semibold">{markup == null ? '—' : `${formatPercent(markup)}`}</p><p className="text-xs text-muted-foreground">Margem resultante: {margin == null ? '—' : formatPercent(margin)}</p></div><div className="flex flex-wrap gap-2">{mayEdit ? <Button size="sm" onClick={onOpen}><Settings2 className="mr-2 h-4 w-4" />Editar política</Button> : null}{onItems ? <Button size="sm" variant="outline" onClick={onItems}>Ver itens</Button> : null}</div></CardContent></Card>;
+}
+
+function PolicyDialog({ companyId, target, defaultMarkup, onClose, onSaved }: { companyId: string; target: PricingCategory | 'DEFAULT' | null; defaultMarkup: number | null; onClose: () => void; onSaved: () => Promise<void> }) {
+  const currentMarkup = target === 'DEFAULT' ? defaultMarkup : target?.markup_percent;
+  const [markup, setMarkup] = useState('');
+  const [automatic, setAutomatic] = useState(true);
+  useEffect(() => { if (target) { setMarkup(currentMarkup == null ? '' : String(currentMarkup)); setAutomatic(target === 'DEFAULT' ? true : target.apply_automatically); } }, [target, currentMarkup]);
+  const numericMarkup = Number(markup.replace(',', '.'));
+  const save = useMutation({ mutationFn: async () => {
+    const { error } = await supabase.rpc('save_company_pricing_policy', { _company_id: companyId, _category_id: (target === 'DEFAULT' ? null : target?.category_id) as unknown as string, _markup_percent: numericMarkup, _apply_automatically: automatic, _is_active: true });
+    if (error) throw error;
+  }, onSuccess: async () => { await onSaved(); toast.success('Política comercial atualizada.'); onClose(); }, onError: (error) => toast.error(operationalErrorMessage(error, 'Não foi possível salvar a política.')) });
+  const margin = Number.isFinite(numericMarkup) && numericMarkup >= 0 ? numericMarkup / (100 + numericMarkup) * 100 : null;
+  return <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}><DialogContent><DialogHeader><DialogTitle>{target === 'DEFAULT' ? 'Padrão da empresa' : target?.category_name}</DialogTitle><DialogDescription>Essa alteração atualiza somente preços automáticos atuais. Preços manuais e documentos históricos permanecem intactos.</DialogDescription></DialogHeader><div className="space-y-4"><Field label="Markup padrão sobre custo"><Input inputMode="decimal" value={markup} onChange={(event) => setMarkup(event.target.value)} placeholder="60,00" /></Field><div className="rounded-md border p-3 text-sm"><p>Custo de exemplo: {formatMoney(100)}</p><p className="font-semibold">Venda calculada: {margin == null ? '—' : formatMoney(100 * (1 + numericMarkup / 100))}</p><p className="text-muted-foreground">Margem resultante: {margin == null ? '—' : formatPercent(margin)}</p></div><div className="flex items-center justify-between gap-3"><Label htmlFor="apply-policy">Aplicar aos itens automáticos</Label><Switch id="apply-policy" checked={automatic} onCheckedChange={setAutomatic} /></div></div><DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button disabled={!Number.isFinite(numericMarkup) || numericMarkup < 0 || save.isPending} onClick={() => save.mutate()}>{save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Atualizar política</Button></DialogFooter></DialogContent></Dialog>;
+}
+
+function PricingItemRow({ companyId, item, mayEdit, onChanged }: { companyId: string; item: PricingItem; mayEdit: boolean; onChanged: () => Promise<void> }) {
+  const [override, setOverride] = useState('');
+  const [manualPrice, setManualPrice] = useState(item.sale_price == null ? '' : String(item.sale_price));
+  const mutate = useMutation({ mutationFn: async (mode: 'POLICY' | 'OVERRIDE' | 'MANUAL') => {
+    const overrideValue = Number(override.replace(',', '.')); const manualValue = Number(manualPrice.replace(',', '.'));
+    const { error } = await supabase.rpc('set_company_item_pricing_mode', { _company_id: companyId, _company_item_id: item.company_item_id, ...(item.variant_id ? { _variant_id: item.variant_id } : {}), _mode: mode === 'MANUAL' ? 'MANUAL' : 'AUTO', ...(mode === 'OVERRIDE' ? { _markup_override: overrideValue } : {}), ...(mode === 'MANUAL' ? { _manual_sale_price: manualValue } : {}) });
+    if (error) throw error;
+  }, onSuccess: async () => { await onChanged(); toast.success('Regra do item atualizada.'); }, onError: (error) => toast.error(operationalErrorMessage(error, 'Não foi possível alterar a regra.')) });
+  return <div className="grid gap-3 rounded-md border p-3 lg:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(110px,0.65fr))_minmax(220px,1.2fr)] lg:items-center"><div><p className="font-medium">{item.item_code ? `${item.item_code} · ` : ''}{item.item_name}</p><p className="text-xs text-muted-foreground">{item.variant_name ?? 'Item base'} · {item.catalog_origin === 'PRIVATE' ? 'Privado' : 'Global materializado'}</p></div><PriceMetric label="Custo" value={item.effective_cost} unit={item.pricing_unit} /><PriceMetric label="Markup" value={item.markup_percent} percent /><PriceMetric label="Venda" value={item.sale_price} unit={item.pricing_unit} /><div className="space-y-2"><div className="flex flex-wrap gap-2"><Badge variant={item.pricing_mode === 'MANUAL' ? 'secondary' : 'outline'}>{pricingSourceLabel(item.pricing_source)}</Badge><Badge variant="outline">Custo: {item.cost_policy}</Badge></div>{mayEdit ? <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => mutate.mutate('POLICY')}>Usar política</Button><Input className="h-9 w-24" inputMode="decimal" value={override} onChange={(event) => setOverride(event.target.value)} placeholder="Markup %" /><Button size="sm" variant="outline" disabled={!Number.isFinite(Number(override.replace(',', '.')))} onClick={() => mutate.mutate('OVERRIDE')}>Aplicar</Button><Input className="h-9 w-28" inputMode="decimal" value={manualPrice} onChange={(event) => setManualPrice(event.target.value)} placeholder="Preço manual" /><Button size="sm" variant="outline" onClick={() => mutate.mutate('MANUAL')}>Manual</Button></div> : null}</div></div>;
+}
+
+function PriceMetric({ label, value, unit, percent }: { label: string; value: number | null; unit?: string | null; percent?: boolean }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="font-medium">{value == null ? '—' : percent ? formatPercent(Number(value)) : `${formatMoney(Number(value))}${unit ? `/${unit.toLocaleLowerCase('pt-BR')}` : ''}`}</p></div>; }
+function pricingSourceLabel(source: string) { return ({ CATEGORY_POLICY: 'Política da categoria', COMPANY_DEFAULT: 'Padrão da empresa', ITEM_OVERRIDE: 'Personalizado', MANUAL: 'Manual', UNPRICED: 'Sem política' } as Record<string, string>)[source] ?? source; }
+function formatMoney(value: number) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function formatPercent(value: number) { return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`; }
 
 function FamilyDetail({ companyId, catalog, mayEdit, canSeeCosts, canSeePrices, onBack, onChanged }: { companyId: string; catalog: FamilyCatalog; mayEdit: boolean; canSeeCosts: boolean; canSeePrices: boolean; onBack: () => void; onChanged: () => Promise<void> }) {
   const attributes = useMemo(() => [...catalog.attributes].sort((a, b) => a.sort_order - b.sort_order), [catalog.attributes]);

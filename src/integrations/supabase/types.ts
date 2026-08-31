@@ -1604,8 +1604,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -1627,8 +1631,12 @@ export type Database = {
           glass_type?: string | null
           id?: string
           is_active?: boolean
+          markup_override_percent?: number | null
           markup_percent?: number | null
           pricing_basis: string
+          pricing_calculated_at?: string | null
+          pricing_mode?: string
+          pricing_source?: string
           profile_color?: string | null
           profile_finish?: string | null
           sale_price?: number | null
@@ -1650,8 +1658,12 @@ export type Database = {
           glass_type?: string | null
           id?: string
           is_active?: boolean
+          markup_override_percent?: number | null
           markup_percent?: number | null
           pricing_basis?: string
+          pricing_calculated_at?: string | null
+          pricing_mode?: string
+          pricing_source?: string
           profile_color?: string | null
           profile_finish?: string | null
           sale_price?: number | null
@@ -1742,13 +1754,17 @@ export type Database = {
           item_template_id: string | null
           largura_mm: number | null
           linha: string | null
+          markup_override_percent: number | null
           markup_percent: number | null
           name: string
           ncm: string | null
           origem: string | null
           preco_unitario: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
           pricing_configured_at: string | null
+          pricing_mode: string
+          pricing_source: string
           pricing_unit: string | null
           sale_margin_percent: number | null
           sale_price: number | null
@@ -1794,13 +1810,17 @@ export type Database = {
           item_template_id?: string | null
           largura_mm?: number | null
           linha?: string | null
+          markup_override_percent?: number | null
           markup_percent?: number | null
           name: string
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
           pricing_basis?: string
+          pricing_calculated_at?: string | null
           pricing_configured_at?: string | null
+          pricing_mode?: string
+          pricing_source?: string
           pricing_unit?: string | null
           sale_margin_percent?: number | null
           sale_price?: number | null
@@ -1846,13 +1866,17 @@ export type Database = {
           item_template_id?: string | null
           largura_mm?: number | null
           linha?: string | null
+          markup_override_percent?: number | null
           markup_percent?: number | null
           name?: string
           ncm?: string | null
           origem?: string | null
           preco_unitario?: number | null
           pricing_basis?: string
+          pricing_calculated_at?: string | null
           pricing_configured_at?: string | null
+          pricing_mode?: string
+          pricing_source?: string
           pricing_unit?: string | null
           sale_margin_percent?: number | null
           sale_price?: number | null
@@ -2223,6 +2247,54 @@ export type Database = {
             foreignKeyName: "company_payment_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_pricing_policies: {
+        Row: {
+          apply_automatically: boolean
+          category_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          markup_percent: number
+          updated_at: string
+        }
+        Insert: {
+          apply_automatically?: boolean
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          markup_percent: number
+          updated_at?: string
+        }
+        Update: {
+          apply_automatically?: boolean
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          markup_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_pricing_policies_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_pricing_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
@@ -10622,6 +10694,39 @@ export type Database = {
           status: string
         }[]
       }
+      list_company_pricing_categories: {
+        Args: { _company_id: string }
+        Returns: {
+          apply_automatically: boolean
+          category_code: string
+          category_id: string
+          category_name: string
+          is_active: boolean
+          item_count: number
+          margin_percent: number
+          markup_percent: number
+        }[]
+      }
+      list_company_pricing_items: {
+        Args: { _category_id: string; _company_id: string }
+        Returns: {
+          bar_length_mm: number
+          catalog_origin: string
+          company_item_id: string
+          cost_policy: string
+          effective_cost: number
+          item_code: string
+          item_name: string
+          markup_percent: number
+          pricing_mode: string
+          pricing_source: string
+          pricing_unit: string
+          sale_price: number
+          variant_id: string
+          variant_name: string
+          weight_per_meter: number
+        }[]
+      }
       list_cutting_plan_templates: {
         Args: { _category?: string; _linha?: string }
         Returns: {
@@ -10965,6 +11070,29 @@ export type Database = {
         }
         Returns: Json
       }
+      record_tenant_stock_movement_with_pricing: {
+        Args: {
+          _company_color_id?: string
+          _company_id: string
+          _company_item_id: string
+          _conversion_factor?: number
+          _direction: string
+          _document_reference?: string
+          _height_mm?: number
+          _idempotency_key?: string
+          _lot_code?: string
+          _metadata?: Json
+          _new_sale_price?: number
+          _original_quantity: number
+          _original_unit: string
+          _reason: string
+          _supplier_name?: string
+          _total_cost?: number
+          _variant_id?: string
+          _width_mm?: number
+        }
+        Returns: Json
+      }
       refresh_daily_summary: { Args: never; Returns: undefined }
       register_cash_count: {
         Args: { _cash_register_id: string; _counts: Json }
@@ -11139,6 +11267,17 @@ export type Database = {
       }
       resolve_product_linha_slug: { Args: { _input: string }; Returns: string }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
+      save_company_item_technical_overrides: {
+        Args: {
+          _bar_length_mm?: number
+          _company_id: string
+          _company_item_id: string
+          _restore_bar_length?: boolean
+          _restore_weight?: boolean
+          _weight_per_meter?: number
+        }
+        Returns: Json
+      }
       save_company_item_configuration: {
         Args: {
           _allow_fractional?: boolean
@@ -11345,6 +11484,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_company_pricing_policy: {
+        Args: {
+          _apply_automatically?: boolean
+          _category_id: string
+          _company_id: string
+          _is_active?: boolean
+          _markup_percent: number
+        }
+        Returns: {
+          apply_automatically: boolean
+          category_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          markup_percent: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_pricing_policies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       save_company_product_pricing: {
         Args: {
           _company_id: string
@@ -11427,6 +11591,17 @@ export type Database = {
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      set_company_item_pricing_mode: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _manual_sale_price?: number
+          _markup_override?: number
+          _mode?: string
+          _variant_id?: string
+        }
+        Returns: Json
       }
       set_company_material_combination_active: {
         Args: { _active: boolean; _company_id: string; _definition_id: string }
