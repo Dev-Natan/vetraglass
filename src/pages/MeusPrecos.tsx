@@ -10,10 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { operationalErrorMessage } from '@/utils/operationalError';
+import { CompositionLaborCard, FinalProductsPricing } from '@/components/precos/FinalProductsPricing';
 
 type Family = { id: string; code: string; name: string; description: string | null; pricing_basis: string; pricing_unit: string; sort_order: number; global_combinations: number; active_combinations: number; priced_combinations: number };
 type Option = { id: string; code: string; label: string; value: unknown; sort_order: number };
@@ -50,9 +52,21 @@ export default function MeusPrecos() {
   const visibleFamilies = useMemo(() => { const term = familySearch.trim().toLocaleLowerCase('pt-BR'); return (familiesQuery.data ?? []).filter((family) => !term || `${family.name} ${family.description ?? ''}`.toLocaleLowerCase('pt-BR').includes(term)); }, [familiesQuery.data, familySearch]);
   const invalidate = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['material-families-activation', companyId] }), queryClient.invalidateQueries({ queryKey: ['material-family-combinations', companyId, selectedFamilyId] })]); };
   if (!companyId) return <MainLayout><div className="p-6">Selecione uma empresa.</div></MainLayout>;
-  return <MainLayout><div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6"><div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Defina como o Vetra calcula os preços de venda da sua empresa.</p></div>
-    <PricingPolicyCenter companyId={companyId} mayEdit={mayEdit} />
-    <section className="space-y-4"><div><h2 className="text-xl font-semibold">Catálogo comercial por área</h2><p className="text-sm text-muted-foreground">Materiais com preço fixado por m² continuam independentes das políticas automáticas.</p></div>{familiesQuery.isLoading ? <Loading /> : familiesQuery.error ? <ErrorCard error={familiesQuery.error} /> : !selectedFamilyId ? <><SearchBox value={familySearch} onChange={setFamilySearch} placeholder="Buscar matéria-prima" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visibleFamilies.map((family) => <Card key={family.id} className="flex flex-col"><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{family.name}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{family.description}</p></div><Layers3 className="h-5 w-5 text-primary" /></div></CardHeader><CardContent className="flex flex-1 flex-col gap-4"><Badge className="w-fit" variant="secondary">Preço por {family.pricing_unit}</Badge><div className="grid grid-cols-3 gap-2"><Metric label="Disponíveis" value={family.global_combinations} /><Metric label="Ativas" value={family.active_combinations} /><Metric label="Precificadas" value={family.priced_combinations} /></div><Button className="mt-auto w-full" onClick={() => setSelectedFamilyId(family.id)}>Abrir catálogo</Button></CardContent></Card>)}{visibleFamilies.length === 0 ? <Empty text="Nenhuma família encontrada." /> : null}</div></> : catalogQuery.isLoading ? <Loading /> : catalogQuery.error ? <ErrorCard error={catalogQuery.error} /> : catalogQuery.data ? <FamilyDetail companyId={companyId} catalog={catalogQuery.data} mayEdit={mayEdit} canSeeCosts={permissions.canSeeCosts()} canSeePrices={permissions.canSeePrices()} onBack={() => setSelectedFamilyId(null)} onChanged={invalidate} /> : null}</section>
+  return <MainLayout><div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6"><div><h1 className="text-2xl font-bold">Meus Preços</h1><p className="text-sm text-muted-foreground">Configure como sua empresa forma seus preços de venda.</p></div>
+    <Tabs defaultValue="materials" className="space-y-6">
+      <TabsList className="grid h-auto w-full max-w-xl grid-cols-2">
+        <TabsTrigger className="whitespace-normal py-2" value="materials">Materiais e Componentes</TabsTrigger>
+        <TabsTrigger className="whitespace-normal py-2" value="products">Produtos Finais</TabsTrigger>
+      </TabsList>
+      <TabsContent value="materials" className="space-y-8">
+        <PricingPolicyCenter companyId={companyId} mayEdit={mayEdit} />
+        <CompositionLaborCard companyId={companyId} mayEdit={mayEdit} />
+        <section className="space-y-4"><div><h2 className="text-xl font-semibold">Materiais por área</h2><p className="text-sm text-muted-foreground">Vidros, espelhos, ACM e outras famílias mantêm custo e preço comercial próprios da empresa.</p></div>{familiesQuery.isLoading ? <Loading /> : familiesQuery.error ? <ErrorCard error={familiesQuery.error} /> : !selectedFamilyId ? <><SearchBox value={familySearch} onChange={setFamilySearch} placeholder="Buscar material ou componente" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visibleFamilies.map((family) => <Card key={family.id} className="flex flex-col"><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{family.name}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{family.description}</p></div><Layers3 className="h-5 w-5 text-primary" /></div></CardHeader><CardContent className="flex flex-1 flex-col gap-4"><Badge className="w-fit" variant="secondary">Preço por {family.pricing_unit}</Badge><div className="grid grid-cols-3 gap-2"><Metric label="Disponíveis" value={family.global_combinations} /><Metric label="Ativas" value={family.active_combinations} /><Metric label="Precificadas" value={family.priced_combinations} /></div><Button className="mt-auto w-full" onClick={() => setSelectedFamilyId(family.id)}>Configurar</Button></CardContent></Card>)}{visibleFamilies.length === 0 ? <Empty text="Nenhuma família encontrada." /> : null}</div></> : catalogQuery.isLoading ? <Loading /> : catalogQuery.error ? <ErrorCard error={catalogQuery.error} /> : catalogQuery.data ? <FamilyDetail companyId={companyId} catalog={catalogQuery.data} mayEdit={mayEdit} canSeeCosts={permissions.canSeeCosts()} canSeePrices={permissions.canSeePrices()} onBack={() => setSelectedFamilyId(null)} onChanged={invalidate} /> : null}</section>
+      </TabsContent>
+      <TabsContent value="products">
+        <FinalProductsPricing companyId={companyId} mayEdit={mayEdit} />
+      </TabsContent>
+    </Tabs>
   </div></MainLayout>;
 }
 

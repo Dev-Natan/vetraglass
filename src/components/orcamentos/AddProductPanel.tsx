@@ -40,7 +40,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AddItemPanel } from './AddItemPanel';
 
 interface CanonicalPricingSnapshot {
-  pricing_mode: 'COMPOSITION' | 'FIXED_PER_SQM';
+  pricing_mode: 'COMPOSITION' | 'LINE_PRICE_PER_M2' | 'FIXED_PER_SQM';
+  commercial_pricing_method?: 'COMPOSITION' | 'LINE_PRICE_PER_M2' | 'LEGACY_FIXED_PER_SQM';
+  pricing_source?: string;
   materials: Array<Record<string, unknown>>;
   warnings: Array<{ code: string; item_name: string; required: number; available: number }>;
   totals: {
@@ -69,6 +71,7 @@ function describePricingError(error: unknown): string {
   const code = candidate.message ?? '';
   const detail = candidate.details ? `: ${candidate.details}` : '';
   if (code.includes('MISSING_PRICE_VARIANT')) return `Preço da especificação não configurado${detail}`;
+  if (code.includes('PRICE_NOT_CONFIGURED')) return `Preço ainda não configurado para esta combinação${detail}`;
   if (code.includes('MISSING_COST')) return `Custo não configurado${detail}`;
   if (code.includes('MISSING_PRICE')) return `Preço de venda não configurado${detail}`;
   if (code.includes('MISSING_VARIANT')) return `Variação comercial não configurada${detail}`;
@@ -221,6 +224,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           is_custom,
           uses_glass,
           pricing_type,
+          commercial_pricing_method,
+          product_line_id,
           product_template_id,
           leaves_count,
           glasses_count,
@@ -463,6 +468,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Get pricing type for the product
   const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'fixed');
+  const usesLinePricing = companyProduct?.commercial_pricing_method === 'LINE_PRICE_PER_M2';
   const productUsesGlass = hasGlass;
   const isParametric = selectedProduct?.composition_mode === 'parametric';
 
@@ -615,14 +621,14 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const requiresProfileVariant = canonicalVariants.some(row => row.variant_type === 'PROFILE');
   const requiresGlassType = canonicalVariants.some(row => row.variant_type === 'GLASS' && row.glass_type);
   const requiresProfileFinish = canonicalVariants.some(row => row.variant_type === 'PROFILE' && row.profile_finish);
-  const canonicalVariantReady = (!requiresGlassVariant || (!!selectedGlassColor && !!selectedGlassThickness
+  const canonicalVariantReady = (!(requiresGlassVariant || usesLinePricing) || (!!selectedGlassColor && !!selectedGlassThickness
     && (!requiresGlassType || !!selectedGlassType)))
-    && (!requiresProfileVariant || (!!canonicalVariantPayload.profile_color
+    && (!(requiresProfileVariant || usesLinePricing) || (!!canonicalVariantPayload.profile_color
       && (!requiresProfileFinish || !!selectedProfileFinish)));
   const canonicalPricing = useQuery({
     queryKey: ['phase3e-quote-pricing', currentCompany?.id, companyProduct?.id, width, height, quantity, canonicalVariantPayload],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('resolve_company_product_pricing', {
+      const { data, error } = await supabase.rpc('resolve_company_final_product_pricing', {
         _company_id: currentCompany!.id,
         _company_product_id: companyProduct!.id,
         _width_mm: width,
@@ -719,7 +725,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       fulfillment_mode: selectedProduct.fulfillment_mode || 'PRODUCTION',
       composition_snapshot: ({
         ...canonicalSnapshot,
-        pricing_source: 'phase4a_company_area_material',
+        pricing_source: canonicalSnapshot.pricing_source ?? 'TENANT_COMPONENT_SALE_PRICES',
+        applied_price: totalPrice,
         technical_snapshot: parametricResult ?? null,
         totals: {
           ...canonicalSnapshot.totals,

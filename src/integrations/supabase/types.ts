@@ -1072,6 +1072,7 @@ export type Database = {
           cnpj: string | null
           codigo_municipio_ibge: string | null
           complement: string | null
+          composition_labor_percent: number
           created_at: string
           default_presentation_text: string | null
           email: string | null
@@ -1113,6 +1114,7 @@ export type Database = {
           cnpj?: string | null
           codigo_municipio_ibge?: string | null
           complement?: string | null
+          composition_labor_percent?: number
           created_at?: string
           default_presentation_text?: string | null
           email?: string | null
@@ -1154,6 +1156,7 @@ export type Database = {
           cnpj?: string | null
           codigo_municipio_ibge?: string | null
           complement?: string | null
+          composition_labor_percent?: number
           created_at?: string
           default_presentation_text?: string | null
           email?: string | null
@@ -2414,19 +2417,83 @@ export type Database = {
           },
         ]
       }
+      company_product_price_line_combinations: {
+        Row: {
+          company_color_id: string
+          company_id: string
+          created_at: string
+          glass_variant_definition_id: string
+          id: string
+          line_id: string
+          price_line_id: string
+          profile_finish: string
+        }
+        Insert: {
+          company_color_id: string
+          company_id: string
+          created_at?: string
+          glass_variant_definition_id: string
+          id?: string
+          line_id: string
+          price_line_id: string
+          profile_finish?: string
+        }
+        Update: {
+          company_color_id?: string
+          company_id?: string
+          created_at?: string
+          glass_variant_definition_id?: string
+          id?: string
+          line_id?: string
+          price_line_id?: string
+          profile_finish?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_product_price_line_com_glass_variant_definition_id_fkey"
+            columns: ["glass_variant_definition_id"]
+            isOneToOne: false
+            referencedRelation: "item_template_variant_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_price_line_combinations_color_fkey"
+            columns: ["company_color_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company_colors"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "company_product_price_line_combinations_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "product_linhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_price_line_combinations_parent_fkey"
+            columns: ["price_line_id", "company_id", "line_id"]
+            isOneToOne: false
+            referencedRelation: "company_product_price_lines"
+            referencedColumns: ["id", "company_id", "line_id"]
+          },
+        ]
+      }
       company_product_price_lines: {
         Row: {
           attributes: Json
           color: string | null
           company_id: string
-          company_product_id: string
+          company_product_id: string | null
           cost: number | null
           created_at: string
           description: string
           glass_type: string | null
           id: string
           is_active: boolean
+          line_id: string | null
           price: number
+          pricing_scope: string
           sort_order: number
           thickness_mm: number | null
           unit: string
@@ -2436,14 +2503,16 @@ export type Database = {
           attributes?: Json
           color?: string | null
           company_id: string
-          company_product_id: string
+          company_product_id?: string | null
           cost?: number | null
           created_at?: string
           description: string
           glass_type?: string | null
           id?: string
           is_active?: boolean
+          line_id?: string | null
           price?: number
+          pricing_scope?: string
           sort_order?: number
           thickness_mm?: number | null
           unit?: string
@@ -2453,14 +2522,16 @@ export type Database = {
           attributes?: Json
           color?: string | null
           company_id?: string
-          company_product_id?: string
+          company_product_id?: string | null
           cost?: number | null
           created_at?: string
           description?: string
           glass_type?: string | null
           id?: string
           is_active?: boolean
+          line_id?: string | null
           price?: number
+          pricing_scope?: string
           sort_order?: number
           thickness_mm?: number | null
           unit?: string
@@ -2472,6 +2543,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_price_lines_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "product_linhas"
             referencedColumns: ["id"]
           },
           {
@@ -2492,6 +2570,7 @@ export type Database = {
           category: string | null
           code: string | null
           commercial_name: string
+          commercial_pricing_method: string | null
           company_id: string
           contramarco: string | null
           cor_componentes: string | null
@@ -2517,6 +2596,7 @@ export type Database = {
           panels_count: number | null
           price_per_sqm: number | null
           pricing_type: string
+          product_line_id: string | null
           product_template_id: string | null
           reforco: string | null
           sides_count: number | null
@@ -2531,6 +2611,7 @@ export type Database = {
           category?: string | null
           code?: string | null
           commercial_name: string
+          commercial_pricing_method?: string | null
           company_id: string
           contramarco?: string | null
           cor_componentes?: string | null
@@ -2556,6 +2637,7 @@ export type Database = {
           panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
+          product_line_id?: string | null
           product_template_id?: string | null
           reforco?: string | null
           sides_count?: number | null
@@ -2570,6 +2652,7 @@ export type Database = {
           category?: string | null
           code?: string | null
           commercial_name?: string
+          commercial_pricing_method?: string | null
           company_id?: string
           contramarco?: string | null
           cor_componentes?: string | null
@@ -2595,6 +2678,7 @@ export type Database = {
           panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
+          product_line_id?: string | null
           product_template_id?: string | null
           reforco?: string | null
           sides_count?: number | null
@@ -2607,6 +2691,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_products_product_line_id_fkey"
+            columns: ["product_line_id"]
+            isOneToOne: false
+            referencedRelation: "product_linhas"
             referencedColumns: ["id"]
           },
           {
@@ -10193,6 +10284,7 @@ export type Database = {
           cnpj: string | null
           codigo_municipio_ibge: string | null
           complement: string | null
+          composition_labor_percent: number
           created_at: string
           default_presentation_text: string | null
           email: string | null
@@ -10445,6 +10537,10 @@ export type Database = {
         }
         Returns: string
       }
+      deactivate_company_line_price_band: {
+        Args: { _company_id: string; _price_line_id: string }
+        Returns: boolean
+      }
       deactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -10503,8 +10599,16 @@ export type Database = {
           unique_clients: number
         }[]
       }
+      get_company_line_pricing_options: {
+        Args: { _company_id: string; _line_id: string }
+        Returns: Json
+      }
       get_company_material_family_catalog: {
         Args: { _company_id: string; _family_id: string }
+        Returns: Json
+      }
+      get_company_pricing_workspace: {
+        Args: { _company_id: string }
         Returns: Json
       }
       get_company_product_profile_colors: {
@@ -10648,6 +10752,20 @@ export type Database = {
       }
       is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_company_line_price_bands: {
+        Args: { _company_id: string; _line_id: string }
+        Returns: {
+          company_color_ids: string[]
+          description: string
+          glass_labels: string[]
+          glass_variant_definition_ids: string[]
+          id: string
+          is_active: boolean
+          price_per_m2: number
+          profile_color_labels: string[]
+          profile_finishes: string[]
+        }[]
+      }
       list_company_material_families: {
         Args: { _company_id: string }
         Returns: {
@@ -10948,6 +11066,45 @@ export type Database = {
         Args: { _company_id: string }
         Returns: Json
       }
+      pre4b2_effective_bar_length_mm: {
+        Args: { _company_item_id: string }
+        Returns: number
+      }
+      pre4b2_effective_cost: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _variant_id?: string
+        }
+        Returns: number
+      }
+      pre4b2_effective_markup: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _variant_id?: string
+        }
+        Returns: {
+          markup_percent: number
+          pricing_source: string
+        }[]
+      }
+      pre4b2_effective_weight_per_meter: {
+        Args: { _company_item_id: string }
+        Returns: number
+      }
+      pre4b2_item_category_id: {
+        Args: { _company_item_id: string }
+        Returns: string
+      }
+      pre4b2_reprice_company_item: {
+        Args: {
+          _company_id: string
+          _company_item_id: string
+          _variant_id?: string
+        }
+        Returns: Json
+      }
       reactivate_company_member: {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
@@ -11203,6 +11360,17 @@ export type Database = {
         Returns: Json
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
+      resolve_company_final_product_pricing: {
+        Args: {
+          _company_id: string
+          _company_product_id: string
+          _height_mm: number
+          _quantity?: number
+          _variants?: Json
+          _width_mm: number
+        }
+        Returns: Json
+      }
       resolve_company_material_price: {
         Args: { _company_id: string; _family_id: string; _option_ids: string[] }
         Returns: Json
@@ -11249,8 +11417,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -11267,16 +11439,9 @@ export type Database = {
       }
       resolve_product_linha_slug: { Args: { _input: string }; Returns: string }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
-      save_company_item_technical_overrides: {
-        Args: {
-          _bar_length_mm?: number
-          _company_id: string
-          _company_item_id: string
-          _restore_bar_length?: boolean
-          _restore_weight?: boolean
-          _weight_per_meter?: number
-        }
-        Returns: Json
+      save_company_composition_labor_percent: {
+        Args: { _company_id: string; _labor_percent: number }
+        Returns: number
       }
       save_company_item_configuration: {
         Args: {
@@ -11338,13 +11503,17 @@ export type Database = {
           item_template_id: string | null
           largura_mm: number | null
           linha: string | null
+          markup_override_percent: number | null
           markup_percent: number | null
           name: string
           ncm: string | null
           origem: string | null
           preco_unitario: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
           pricing_configured_at: string | null
+          pricing_mode: string
+          pricing_source: string
           pricing_unit: string | null
           sale_margin_percent: number | null
           sale_price: number | null
@@ -11366,6 +11535,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_company_item_technical_overrides: {
+        Args: {
+          _bar_length_mm?: number
+          _company_id: string
+          _company_item_id: string
+          _restore_bar_length?: boolean
+          _restore_weight?: boolean
+          _weight_per_meter?: number
+        }
+        Returns: Json
       }
       save_company_item_variant: {
         Args: {
@@ -11391,8 +11571,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -11406,6 +11590,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_company_line_price_band: {
+        Args: {
+          _company_color_ids: string[]
+          _company_id: string
+          _description: string
+          _glass_variant_definition_ids: string[]
+          _line_id: string
+          _price_line_id?: string
+          _price_per_m2: number
+          _profile_finishes: string[]
+        }
+        Returns: string
       }
       save_company_material_variant: {
         Args: {
@@ -11430,8 +11627,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -11468,8 +11669,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -11520,8 +11725,11 @@ export type Database = {
           acabamento: string | null
           arremate: string | null
           base_price: number | null
+          catalog_origin: string | null
           category: string | null
+          code: string | null
           commercial_name: string
+          commercial_pricing_method: string | null
           company_id: string
           contramarco: string | null
           cor_componentes: string | null
@@ -11547,6 +11755,7 @@ export type Database = {
           panels_count: number | null
           price_per_sqm: number | null
           pricing_type: string
+          product_line_id: string | null
           product_template_id: string | null
           reforco: string | null
           sides_count: number | null
@@ -11559,6 +11768,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_company_product_pricing_method: {
+        Args: {
+          _company_id: string
+          _company_product_id: string
+          _line_id?: string
+          _method: string
+        }
+        Returns: Json
       }
       save_company_profile_configuration: {
         Args: {
@@ -11630,8 +11848,12 @@ export type Database = {
           glass_type: string | null
           id: string
           is_active: boolean
+          markup_override_percent: number | null
           markup_percent: number | null
           pricing_basis: string
+          pricing_calculated_at: string | null
+          pricing_mode: string
+          pricing_source: string
           profile_color: string | null
           profile_finish: string | null
           sale_price: number | null
@@ -11769,12 +11991,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -11798,11 +12020,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -11823,11 +12045,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -11848,11 +12070,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -11865,11 +12087,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
