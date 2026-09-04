@@ -16,67 +16,228 @@ GRANT SELECT ON pricing_phase_ctx TO authenticated;
 GRANT SELECT,INSERT,UPDATE ON pricing_phase_results TO authenticated;
 GRANT EXECUTE ON FUNCTION pg_temp.ok(boolean,text,text) TO authenticated;
 
+-- Read only global technical catalog rows. Every mutable row used by this suite
+-- belongs to a fresh transaction-only tenant.
 INSERT INTO pricing_phase_ctx
-SELECT 'company_a',company_id FROM public.company_products ORDER BY created_at LIMIT 1;
+SELECT 'source_template',pt.id
+FROM public.product_templates pt
+WHERE pt.is_active AND pt.company_id IS NULL
+  AND EXISTS (
+    SELECT 1 FROM public.product_template_items pti
+    WHERE pti.product_template_id=pt.id
+      AND pti.company_id IS NULL
+      AND pti.item_template_id IS NOT NULL
+  )
+ORDER BY pt.created_at
+LIMIT 1;
 INSERT INTO pricing_phase_ctx
-SELECT 'product_a',id FROM public.company_products WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') ORDER BY created_at LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'line',COALESCE(cp.product_line_id,pl.id) FROM public.company_products cp
-LEFT JOIN public.product_linhas pl ON pl.slug=cp.linha
-WHERE cp.id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a');
+SELECT 'line',pl.id
+FROM public.product_templates pt
+JOIN public.product_linhas pl
+  ON lower(pl.slug)=lower(pt.linha) OR lower(pl.name)=lower(pt.linha)
+WHERE pt.id=(SELECT v FROM pricing_phase_ctx WHERE k='source_template')
+LIMIT 1;
 INSERT INTO pricing_phase_ctx
 SELECT 'user_a',uc.user_id FROM public.user_companies uc
-WHERE uc.company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND uc.role='admin' AND uc.is_active
+WHERE uc.role='admin' AND uc.is_active
 ORDER BY uc.created_at LIMIT 1;
 INSERT INTO pricing_phase_ctx
 SELECT 'user_b',u.id FROM auth.users u
 WHERE u.id<>(SELECT v FROM pricing_phase_ctx WHERE k='user_a') ORDER BY u.created_at LIMIT 1;
 
 DO $$ BEGIN
-  IF (SELECT count(*) FROM pricing_phase_ctx WHERE k IN ('company_a','product_a','line','user_a','user_b'))<>5 THEN
+  IF (SELECT count(*) FROM pricing_phase_ctx
+      WHERE k IN ('source_template','line','user_a','user_b'))<>4 THEN
     RAISE EXCEPTION 'PRICING_PHASE_CONTEXT_MISSING';
   END IF;
 END $$;
 
-INSERT INTO pricing_phase_ctx
-SELECT 'glass_incolor_8',variant_definition_id FROM public.company_item_variants
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND is_active
-  AND glass_color='INCOLOR' AND glass_thickness_mm=8 AND variant_definition_id IS NOT NULL LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'glass_green_6',variant_definition_id FROM public.company_item_variants
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND is_active
-  AND glass_color='VERDE' AND glass_thickness_mm=6 AND variant_definition_id IS NOT NULL LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'glass_green_8',variant_definition_id FROM public.company_item_variants
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND is_active
-  AND glass_color='VERDE' AND glass_thickness_mm=8 AND variant_definition_id IS NOT NULL LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'glass_fume_6',variant_definition_id FROM public.company_item_variants
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND is_active
-  AND glass_color='FUME' AND glass_thickness_mm=6 AND variant_definition_id IS NOT NULL LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'glass_fume_8',variant_definition_id FROM public.company_item_variants
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND is_active
-  AND glass_color='FUME' AND glass_thickness_mm=8 AND variant_definition_id IS NOT NULL LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'color_white',id FROM public.company_colors
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='branco' AND is_active LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'color_black',id FROM public.company_colors
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='preto' AND is_active LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'color_bronze',id FROM public.company_colors
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='bronze' AND is_active LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'color_wood',id FROM public.company_colors
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='amadeirado' AND is_active LIMIT 1;
-INSERT INTO pricing_phase_ctx
-SELECT 'color_natural',id FROM public.company_colors
-WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='natural' AND is_active LIMIT 1;
+WITH inserted AS (
+  INSERT INTO public.companies(name)
+  VALUES('PRICING PHASE TENANT A '||gen_random_uuid())
+  RETURNING id
+)
+INSERT INTO pricing_phase_ctx SELECT 'company_a',id FROM inserted;
+INSERT INTO public.user_companies(user_id,company_id,role,is_active)
+VALUES((SELECT v FROM pricing_phase_ctx WHERE k='user_a'),
+  (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),'admin',true);
+
+-- Materialize global aluminum colors into the isolated tenant.
+INSERT INTO public.company_colors(company_id,admin_color_id,name,code,hex_color,catalog_origin,is_active)
+SELECT (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),c.id,
+  c.name,c.slug,c.hex_color,'GLOBAL',true
+FROM public.admin_aluminum_colors c
+WHERE lower(c.slug) IN ('branco','preto','bronze','amadeirado','natural')
+  AND c.is_active
+  AND NOT EXISTS (
+    SELECT 1 FROM public.company_colors existing
+    WHERE existing.company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+      AND existing.admin_color_id=c.id
+  );
+INSERT INTO pricing_phase_ctx SELECT 'color_white',id FROM public.company_colors
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='branco' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'color_black',id FROM public.company_colors
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='preto' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'color_bronze',id FROM public.company_colors
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='bronze' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'color_wood',id FROM public.company_colors
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='amadeirado' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'color_natural',id FROM public.company_colors
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND lower(code)='natural' LIMIT 1;
+
+-- Materialize an isolated product from the global technical template.
+WITH source AS (
+  SELECT pt.* FROM public.product_templates pt
+  WHERE pt.id=(SELECT v FROM pricing_phase_ctx WHERE k='source_template')
+), inserted AS (
+  INSERT INTO public.company_products(
+    company_id,product_template_id,commercial_name,description,is_active,is_custom,
+    category,linha,uses_glass,pricing_type,product_line_id,
+    commercial_pricing_method
+  )
+  SELECT (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),id,
+    'PRICING PHASE PRODUCT A '||gen_random_uuid(),description,true,false,
+    category,linha,true,'COMPOSITION',
+    (SELECT v FROM pricing_phase_ctx WHERE k='line'),'COMPOSITION'
+  FROM source
+  ON CONFLICT (company_id,product_template_id) DO UPDATE
+  SET is_active=true,product_line_id=EXCLUDED.product_line_id
+  RETURNING id
+)
+INSERT INTO pricing_phase_ctx SELECT 'product_a',id FROM inserted;
+
+CREATE TEMP TABLE pricing_phase_item_map(
+  source_id uuid PRIMARY KEY,
+  target_id uuid NOT NULL UNIQUE
+);
+INSERT INTO pricing_phase_item_map(source_id,target_id)
+SELECT DISTINCT it.id,
+  COALESCE((
+    SELECT target.id FROM public.company_items target
+    WHERE target.company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+      AND target.item_template_id=it.id
+    LIMIT 1
+  ),gen_random_uuid())
+FROM public.product_template_items pti
+JOIN public.item_templates it ON it.id=pti.item_template_id
+WHERE pti.product_template_id=(SELECT v FROM pricing_phase_ctx WHERE k='source_template')
+  AND pti.company_id IS NULL;
+
+UPDATE public.company_items target
+SET name=source.name,description=source.description,type=source.type::text,unit=source.unit,
+    cost=COALESCE(NULLIF(source.default_cost,0),10),
+    sale_price=COALESCE(NULLIF(source.default_sale_price,0),NULLIF(source.default_price,0),20),
+    specifications=source.specifications,linha=source.linha,is_custom=false,is_active=true,
+    bar_length_mm=source.bar_length_mm,weight_per_meter=source.weight_per_meter,
+    pricing_basis=COALESCE(source.pricing_basis,'UNIT'),
+    variant_attribute_schema=source.variant_attribute_schema,
+    is_commercial_area_material=source.is_commercial_area_material,
+    commercial_material_family=source.commercial_material_family,
+    catalog_origin='GLOBAL'
+FROM pricing_phase_item_map map
+JOIN public.item_templates source ON source.id=map.source_id
+WHERE target.id=map.target_id;
+
+INSERT INTO public.company_items(
+  id,company_id,item_template_id,name,description,type,unit,cost,sale_price,
+  specifications,linha,is_custom,is_active,glass_thickness,glass_color,
+  glass_type_detail,bar_length_mm,weight_kg,weight_per_meter,pricing_basis,
+  variant_attribute_schema,is_commercial_area_material,commercial_material_family,
+  catalog_origin,code
+)
+SELECT map.target_id,(SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+  source.id,source.name,source.description,source.type::text,source.unit,
+  COALESCE(NULLIF(source.default_cost,0),10),
+  COALESCE(NULLIF(source.default_sale_price,0),NULLIF(source.default_price,0),20),
+  source.specifications,source.linha,false,true,
+  NULL,NULL,NULL,
+  source.bar_length_mm,NULL,source.weight_per_meter,COALESCE(source.pricing_basis,'UNIT'),
+  source.variant_attribute_schema,source.is_commercial_area_material,
+  source.commercial_material_family,'GLOBAL',NULL
+FROM pricing_phase_item_map map
+JOIN public.item_templates source ON source.id=map.source_id
+WHERE NOT EXISTS(SELECT 1 FROM public.company_items target WHERE target.id=map.target_id);
+
+UPDATE public.company_items
+SET cost=COALESCE(NULLIF(cost,0),10),
+    sale_price=COALESCE(NULLIF(sale_price,0),20),
+    is_active=true
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+  AND id IN (SELECT target_id FROM pricing_phase_item_map);
+
+-- The isolated fixture must exercise the current area-material resolver even
+-- when the legacy global engineering template still labels a glass component
+-- as UNIT. This tenant-scoped normalization is rolled back with the suite.
+UPDATE public.company_items
+SET pricing_basis='AREA', pricing_unit='m²',
+    commercial_material_family='GLASS'
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+  AND id IN (SELECT target_id FROM pricing_phase_item_map)
+  AND lower(type)='glass';
+
+DELETE FROM public.company_product_items
+WHERE company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a');
+INSERT INTO public.company_product_items(
+  company_product_id,item_template_id,quantity_formula,width_formula,height_formula,
+  is_optional,notes,sort_order,company_item_id,cut_angle,pieces_quantity,loss_percent,
+  section,side,calculation_type,applies_to,pieces_formula,cut_angle_start,cut_angle_end,
+  company_id
+)
+SELECT (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),cpi.item_template_id,
+  cpi.quantity_formula,cpi.width_formula,cpi.height_formula,cpi.is_optional,cpi.notes,
+  row_number() over(order by cpi.created_at,cpi.id)::integer,map.target_id,
+  cpi.cut_angle,cpi.pieces_quantity,cpi.loss_percent,
+  cpi.section,cpi.side,cpi.calculation_type,cpi.applies_to,cpi.pieces_formula,
+  cpi.cut_angle_start,cpi.cut_angle_end,(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+FROM public.product_template_items cpi
+JOIN pricing_phase_item_map map ON map.source_id=cpi.item_template_id
+WHERE cpi.product_template_id=(SELECT v FROM pricing_phase_ctx WHERE k='source_template')
+  AND cpi.company_id IS NULL;
+
+CREATE TEMP TABLE pricing_phase_glass_catalog AS
+SELECT d.id definition_id,
+  max(CASE WHEN a.attribute_code='TYPE' THEN o.canonical_value#>>'{}' END) glass_type,
+  max(CASE WHEN a.attribute_code='COLOR' THEN o.canonical_value#>>'{}' END) glass_color,
+  max(CASE WHEN a.attribute_code='THICKNESS_MM'
+    THEN (o.canonical_value#>>'{}')::numeric END) thickness_mm,
+  max(CASE WHEN a.attribute_code='FINISH' THEN o.canonical_value#>>'{}' END) finish
+FROM public.item_template_variant_definitions d
+JOIN public.item_templates it ON it.id=d.item_template_id
+JOIN public.item_template_variant_definition_options link ON link.definition_id=d.id
+JOIN public.item_template_attributes a ON a.id=link.attribute_id
+JOIN public.item_template_attribute_options o ON o.id=link.option_id
+WHERE d.is_active AND it.company_id IS NULL AND it.commercial_material_family='GLASS'
+GROUP BY d.id;
+INSERT INTO pricing_phase_ctx SELECT 'glass_incolor_8',definition_id FROM pricing_phase_glass_catalog
+WHERE glass_type='TEMPERADO' AND glass_color='INCOLOR' AND thickness_mm=8 AND finish='PADRAO' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'glass_green_6',definition_id FROM pricing_phase_glass_catalog
+WHERE glass_type='TEMPERADO' AND glass_color='VERDE' AND thickness_mm=6 AND finish='PADRAO' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'glass_green_8',definition_id FROM pricing_phase_glass_catalog
+WHERE glass_type='TEMPERADO' AND glass_color='VERDE' AND thickness_mm=8 AND finish='PADRAO' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'glass_fume_6',definition_id FROM pricing_phase_glass_catalog
+WHERE glass_type='TEMPERADO' AND glass_color='FUME' AND thickness_mm=6 AND finish='PADRAO' LIMIT 1;
+INSERT INTO pricing_phase_ctx SELECT 'glass_fume_8',definition_id FROM pricing_phase_glass_catalog
+WHERE glass_type='TEMPERADO' AND glass_color='FUME' AND thickness_mm=8 AND finish='PADRAO' LIMIT 1;
+
+SELECT set_config('request.jwt.claims',jsonb_build_object(
+  'sub',(SELECT v FROM pricing_phase_ctx WHERE k='user_a'),'role','authenticated'
+)::text,true);
+SELECT public.set_company_material_combination_active(
+  (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),v,true)
+FROM pricing_phase_ctx WHERE k LIKE 'glass_%';
+UPDATE public.company_item_variants
+SET cost=CASE glass_color WHEN 'VERDE' THEN 220 WHEN 'FUME' THEN 230 ELSE 210 END,
+    sale_price=CASE glass_color WHEN 'VERDE' THEN 375 WHEN 'FUME' THEN 400 ELSE 350 END,
+    is_active=true,pricing_mode='MANUAL',pricing_source='MANUAL'
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+  AND variant_definition_id IN (SELECT v FROM pricing_phase_ctx WHERE k LIKE 'glass_%');
 
 -- Tenant B has independent operational options and a private product.
-INSERT INTO public.companies(name) VALUES('PRICING PHASE TENANT B') RETURNING id;
-INSERT INTO pricing_phase_ctx SELECT 'company_b',id FROM public.companies WHERE name='PRICING PHASE TENANT B';
+WITH inserted AS (
+  INSERT INTO public.companies(name)
+  VALUES('PRICING PHASE TENANT B '||gen_random_uuid()) RETURNING id
+)
+INSERT INTO pricing_phase_ctx SELECT 'company_b',id FROM inserted;
 INSERT INTO public.user_companies(user_id,company_id,role,is_active)
 VALUES((SELECT v FROM pricing_phase_ctx WHERE k='user_b'),(SELECT v FROM pricing_phase_ctx WHERE k='company_b'),'admin',true);
 
@@ -90,19 +251,22 @@ INSERT INTO pricing_phase_ctx
 SELECT 'color_b_white',id FROM public.company_colors
 WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b') AND lower(code)='branco' LIMIT 1;
 
+SELECT set_config('request.jwt.claims',jsonb_build_object(
+  'sub',(SELECT v FROM pricing_phase_ctx WHERE k='user_b'),'role','authenticated'
+)::text,true);
+SELECT public.set_company_material_combination_active(
+  (SELECT v FROM pricing_phase_ctx WHERE k='company_b'),
+  (SELECT v FROM pricing_phase_ctx WHERE k='glass_incolor_8'),true);
 INSERT INTO pricing_phase_ctx
-SELECT 'glass_item_b',id FROM public.company_items
+SELECT 'glass_item_b',company_item_id FROM public.company_item_variants
 WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b')
-  AND is_commercial_area_material AND commercial_material_family='GLASS' LIMIT 1;
+  AND variant_definition_id=(SELECT v FROM pricing_phase_ctx WHERE k='glass_incolor_8') LIMIT 1;
 UPDATE public.company_items SET cost=250,sale_price=400,is_active=true
 WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='glass_item_b');
-INSERT INTO public.company_item_variants(company_id,company_item_id,variant_type,glass_type,glass_color,
-  glass_thickness_mm,cost,sale_price,is_active,pricing_basis,attributes,variant_definition_id,pricing_mode,pricing_source)
-SELECT (SELECT v FROM pricing_phase_ctx WHERE k='company_b'),(SELECT v FROM pricing_phase_ctx WHERE k='glass_item_b'),
-  'GLASS',a.glass_type,a.glass_color,a.glass_thickness_mm,250,400,true,'AREA',a.attributes,a.variant_definition_id,'MANUAL','MANUAL'
-FROM public.company_item_variants a
-WHERE a.company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
-  AND a.variant_definition_id=(SELECT v FROM pricing_phase_ctx WHERE k='glass_incolor_8') AND a.is_active LIMIT 1;
+UPDATE public.company_item_variants
+SET cost=250,sale_price=400,is_active=true,pricing_mode='MANUAL',pricing_source='MANUAL'
+WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b')
+  AND variant_definition_id=(SELECT v FROM pricing_phase_ctx WHERE k='glass_incolor_8');
 
 INSERT INTO public.company_items(company_id,name,type,unit,cost,sale_price,is_active,pricing_basis,catalog_origin)
 VALUES((SELECT v FROM pricing_phase_ctx WHERE k='company_b'),'TEST ACCESSORY B','accessory','un',10,20,true,'UNIT','PRIVATE')
@@ -257,29 +421,30 @@ BEGIN
   PERFORM pg_temp.ok((r#>>'{totals,area_m2}')::numeric=1.8 AND (r#>>'{totals,sale_price}')::numeric=2430,'T15','Area times tenant band price');
 END $$;
 
--- Composition fixtures: tenant profile variants and an accessory are test-only.
-INSERT INTO public.company_item_variants(company_id,company_item_id,variant_type,profile_color,profile_finish,cost,sale_price,
-  is_active,pricing_basis,attributes,aluminum_color_id,company_color_id,pricing_mode,pricing_source)
-SELECT ci.company_id,ci.id,'PROFILE',upper(cc.name),'PADRAO',greatest(coalesce(ci.cost,10),0.01),
-  greatest(coalesce(ci.sale_price,20),0.01),true,ci.pricing_basis,
-  public.phase4a_normalize_variant_attributes(jsonb_build_object('color',cc.name,'finish','PADRAO')),
-  cc.admin_color_id,cc.id,'MANUAL','MANUAL'
+-- Composition fixtures use the same canonical resolver invoked by quote
+-- freezing, so unique profile identities are exercised rather than bypassed.
+SELECT (public.resolve_company_profile_variant(
+  (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),ci.id,
+  (SELECT v FROM pricing_phase_ctx WHERE k='color_white'))).id
 FROM public.company_product_items cpi
 JOIN public.company_items ci ON ci.id=cpi.company_item_id AND ci.type='profile'
-CROSS JOIN public.company_colors cc
-WHERE cpi.company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a')
-  AND cc.id=(SELECT v FROM pricing_phase_ctx WHERE k='color_white');
-INSERT INTO public.company_item_variants(company_id,company_item_id,variant_type,profile_color,profile_finish,cost,sale_price,
-  is_active,pricing_basis,attributes,aluminum_color_id,company_color_id,pricing_mode,pricing_source)
-SELECT ci.company_id,ci.id,'PROFILE',upper(cc.name),'PADRAO',greatest(coalesce(ci.cost,10),0.01),
-  greatest(coalesce(ci.sale_price,20),0.01)*1.25,true,ci.pricing_basis,
-  public.phase4a_normalize_variant_attributes(jsonb_build_object('color',cc.name,'finish','PADRAO')),
-  cc.admin_color_id,cc.id,'MANUAL','MANUAL'
+WHERE cpi.company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a');
+SELECT (public.resolve_company_profile_variant(
+  (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),ci.id,
+  (SELECT v FROM pricing_phase_ctx WHERE k='color_wood'))).id
 FROM public.company_product_items cpi
 JOIN public.company_items ci ON ci.id=cpi.company_item_id AND ci.type='profile'
-CROSS JOIN public.company_colors cc
-WHERE cpi.company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a')
-  AND cc.id=(SELECT v FROM pricing_phase_ctx WHERE k='color_wood');
+WHERE cpi.company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a');
+UPDATE public.company_item_variants civ
+SET cost=greatest(coalesce(ci.cost,10),0.01),
+    sale_price=greatest(coalesce(ci.sale_price,20),0.01)
+      * CASE WHEN civ.company_color_id=(SELECT v FROM pricing_phase_ctx WHERE k='color_wood') THEN 1.25 ELSE 1 END,
+    profile_finish='PADRAO',pricing_mode='MANUAL',pricing_source='MANUAL',is_active=true
+FROM public.company_items ci
+WHERE ci.id=civ.company_item_id
+  AND civ.company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a')
+  AND civ.company_color_id IN ((SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
+    (SELECT v FROM pricing_phase_ctx WHERE k='color_wood'));
 
 INSERT INTO public.company_items(company_id,name,type,unit,cost,sale_price,is_active,pricing_basis,catalog_origin)
 VALUES((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),'PRICING TEST ACCESSORY','accessory','un',10,20,true,'UNIT','PRIVATE') RETURNING id;
@@ -297,7 +462,7 @@ DECLARE core jsonb; result jsonb; wood jsonb; green jsonb; variants jsonb; wood_
 BEGIN
   variants:=jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
     'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
-    'profile_color','Branco','profile_finish','PADRAO');
+    'profile_color','Branco');
   core:=public.resolve_company_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
     (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,variants);
   result:=public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
@@ -320,7 +485,8 @@ BEGIN
   PERFORM pg_temp.ok((wood#>>'{totals,sale_price}')::numeric<>total,'C10','White to wood recalculates');
   green:=public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
     (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,variants||jsonb_build_object('glass_color','VERDE'));
-  PERFORM pg_temp.ok((green#>>'{totals,sale_price}')::numeric<>total,'C11','Incolor to green recalculates');
+  PERFORM pg_temp.ok((green#>>'{totals,sale_price}')::numeric<>total,'C11',
+    'Changing glass color recalculates');
   PERFORM pg_temp.ok((SELECT composition_labor_percent FROM public.companies WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b'))=0,'C12','Labor never crosses tenants');
   PERFORM pg_temp.ok(result->>'pricing_source'='TENANT_COMPONENT_SALE_PRICES','C14','No second markup source');
   PERFORM pg_temp.ok((result#>>'{totals,labor_amount}')::numeric=round(subtotal*0.30,2),'C16','Composition labor applied once');
@@ -333,7 +499,7 @@ DO $$ DECLARE old_sale numeric; BEGIN
     PERFORM public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
       (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
       jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
-        'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_color','Branco','profile_finish','PADRAO'));
+        'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_color','Branco'));
     RAISE EXCEPTION 'EXPECTED_MISSING_PRICE';
   EXCEPTION WHEN check_violation THEN
     IF sqlerrm NOT LIKE '%MISSING_PRICE%' THEN RAISE; END IF;
@@ -352,6 +518,93 @@ DO $$ DECLARE r jsonb; BEGIN
   PERFORM pg_temp.ok((r#>>'{totals,labor_percent}')::numeric=0 AND (r#>>'{totals,labor_amount}')::numeric=0,'C15','Line price never receives composition labor');
 END $$;
 
+-- Snapshot follow-up checks run on the same transaction-only tenant/product.
+DO $$
+DECLARE v_quote uuid; v_item uuid; v_expected jsonb; v_supplied jsonb; v_applied numeric;
+BEGIN
+  INSERT INTO public.quotes(company_id,customer_name,status,total_amount,final_amount)
+  VALUES((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+    'PRICING PHASE SNAPSHOTS '||gen_random_uuid(),'pending',1,1)
+  RETURNING id INTO v_quote;
+
+  v_expected:=public.resolve_company_final_product_pricing(
+    (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+    (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
+    jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR',
+      'glass_thickness_mm',8,'glass_finish','PADRAO',
+      'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
+      'profile_color','Branco'));
+  v_applied:=(v_expected#>>'{totals,sale_price}')::numeric+123;
+  v_supplied:=v_expected || jsonb_build_object(
+    'variants',jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR',
+      'glass_thickness_mm',8,'glass_finish','PADRAO',
+      'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
+      'profile_color','Branco','profile_finish','PADRAO'),
+    'pricing_method','LINE_BAND','pricing_method_label','Faixa por linha',
+    'applied_product_price',v_applied,
+    'totals',(v_expected->'totals') || jsonb_build_object(
+      'suggested_price',(v_expected#>'{totals,sale_price}'),
+      'applied_product_price',v_applied,'quote_unit_price',v_applied,'quote_total',v_applied));
+  INSERT INTO public.quote_items(
+    quote_id,description,company_product_id,width,height,quantity,
+    unit_price,total_price,composition_snapshot)
+  VALUES(v_quote,'Snapshot LINE_BAND',(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),
+    1000,1000,1,v_applied,v_applied,v_supplied)
+  RETURNING id INTO v_item;
+  PERFORM pg_temp.ok((SELECT composition_snapshot->>'commercial_pricing_method'='LINE_PRICE_PER_M2'
+      AND (composition_snapshot#>>'{totals,applied_product_price}')::numeric=v_applied
+    FROM public.quote_items WHERE id=v_item),'S01','LINE_BAND snapshot preserves server suggestion and quote-applied price');
+
+  PERFORM public.save_company_product_pricing_method(
+    (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+    (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),'COMPOSITION',NULL);
+  v_expected:=public.resolve_company_final_product_pricing(
+    (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+    (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
+    jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR',
+      'glass_thickness_mm',8,'glass_finish','PADRAO',
+      'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
+      'profile_color','Branco'));
+  v_applied:=(v_expected#>>'{totals,sale_price}')::numeric+77;
+  v_supplied:=v_expected || jsonb_build_object(
+    'pricing_method','COMPOSITION','pricing_method_label','Composição',
+    'applied_product_price',v_applied,
+    'totals',(v_expected->'totals') || jsonb_build_object(
+      'suggested_price',(v_expected#>'{totals,sale_price}'),
+      'applied_product_price',v_applied,'quote_unit_price',v_applied,'quote_total',v_applied));
+  INSERT INTO public.quote_items(
+    quote_id,description,company_product_id,width,height,quantity,
+    unit_price,total_price,composition_snapshot)
+  VALUES(v_quote,'Snapshot COMPOSITION',(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),
+    1000,1000,1,v_applied,v_applied,v_supplied)
+  RETURNING id INTO v_item;
+  PERFORM pg_temp.ok((SELECT composition_snapshot->>'commercial_pricing_method'='COMPOSITION'
+      AND (composition_snapshot#>>'{totals,labor_amount}')::numeric>0
+      AND (composition_snapshot#>>'{totals,applied_product_price}')::numeric=v_applied
+    FROM public.quote_items WHERE id=v_item),'S02','COMPOSITION snapshot freezes labor and quote-applied price');
+
+  v_applied:=777;
+  v_supplied:=jsonb_build_object(
+    'pricing_method','MANUAL','pricing_method_label','Preço manual',
+    'pricing_unavailable_reason','MISSING_PRICE_VARIANT',
+    'applied_product_price',v_applied,'applied_price',v_applied,
+    'totals',jsonb_build_object('applied_product_price',v_applied,
+      'quote_unit_price',v_applied,'quote_total',v_applied));
+  INSERT INTO public.quote_items(
+    quote_id,description,company_product_id,width,height,quantity,
+    unit_price,total_price,composition_snapshot)
+  VALUES(v_quote,'Snapshot fixed manual',(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),
+    1000,1000,1,v_applied,v_applied,v_supplied)
+  RETURNING id INTO v_item;
+  PERFORM pg_temp.ok((SELECT composition_snapshot->>'composition_mode'='fixed'
+      AND (composition_snapshot->>'applied_price')::numeric=v_applied
+      AND (composition_snapshot#>>'{totals,applied_product_price}')::numeric=v_applied
+      AND (composition_snapshot#>>'{totals,missing_price_items}')::integer>0
+      AND EXISTS(SELECT 1 FROM jsonb_array_elements(composition_snapshot->'warnings') warning
+        WHERE warning->>'code'='MISSING_PRICE')
+    FROM public.quote_items WHERE id=v_item),'S03','P09/P10 fixed snapshot keeps manual price and explicit missing-price warnings');
+END $$;
+
 SELECT set_config('request.jwt.claims',jsonb_build_object('sub',(SELECT v FROM pricing_phase_ctx WHERE k='user_b'),'role','authenticated')::text,true);
 SELECT public.save_company_product_pricing_method((SELECT v FROM pricing_phase_ctx WHERE k='company_b'),
   (SELECT v FROM pricing_phase_ctx WHERE k='product_b'),'LINE_PRICE_PER_M2',(SELECT v FROM pricing_phase_ctx WHERE k='line'));
@@ -363,6 +616,7 @@ DO $$ DECLARE r jsonb; BEGIN
   IF (r#>>'{totals,sale_price}')::numeric<>1600 THEN RAISE EXCEPTION 'TENANT_B_WRONG_PRICE'; END IF;
 END $$;
 
-SELECT pg_temp.ok((SELECT count(*) FROM pricing_phase_results)=31,'SUITE','T01-T15 and C01-C16 completed');
+SELECT pg_temp.ok((SELECT count(*) FROM pricing_phase_results WHERE test ~ '^[TC]')=31,
+  'SUITE','T01-T15 and C01-C16 completed; snapshot checks are reported separately');
 SELECT * FROM pricing_phase_results ORDER BY test;
 ROLLBACK;

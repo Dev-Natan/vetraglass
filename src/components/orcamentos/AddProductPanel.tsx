@@ -34,6 +34,7 @@ import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProdu
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
+import { describeQuotePricingError, parseAppliedQuotePrice, syncAppliedQuotePrice } from '@/utils/quotePricing';
 import type { Json } from '@/integrations/supabase/types';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -63,19 +64,6 @@ interface ProfileColorOption {
   color_name: string;
   hex_color: string | null;
   sort_order: number;
-}
-
-function describePricingError(error: unknown): string {
-  if (!error || typeof error !== 'object') return 'Não foi possível calcular o preço.';
-  const candidate = error as { message?: string; details?: string };
-  const code = candidate.message ?? '';
-  const detail = candidate.details ? `: ${candidate.details}` : '';
-  if (code.includes('MISSING_PRICE_VARIANT')) return `Preço da especificação não configurado${detail}`;
-  if (code.includes('PRICE_NOT_CONFIGURED')) return `Preço ainda não configurado para esta combinação${detail}`;
-  if (code.includes('MISSING_COST')) return `Custo não configurado${detail}`;
-  if (code.includes('MISSING_PRICE')) return `Preço de venda não configurado${detail}`;
-  if (code.includes('MISSING_VARIANT')) return `Variação comercial não configurada${detail}`;
-  return `${code || 'Não foi possível calcular o preço'}${detail}`;
 }
 
 interface ProductTemplateRef {
@@ -198,6 +186,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
+  const [appliedPriceInput, setAppliedPriceInput] = useState('');
+  const [appliedPriceEdited, setAppliedPriceEdited] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [components, setComponents] = useState<Array<{
     description: string;
@@ -520,10 +510,12 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       if (error) throw error;
       return (data ?? []).filter((row) => row.pricing_basis !== 'AREA' || (
         row.variant_definition_id !== null
-        && row.cost !== null
-        && Number(row.cost) > 0
-        && row.sale_price !== null
-        && Number(row.sale_price) >= Number(row.cost)
+        && ((usesLinePricing && row.variant_type === 'GLASS') || (
+          row.cost !== null
+          && Number(row.cost) > 0
+          && row.sale_price !== null
+          && Number(row.sale_price) >= Number(row.cost)
+        ))
       ));
     },
     enabled: !!currentCompany?.id && pricingVariantItemIds.length > 0,
@@ -644,14 +636,22 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     retry: false,
   });
   const canonicalSnapshot = canonicalPricing.data;
+  const suggestedPrice = canonicalSnapshot ? Number(canonicalSnapshot.totals.sale_price) : null;
+  const pricingIssue = canonicalPricing.error ? describeQuotePricingError(canonicalPricing.error) : null;
+
+  useEffect(() => {
+    if (mode !== 'quote' || appliedPriceEdited) return;
+    setAppliedPriceInput((current) => syncAppliedQuotePrice(current, appliedPriceEdited, suggestedPrice));
+  }, [appliedPriceEdited, mode, suggestedPrice]);
 
   // Get optional items for toggle UI
   const optionalItems: Array<{ id: string; name: string }> = [];
   const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const computedTotalPrice = Number(canonicalSnapshot?.totals.sale_price ?? 0) + componentsTotal;
-  const totalPrice = computedTotalPrice;
-  const unitPrice = quantity > 0 ? Number(canonicalSnapshot?.totals.sale_price ?? 0) / quantity : 0;
+  const appliedProductPrice = parseAppliedQuotePrice(appliedPriceInput);
+  const hasValidAppliedPrice = appliedProductPrice !== null;
+  const totalPrice = (appliedProductPrice ?? 0) + componentsTotal;
+  const unitPrice = quantity > 0 && appliedProductPrice !== null ? appliedProductPrice / quantity : 0;
   const effectiveUnitPrice = quantity > 0
     ? (totalPrice - componentsTotal) / quantity
     : unitPrice;
@@ -667,6 +667,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     setSelectedGlassColor('');
     setSelectedAluminumColor('');
     setSelectedProfileFinish('');
+    setAppliedPriceInput('');
+    setAppliedPriceEdited(false);
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -677,7 +679,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const getProductImage = resolveProductImageUrl;
 
   const handleAdd = () => {
-    if (!selectedProduct || !canonicalSnapshot || (isParametric && !parametricResult)) return;
+    if (!selectedProduct || !hasValidAppliedPrice || (isParametric && !parametricResult)) return;
 
     // For aluminum-priced products, the color name comes from the price option
     // For other products, it comes from the simple selector
@@ -724,12 +726,55 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       composition_mode: isParametric ? 'parametric' : 'fixed',
       fulfillment_mode: selectedProduct.fulfillment_mode || 'PRODUCTION',
       composition_snapshot: ({
-        ...canonicalSnapshot,
-        pricing_source: canonicalSnapshot.pricing_source ?? 'TENANT_COMPONENT_SALE_PRICES',
+        ...(canonicalSnapshot ?? parametricResult ?? {
+          pricing_mode: companyProduct?.commercial_pricing_method ?? 'COMPOSITION',
+          commercial_pricing_method: companyProduct?.commercial_pricing_method ?? 'COMPOSITION',
+          pricing_source: 'MANUAL_QUOTE_PRICE',
+          engine_version: 2,
+          snapshot_version: 2,
+          inputs: {
+            width_mm: width,
+            height_mm: height,
+            quantity,
+            variants: canonicalVariantPayload,
+          },
+          variants: canonicalVariantPayload,
+          materials: [],
+          glass_pieces: [],
+          cuts: [],
+          rules: [],
+          rule_versions: [],
+          items: [],
+          warnings: [],
+          totals: {
+            area_m2: area * quantity,
+            cost: null,
+            sale_price: null,
+            profit: null,
+            margin_percent: null,
+            composition_sale_price: null,
+            fixed_price_per_sqm: null,
+          },
+        }),
+        pricing_source: canonicalSnapshot?.pricing_source ?? 'MANUAL_QUOTE_PRICE',
+        pricing_method: companyProduct?.commercial_pricing_method ?? 'COMPOSITION',
+        pricing_method_label: usesLinePricing ? 'Preço por linha / m²' : 'Preço por composição',
+        product_line: {
+          id: companyProduct?.product_line_id ?? null,
+          name: selectedProduct.linha ?? null,
+        },
+        specification: canonicalVariantPayload,
+        dimensions: { width_mm: width, height_mm: height, quantity, area_m2: area * quantity },
+        suggested_price: suggestedPrice,
+        applied_product_price: appliedProductPrice,
         applied_price: totalPrice,
+        pricing_unavailable_reason: pricingIssue?.code ?? null,
         technical_snapshot: parametricResult ?? null,
         totals: {
-          ...canonicalSnapshot.totals,
+          ...(canonicalSnapshot?.totals ?? {}),
+          suggested_price: suggestedPrice,
+          applied_product_price: appliedProductPrice,
+          additional_components_total: componentsTotal,
           quote_unit_price: effectiveUnitPrice,
           quote_total: totalPrice,
         },
@@ -753,8 +798,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   };
 
   const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0
-    && canonicalVariantReady && !canonicalPricing.isLoading && Boolean(canonicalSnapshot)
-    && totalPrice > 0 && (!isParametric || Boolean(parametricResult));
+    && canonicalVariantReady && !canonicalPricing.isLoading
+    && hasValidAppliedPrice && (!isParametric || Boolean(parametricResult));
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -1264,22 +1309,75 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             </div>
             )}
 
-            {/* Canonical price is resolved automatically; no manual quote price. */}
+            {/* O motor recomenda; o preço aplicado pertence somente a este orçamento. */}
             {mode !== 'cutting' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  Preço resolvido automaticamente
-                </label>
-                <Input
-                  value={canonicalSnapshot ? formatCurrency(canonicalSnapshot.totals.sale_price) : ''}
-                  placeholder={canonicalPricing.isLoading ? 'Calculando...' : 'Configure os preços em Meus Preços'}
-                  readOnly
-                  className="bg-muted h-10 font-mono"
-                />
-                {canonicalPricing.error && <p className="text-xs text-destructive">{describePricingError(canonicalPricing.error)}</p>}
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Precificação</p>
+                    <p className="text-sm font-medium">
+                      {usesLinePricing ? 'Preço por linha / m²' : 'Preço por composição'}
+                    </p>
+                  </div>
+                  {selectedProduct?.linha ? (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Linha</p>
+                      <p className="text-sm font-medium">{selectedProduct.linha}</p>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">Preço sugerido pelo Vetra</label>
+                    <Input
+                      value={suggestedPrice == null ? '' : formatCurrency(suggestedPrice)}
+                      placeholder={canonicalPricing.isLoading ? 'Calculando...' : 'Não disponível'}
+                      readOnly
+                      className="bg-muted h-10 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="quote-applied-price" className="text-xs font-medium text-foreground">Preço aplicado</label>
+                    <Input
+                      id="quote-applied-price"
+                      inputMode="decimal"
+                      value={appliedPriceInput}
+                      onChange={(event) => {
+                        setAppliedPriceInput(event.target.value);
+                        setAppliedPriceEdited(true);
+                      }}
+                      placeholder="0,00"
+                      className="h-10 font-mono"
+                    />
+                    {appliedPriceEdited && suggestedPrice != null ? (
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => {
+                          setAppliedPriceInput(suggestedPrice.toFixed(2));
+                          setAppliedPriceEdited(false);
+                        }}
+                      >
+                        Usar preço sugerido
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                {pricingIssue ? (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                    <p className="flex gap-2">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{pricingIssue.message} Você pode informar o preço deste produto manualmente.</span>
+                    </p>
+                    {pricingIssue.detail ? <p className="mt-1 pl-5 font-medium">{pricingIssue.detail}</p> : null}
+                  </div>
+                ) : null}
+                {!hasValidAppliedPrice && appliedPriceInput ? (
+                  <p className="text-xs text-destructive">Informe um preço aplicado maior que zero.</p>
+                ) : null}
                 {canonicalSnapshot && <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs sm:grid-cols-4">
                   <div><span className="text-muted-foreground">Custo</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
-                  <div><span className="text-muted-foreground">Venda</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
+                  <div><span className="text-muted-foreground">Sugestão</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
                   <div><span className="text-muted-foreground">Lucro</span><strong className="block">{formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
                   <div><span className="text-muted-foreground">Margem</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
                 </div>}
@@ -1541,10 +1639,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   <span>{area.toFixed(2)} m²</span>
                   <span className="opacity-70">×</span>
                   <span>{quantity} un</span>
-                  {canonicalSnapshot && (
+                  {suggestedPrice != null && (
                     <Badge variant="outline" className="ml-2 text-[10px] bg-white/15 border-white/30 text-primary-foreground">
                       <Sparkles className="w-3 h-3 mr-1" />
-                      Composição
+                      {usesLinePricing ? 'Linha / m²' : 'Composição'}
                     </Badge>
                   )}
                 </div>

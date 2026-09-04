@@ -48,6 +48,13 @@ type PriceBand = {
   glass_labels: string[];
   profile_color_labels: string[];
 };
+type MaterialFamily = { id: string; code: string; name: string };
+type MaterialCombination = {
+  definition_id: string;
+  attributes: Record<string, unknown>;
+  company_active: boolean;
+  status: string;
+};
 
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -322,8 +329,36 @@ function LinePricingDetail({ companyId, line, mayEdit, onBack }: {
       return data as unknown as LineOptions;
     },
   });
-  if (bands.isLoading || options.isLoading) return <Loading />;
-  if (bands.error || options.error) return <ErrorCard error={bands.error ?? options.error} />;
+  const materialFamilies = useQuery({
+    queryKey: ['material-families-activation', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_company_material_families_activation', {
+        _company_id: companyId,
+      });
+      if (error) throw error;
+      return (data ?? []) as MaterialFamily[];
+    },
+  });
+  const glassFamily = materialFamilies.data?.find((family) => family.code === 'GLASS') ?? null;
+  const glassCatalog = useQuery({
+    queryKey: ['material-family-combinations', companyId, glassFamily?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_company_material_family_combinations', {
+        _company_id: companyId,
+        _family_id: glassFamily!.id,
+      });
+      if (error) throw error;
+      return (data ?? []).map((row) => ({
+        ...row,
+        attributes: (row.attributes ?? {}) as Record<string, unknown>,
+      })) as MaterialCombination[];
+    },
+    enabled: !!glassFamily?.id,
+  });
+  if (bands.isLoading || options.isLoading || materialFamilies.isLoading || (glassFamily && glassCatalog.isLoading)) return <Loading />;
+  if (bands.error || options.error || materialFamilies.error || glassCatalog.error) {
+    return <ErrorCard error={bands.error ?? options.error ?? materialFamilies.error ?? glassCatalog.error} />;
+  }
   return (
     <div className="space-y-5">
       <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />Produtos finais</Button>
@@ -366,17 +401,19 @@ function LinePricingDetail({ companyId, line, mayEdit, onBack }: {
         line={line}
         band={editing}
         options={options.data ?? { glass_variants: [], profile_colors: [], profile_finishes: ['PADRAO'] }}
+        glassCatalog={glassCatalog.data ?? []}
         onClose={() => setEditing(null)}
       />
     </div>
   );
 }
 
-function BandDialog({ companyId, line, band, options, onClose }: {
+function BandDialog({ companyId, line, band, options, glassCatalog, onClose }: {
   companyId: string;
   line: LineSummary;
   band: PriceBand | 'NEW' | null;
   options: LineOptions;
+  glassCatalog: MaterialCombination[];
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -386,6 +423,10 @@ function BandDialog({ companyId, line, band, options, onClose }: {
   const [glassIds, setGlassIds] = useState<string[]>([]);
   const [colorIds, setColorIds] = useState<string[]>([]);
   const [finishes, setFinishes] = useState<string[]>(['PADRAO']);
+  const [showGlassCatalog, setShowGlassCatalog] = useState(false);
+  const [glassType, setGlassType] = useState('');
+  const [glassColor, setGlassColor] = useState('');
+  const [glassThickness, setGlassThickness] = useState('');
   useEffect(() => {
     if (!band) return;
     setDescription(existing?.description ?? '');
@@ -393,6 +434,10 @@ function BandDialog({ companyId, line, band, options, onClose }: {
     setGlassIds(existing?.glass_variant_definition_ids ?? []);
     setColorIds(existing?.company_color_ids ?? []);
     setFinishes(existing?.profile_finishes ?? ['PADRAO']);
+    setShowGlassCatalog(false);
+    setGlassType('');
+    setGlassColor('');
+    setGlassThickness('');
   }, [band, existing]);
   const numericPrice = Number(price.replace(',', '.'));
   const save = useMutation({
@@ -422,6 +467,52 @@ function BandDialog({ companyId, line, band, options, onClose }: {
   const toggle = (values: string[], value: string, checked: boolean) => checked
     ? Array.from(new Set([...values, value]))
     : values.filter((item) => item !== value);
+  const catalogValue = (combination: MaterialCombination, key: string) => String(combination.attributes[key] ?? '');
+  const catalogTypes = Array.from(new Set(glassCatalog.map((combination) => catalogValue(combination, 'type')).filter(Boolean))).sort();
+  const catalogColors = Array.from(new Set(glassCatalog
+    .filter((combination) => !glassType || catalogValue(combination, 'type') === glassType)
+    .map((combination) => catalogValue(combination, 'color')).filter(Boolean))).sort();
+  const catalogThicknesses = Array.from(new Set(glassCatalog
+    .filter((combination) => (!glassType || catalogValue(combination, 'type') === glassType)
+      && (!glassColor || catalogValue(combination, 'color') === glassColor))
+    .map((combination) => catalogValue(combination, 'thickness_mm')).filter(Boolean)))
+    .sort((left, right) => Number(left) - Number(right));
+  const selectedCatalogCombination = glassCatalog.find((combination) => (
+    catalogValue(combination, 'type') === glassType
+    && catalogValue(combination, 'color') === glassColor
+    && catalogValue(combination, 'thickness_mm') === glassThickness
+    && catalogValue(combination, 'finish') === 'PADRAO'
+  ));
+  const activateGlass = useMutation({
+    mutationFn: async () => {
+      if (!selectedCatalogCombination) throw new Error('Selecione uma combinação válida do catálogo.');
+      if (selectedCatalogCombination.company_active) {
+        return { definitionId: selectedCatalogCombination.definition_id, activated: false };
+      }
+      const { error } = await supabase.rpc('set_company_material_combination_active', {
+        _company_id: companyId,
+        _definition_id: selectedCatalogCombination.definition_id,
+        _active: true,
+      });
+      if (error) throw error;
+      return { definitionId: selectedCatalogCombination.definition_id, activated: true };
+    },
+    onSuccess: async ({ definitionId, activated }) => {
+      setGlassIds((current) => Array.from(new Set([...current, definitionId])));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['line-pricing-options', companyId, line.id] }),
+        queryClient.invalidateQueries({ queryKey: ['material-family-combinations', companyId] }),
+      ]);
+      setShowGlassCatalog(false);
+      setGlassType('');
+      setGlassColor('');
+      setGlassThickness('');
+      toast.success(activated
+        ? 'Combinação ativada para esta empresa e selecionada na faixa.'
+        : 'Combinação selecionada na faixa.');
+    },
+    onError: (error) => toast.error(operationalErrorMessage(error, 'Não foi possível ativar a combinação.')),
+  });
   return (
     <Dialog open={band != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -434,16 +525,61 @@ function BandDialog({ companyId, line, band, options, onClose }: {
             <Field label="Descrição"><Input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ex.: Padrão Incolor" /></Field>
             <Field label="Preço por m²"><Input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="1300,00" /></Field>
           </div>
-          <OptionGroup title="Vidros habilitados">
-            {options.glass_variants.map((option) => (
-              <CheckOption
-                key={option.id}
-                checked={glassIds.includes(option.id)}
-                label={`${option.type} · ${option.color} · ${option.thickness_mm} mm${option.finish !== 'PADRAO' ? ` · ${option.finish}` : ''}`}
-                onChecked={(checked) => setGlassIds((current) => toggle(current, option.id, checked))}
-              />
-            ))}
-          </OptionGroup>
+          <fieldset className="space-y-3">
+            <legend className="sr-only">Vidros habilitados</legend>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">Vidros habilitados</span>
+              <Button type="button" size="sm" variant="outline" onClick={() => setShowGlassCatalog((current) => !current)}>
+                <Plus className="mr-2 h-4 w-4" />Adicionar combinação
+              </Button>
+            </div>
+            {showGlassCatalog ? (
+              <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Ative uma combinação do catálogo técnico para esta empresa. Preços de materiais não são copiados.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Tipo de vidro">
+                    <Select value={glassType} onValueChange={(value) => { setGlassType(value); setGlassColor(''); setGlassThickness(''); }}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{catalogTypes.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Cor do vidro">
+                    <Select value={glassColor} disabled={!glassType} onValueChange={(value) => { setGlassColor(value); setGlassThickness(''); }}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{catalogColors.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Espessura">
+                    <Select value={glassThickness} disabled={!glassColor} onValueChange={setGlassThickness}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{catalogThicknesses.map((value) => <SelectItem key={value} value={value}>{value} mm</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!selectedCatalogCombination || activateGlass.isPending}
+                  onClick={() => activateGlass.mutate()}
+                >
+                  {activateGlass.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Ativar e selecionar
+                </Button>
+              </div>
+            ) : null}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {options.glass_variants.map((option) => (
+                <CheckOption
+                  key={option.id}
+                  checked={glassIds.includes(option.id)}
+                  label={`${option.type} · ${option.color} · ${option.thickness_mm} mm${option.finish !== 'PADRAO' ? ` · ${option.finish}` : ''}`}
+                  onChecked={(checked) => setGlassIds((current) => toggle(current, option.id, checked))}
+                />
+              ))}
+            </div>
+          </fieldset>
           <OptionGroup title="Cores do perfil">
             {options.profile_colors.map((option) => (
               <CheckOption
