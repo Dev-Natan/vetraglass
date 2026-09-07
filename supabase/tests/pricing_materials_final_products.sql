@@ -335,18 +335,14 @@ SELECT pg_temp.ok((SELECT count(*) FROM public.company_product_price_lines WHERE
 
 SELECT public.save_company_product_pricing_method((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
   (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),'LINE_PRICE_PER_M2',(SELECT v FROM pricing_phase_ctx WHERE k='line'));
-DO $$ BEGIN
-  BEGIN
-    PERFORM public.resolve_company_final_product_pricing(
-      (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
-      jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
-        'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_natural'),'profile_finish','PADRAO'));
-    RAISE EXCEPTION 'EXPECTED_PRICE_NOT_CONFIGURED';
-  EXCEPTION WHEN check_violation THEN
-    IF sqlerrm NOT LIKE '%PRICE_NOT_CONFIGURED%' THEN RAISE; END IF;
-  END;
+DO $$ DECLARE r jsonb; BEGIN
+  r:=public.resolve_company_final_product_pricing(
+    (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
+    jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
+      'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_natural'),'profile_finish','PADRAO'));
+  PERFORM pg_temp.ok(r->>'commercial_pricing_method'='COMPOSITION'
+    AND r->>'pricing_source'='COMPOSITION','T08','LINE_BAND config cannot replace composition authority');
 END $$;
-SELECT pg_temp.ok(true,'T08','Missing combination returns PRICE_NOT_CONFIGURED');
 
 SELECT public.save_company_line_price_band(
   (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),(SELECT v FROM pricing_phase_ctx WHERE k='line'),
@@ -404,9 +400,6 @@ SELECT (SELECT v FROM pricing_phase_ctx WHERE k='private_a'),item_template_id,qu
   is_optional,notes,sort_order,company_item_id,cut_angle,pieces_quantity,loss_percent,section,side,calculation_type,
   applies_to,pieces_formula,cut_angle_start,cut_angle_end,company_id
 FROM public.company_product_items WHERE company_product_id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a');
-SELECT public.save_company_product_pricing_method((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
-  (SELECT v FROM pricing_phase_ctx WHERE k='private_a'),'LINE_PRICE_PER_M2',(SELECT v FROM pricing_phase_ctx WHERE k='line'));
-
 DO $$
 DECLARE r jsonb; variants jsonb;
 BEGIN
@@ -414,11 +407,12 @@ BEGIN
     'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_finish','PADRAO');
   r:=public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
     (SELECT v FROM pricing_phase_ctx WHERE k='private_a'),1500,1200,1,variants);
-  PERFORM pg_temp.ok((r#>>'{totals,sale_price}')::numeric=2430,'T13','Private product uses canonical line engine');
+  PERFORM pg_temp.ok(r->>'commercial_pricing_method'='COMPOSITION','T13','Private product uses composition engine');
   r:=public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
     (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1500,1200,1,variants);
-  PERFORM pg_temp.ok(r->>'commercial_pricing_method'='LINE_PRICE_PER_M2','T14','Global-materialized product uses canonical line engine');
-  PERFORM pg_temp.ok((r#>>'{totals,area_m2}')::numeric=1.8 AND (r#>>'{totals,sale_price}')::numeric=2430,'T15','Area times tenant band price');
+  PERFORM pg_temp.ok(r->>'commercial_pricing_method'='COMPOSITION','T14','Global-materialized product uses composition engine');
+  PERFORM pg_temp.ok((r#>>'{totals,area_m2}')::numeric=1.8
+    AND coalesce((r#>>'{totals,sale_price}')::numeric,-1)<>2430,'T15','Historical band does not set new suggestion');
 END $$;
 
 -- Composition fixtures use the same canonical resolver invoked by quote
@@ -488,25 +482,28 @@ BEGIN
   PERFORM pg_temp.ok((green#>>'{totals,sale_price}')::numeric<>total,'C11',
     'Changing glass color recalculates');
   PERFORM pg_temp.ok((SELECT composition_labor_percent FROM public.companies WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b'))=0,'C12','Labor never crosses tenants');
-  PERFORM pg_temp.ok(result->>'pricing_source'='TENANT_COMPONENT_SALE_PRICES','C14','No second markup source');
+  PERFORM pg_temp.ok(result->>'pricing_source'='COMPOSITION','C14','Composition is the canonical pricing source');
   PERFORM pg_temp.ok((result#>>'{totals,labor_amount}')::numeric=round(subtotal*0.30,2),'C16','Composition labor applied once');
 END $$;
 
-DO $$ DECLARE old_sale numeric; BEGIN
+DO $$ DECLARE old_sale numeric; r jsonb; BEGIN
   SELECT sale_price INTO old_sale FROM public.company_items WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='accessory_a');
   UPDATE public.company_items SET sale_price=NULL WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='accessory_a');
-  BEGIN
-    PERFORM public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
-      (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
-      jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
-        'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_color','Branco'));
-    RAISE EXCEPTION 'EXPECTED_MISSING_PRICE';
-  EXCEPTION WHEN check_violation THEN
-    IF sqlerrm NOT LIKE '%MISSING_PRICE%' THEN RAISE; END IF;
-  END;
+  r:=public.resolve_company_final_product_pricing((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
+    (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
+    jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
+      'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_color','Branco'));
+  IF r->>'suggestion_status'<>'PARTIAL'
+     OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(r->'materials') material
+       WHERE material->>'item_name'='PRICING TEST ACCESSORY'
+         AND material->>'unit_sale_price' IS NULL)
+     OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(r->'warnings') warning
+       WHERE warning->>'code'='MISSING_PRICE') THEN
+    RAISE EXCEPTION 'PARTIAL_PRICE_CONTRACT_FAILED %',r;
+  END IF;
   UPDATE public.company_items SET sale_price=old_sale WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='accessory_a');
 END $$;
-SELECT pg_temp.ok(true,'C13','Missing component price never invents a value');
+SELECT pg_temp.ok(true,'C13','Missing component price remains null and yields PARTIAL');
 
 SELECT public.save_company_product_pricing_method((SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
   (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),'LINE_PRICE_PER_M2',(SELECT v FROM pricing_phase_ctx WHERE k='line'));
@@ -515,7 +512,8 @@ DO $$ DECLARE r jsonb; BEGIN
     (SELECT v FROM pricing_phase_ctx WHERE k='product_a'),1000,1000,1,
     jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
       'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),'profile_finish','PADRAO'));
-  PERFORM pg_temp.ok((r#>>'{totals,labor_percent}')::numeric=0 AND (r#>>'{totals,labor_amount}')::numeric=0,'C15','Line price never receives composition labor');
+  PERFORM pg_temp.ok(r->>'commercial_pricing_method'='COMPOSITION'
+    AND (r#>>'{totals,labor_percent}')::numeric=30,'C15','LINE_BAND config cannot bypass composition labor');
 END $$;
 
 -- Snapshot follow-up checks run on the same transaction-only tenant/product.
@@ -533,14 +531,14 @@ BEGIN
     jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR',
       'glass_thickness_mm',8,'glass_finish','PADRAO',
       'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
-      'profile_color','Branco'));
+      'profile_color','Branco','profile_finish','PADRAO'));
   v_applied:=(v_expected#>>'{totals,sale_price}')::numeric+123;
   v_supplied:=v_expected || jsonb_build_object(
     'variants',jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR',
       'glass_thickness_mm',8,'glass_finish','PADRAO',
       'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_white'),
       'profile_color','Branco','profile_finish','PADRAO'),
-    'pricing_method','LINE_BAND','pricing_method_label','Faixa por linha',
+    'pricing_method','COMPOSITION','pricing_method_label','Composição',
     'applied_product_price',v_applied,
     'totals',(v_expected->'totals') || jsonb_build_object(
       'suggested_price',(v_expected#>'{totals,sale_price}'),
@@ -548,12 +546,12 @@ BEGIN
   INSERT INTO public.quote_items(
     quote_id,description,company_product_id,width,height,quantity,
     unit_price,total_price,composition_snapshot)
-  VALUES(v_quote,'Snapshot LINE_BAND',(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),
+  VALUES(v_quote,'Snapshot COMPOSITION despite historical band',(SELECT v FROM pricing_phase_ctx WHERE k='product_a'),
     1000,1000,1,v_applied,v_applied,v_supplied)
   RETURNING id INTO v_item;
-  PERFORM pg_temp.ok((SELECT composition_snapshot->>'commercial_pricing_method'='LINE_PRICE_PER_M2'
+  PERFORM pg_temp.ok((SELECT composition_snapshot->>'commercial_pricing_method'='COMPOSITION'
       AND (composition_snapshot#>>'{totals,applied_product_price}')::numeric=v_applied
-    FROM public.quote_items WHERE id=v_item),'S01','LINE_BAND snapshot preserves server suggestion and quote-applied price');
+    FROM public.quote_items WHERE id=v_item),'S01','Snapshot freezes composition despite historical LINE_BAND config');
 
   PERFORM public.save_company_product_pricing_method(
     (SELECT v FROM pricing_phase_ctx WHERE k='company_a'),
@@ -613,7 +611,10 @@ DO $$ DECLARE r jsonb; BEGIN
     (SELECT v FROM pricing_phase_ctx WHERE k='product_b'),1000,1000,1,
     jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',8,'glass_finish','PADRAO',
       'profile_company_color_id',(SELECT v FROM pricing_phase_ctx WHERE k='color_b_white'),'profile_finish','PADRAO'));
-  IF (r#>>'{totals,sale_price}')::numeric<>1600 THEN RAISE EXCEPTION 'TENANT_B_WRONG_PRICE'; END IF;
+  IF (r#>>'{totals,sale_price}')::numeric<>20
+     OR r->>'commercial_pricing_method'<>'COMPOSITION' THEN
+    RAISE EXCEPTION 'TENANT_B_WRONG_COMPOSITION_PRICE %',r;
+  END IF;
 END $$;
 
 SELECT pg_temp.ok((SELECT count(*) FROM pricing_phase_results WHERE test ~ '^[TC]')=31,

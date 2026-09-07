@@ -4,6 +4,26 @@ export interface PricingIssue {
   detail?: string;
 }
 
+export type SuggestionStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+
+export function readCompositionSuggestion(snapshot?: {
+  suggestion_status?: SuggestionStatus;
+  totals: { sale_price: number | null };
+}) {
+  const value = snapshot?.totals.sale_price;
+  const price = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+  const status: SuggestionStatus = price === null ? 'UNAVAILABLE' : snapshot?.suggestion_status ?? 'UNAVAILABLE';
+  return {
+    price: status === 'UNAVAILABLE' ? null : price,
+    status,
+    message: status === 'COMPLETE'
+      ? 'Preço sugerido calculado.'
+      : status === 'PARTIAL'
+        ? 'Preço sugerido parcialmente calculado. Existem componentes sem preço ou composição incompleta.'
+        : 'Preço sugerido não disponível. Informe o preço aplicado para continuar.',
+  };
+}
+
 function humanizeAttributeValue(value: string): string {
   return value
     .replace(/_/g, ' ')

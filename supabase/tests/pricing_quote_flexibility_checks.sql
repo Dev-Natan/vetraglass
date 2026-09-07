@@ -138,7 +138,13 @@ SELECT pg_temp.pricing_flex_ok((public.resolve_company_final_product_pricing(
   (SELECT v FROM pricing_flex_ctx WHERE k='product_test'),1000,1000,1,
   jsonb_build_object('glass_type','TEMPERADO','glass_color','INCOLOR','glass_thickness_mm',10,
     'glass_finish','PADRAO','profile_company_color_id',(SELECT v FROM pricing_flex_ctx WHERE k='profile_color_a'),
-    'profile_finish','PADRAO'))#>>'{totals,sale_price}')::numeric=1500,'V04');
+    'profile_finish','PADRAO'))#>>'{totals,sale_price}')::numeric=20
+  AND (public.resolve_company_final_product_pricing(
+    (SELECT v FROM pricing_flex_ctx WHERE k='company_a'),
+    (SELECT v FROM pricing_flex_ctx WHERE k='product_test'),1000,1000,1,'{}')::jsonb
+      ->>'commercial_pricing_method')='COMPOSITION'
+  AND EXISTS(SELECT 1 FROM public.company_product_price_lines
+    WHERE id=(SELECT v FROM pricing_flex_ctx WHERE k='band_a') AND price=1500),'V04');
 
 DO $$ BEGIN
   BEGIN
