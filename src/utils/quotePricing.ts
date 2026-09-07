@@ -76,20 +76,6 @@ export function commercialUnitLabel(unit: CommercialUnit | null): string {
   return '';
 }
 
-const COMMERCIAL_WARNING_CODES = new Set([
-  'MISSING_COMPANY_ITEM',
-  'MISSING_COMPOSITION',
-  'INCOMPLETE_COMPOSITION',
-  'MISSING_PRICE_VARIANT',
-  'MISSING_VARIANT',
-  'MISSING_COST',
-  'MISSING_PRICE',
-]);
-
-export function isCommercialPricingWarning(code: string): boolean {
-  return COMMERCIAL_WARNING_CODES.has(code);
-}
-
 function humanizeAttributeValue(value: string): string {
   return value
     .replace(/_/g, ' ')

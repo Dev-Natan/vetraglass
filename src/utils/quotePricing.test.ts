@@ -9,7 +9,6 @@ import {
   getCompositionSuggestionNotice,
   calculateQuoteProductPrice,
   commercialUnitLabel,
-  isCommercialPricingWarning,
 } from './quotePricing.ts';
 
 test('P02: preço aplicado inicialmente acompanha a sugestão', () => {
@@ -123,11 +122,25 @@ test('PUNIT07/PUNIT08: UNIT não usa área e null não vira preço', () => {
   assert.equal(commercialUnitLabel('UNIT'), 'un');
 });
 
-test('STOCKUX01/PARTIAL: somente warnings comerciais são apresentados no orçamento', () => {
-  assert.equal(isCommercialPricingWarning('MISSING_PRICE'), true);
-  assert.equal(isCommercialPricingWarning('MISSING_PRICE_VARIANT'), true);
-  assert.equal(isCommercialPricingWarning('INSUFFICIENT_STOCK'), false);
-  assert.equal(isCommercialPricingWarning('MISSING_STOCK'), false);
+test('UXD01/UXD02/UXD03: somente o aviso comercial do status é apresentado', () => {
+  assert.equal(getCompositionSuggestionNotice('COMPLETE'), null);
+  assert.equal(
+    getCompositionSuggestionNotice('PARTIAL'),
+    'Alguns componentes ainda estão sem preço. Revise o valor antes de continuar.',
+  );
+  assert.equal(
+    getCompositionSuggestionNotice('UNAVAILABLE'),
+    'Não foi possível calcular o preço automaticamente. Informe o valor.',
+  );
+});
+
+test('UXD04/UXD05: avisos comerciais nunca expõem códigos técnicos', () => {
+  for (const status of ['COMPLETE', 'PARTIAL', 'UNAVAILABLE'] as const) {
+    const notice = getCompositionSuggestionNotice(status) ?? '';
+    assert.equal(notice.includes('MISSING_PRICE_VARIANT'), false);
+    assert.equal(notice.includes('MISSING_COST'), false);
+    assert.equal(notice.includes('MISSING_PRICE'), false);
+  }
 });
 
 test('UX01/UX06/UX11: campo único usa formato monetário sem transformar ausência em zero', () => {

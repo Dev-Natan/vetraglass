@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, AlertTriangle } from 'lucide-react';
 
 // Ícone específico por categoria (slug ou nome normalizado)
 function getCategoryIcon(value?: string) {
@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils';
 import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
 import {
   calculateQuoteProductPrice,
@@ -40,7 +39,6 @@ import {
   describeQuotePricingError,
   formatAppliedQuotePriceInput,
   getCompositionSuggestionNotice,
-  isCommercialPricingWarning,
   parseAppliedQuotePrice,
   readCompositionSuggestion,
   syncAppliedQuotePrice,
@@ -1345,7 +1343,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                         if (value != null) setAppliedPriceInput(formatAppliedQuotePriceInput(value));
                       }}
                       placeholder="0,00"
-                      aria-describedby="quote-price-notice"
+                      aria-describedby={suggestionNotice ? 'quote-price-notice' : undefined}
                       className="h-11 pl-10 pr-16 font-mono text-base font-semibold"
                     />
                     <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground">
@@ -1356,44 +1354,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                 {!canonicalPricing.isFetching && suggestionNotice ? (
                   <p id="quote-price-notice" role="status" className="text-xs text-amber-700 dark:text-amber-300">{suggestionNotice}</p>
                 ) : null}
-                {appliedPriceEdited && !canonicalPricing.isFetching ? (
-                  <p id={suggestionNotice ? undefined : 'quote-price-notice'} className="text-xs text-muted-foreground">Composição recalculada. O preço informado manualmente foi mantido.</p>
-                ) : null}
-                {pricingIssue ? (
-                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
-                    <p className="flex gap-2">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span>{pricingIssue.message} Você pode informar o preço deste produto manualmente.</span>
-                    </p>
-                    {pricingIssue.detail ? <p className="mt-1 pl-5 font-medium">{pricingIssue.detail}</p> : null}
-                  </div>
-                ) : null}
                 {!hasValidAppliedPrice && appliedPriceInput ? (
                   <p className="text-xs text-destructive">Informe um preço maior que zero.</p>
-                ) : null}
-                {canonicalSnapshot ? (
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground">
-                        Ver detalhes <ChevronDown className="ml-1 h-3.5 w-3.5" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 pt-2">
-                      <div className="grid grid-cols-2 gap-2 rounded-md border bg-background p-3 text-xs sm:grid-cols-4">
-                        <div><span className="text-muted-foreground">Preço sugerido/{commercialUnitLabel(commercialUnit)}</span><strong className="block">{suggestedUnitPrice == null ? '—' : formatCurrency(suggestedUnitPrice)}</strong></div>
-                        <div><span className="text-muted-foreground">Custo conhecido</span><strong className="block">{canonicalSnapshot.totals.cost == null ? '—' : formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
-                        <div><span className="text-muted-foreground">Lucro estimado</span><strong className="block">{canonicalSnapshot.totals.profit == null ? '—' : formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
-                        <div><span className="text-muted-foreground">Margem estimada</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Status da composição: {suggestion.status}</p>
-                      {canonicalSnapshot.warnings.filter((warning) => isCommercialPricingWarning(warning.code)).map((warning, index) => (
-                        <p key={`${warning.code}-${warning.item_name}-${index}`} className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          {warning.item_name || 'Componente'}: {warning.code === 'MISSING_PRICE' ? 'sem preço configurado' : warning.code}.
-                        </p>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
                 ) : null}
               </div>
             )}
