@@ -7,6 +7,9 @@ import {
   readCompositionSuggestion,
   formatAppliedQuotePriceInput,
   getCompositionSuggestionNotice,
+  calculateQuoteProductPrice,
+  commercialUnitLabel,
+  isCommercialPricingWarning,
 } from './quotePricing.ts';
 
 test('P02: preço aplicado inicialmente acompanha a sugestão', () => {
@@ -44,13 +47,13 @@ test('erro legado usa mensagem comercial', () => {
   assert.equal(issue.message, 'Esta configuração ainda não possui preço automático.');
 });
 
-test('P01/P06/P07/P09/P21: estados preservam preço conhecido e ausência como null', () => {
-  assert.equal(readCompositionSuggestion({ suggestion_status: 'COMPLETE', totals: { sale_price: 850 } }).status, 'COMPLETE');
-  assert.equal(readCompositionSuggestion({ suggestion_status: 'PARTIAL', totals: { sale_price: 850 } }).price, 850);
-  assert.equal(readCompositionSuggestion({ suggestion_status: 'PARTIAL', totals: { sale_price: 850 } }).status, 'PARTIAL');
+test('P01/P06/P07/P09/P21: estados preservam preço unitário conhecido e ausência como null', () => {
+  assert.equal(readCompositionSuggestion({ suggestion_status: 'COMPLETE', suggested_unit_price: 590, totals: { sale_price: 850 } }).status, 'COMPLETE');
+  assert.equal(readCompositionSuggestion({ suggestion_status: 'PARTIAL', totals: { suggested_unit_price: 590, sale_price: 850 } }).price, 590);
+  assert.equal(readCompositionSuggestion({ suggestion_status: 'PARTIAL', totals: { suggested_unit_price: 590, sale_price: 850 } }).status, 'PARTIAL');
   assert.equal(readCompositionSuggestion({ suggestion_status: 'UNAVAILABLE', totals: { sale_price: null } }).price, null);
   assert.equal(readCompositionSuggestion().price, null);
-  assert.equal(readCompositionSuggestion({ suggestion_status: 'COMPLETE', totals: { sale_price: NaN } }).price, null);
+  assert.equal(readCompositionSuggestion({ suggestion_status: 'COMPLETE', suggested_unit_price: NaN, totals: { sale_price: 850 } }).price, null);
 });
 
 test('P04/P05: recálculo acompanha sugestão somente antes do override', () => {
@@ -61,7 +64,11 @@ test('P04/P05: recálculo acompanha sugestão somente antes do override', () => 
 
 test('P08/P10: sugestão parcial ou indisponível não impede preço aplicado válido', () => {
   for (const status of ['PARTIAL', 'UNAVAILABLE'] as const) {
-    const suggestion = readCompositionSuggestion({ suggestion_status: status, totals: { sale_price: status === 'PARTIAL' ? 850 : null } });
+    const suggestion = readCompositionSuggestion({
+      suggestion_status: status,
+      suggested_unit_price: status === 'PARTIAL' ? 590 : null,
+      totals: { sale_price: status === 'PARTIAL' ? 850 : null },
+    });
     assert.equal(parseAppliedQuotePrice(syncAppliedQuotePrice('975', true, suggestion.price)), 975);
   }
 });
@@ -69,6 +76,58 @@ test('P08/P10: sugestão parcial ou indisponível não impede preço aplicado v�
 test('preço legado sem status não é anunciado como sugestão completa', () => {
   assert.equal(readCompositionSuggestion({ totals: { sale_price: 1300 } }).status, 'UNAVAILABLE');
   assert.equal(readCompositionSuggestion({ totals: { sale_price: 1300 } }).price, null);
+});
+
+test('PUNIT01/PUNIT02: M2 usa preço por área e quantidade', () => {
+  assert.deepEqual(
+    calculateQuoteProductPrice({
+      commercialUnit: 'M2',
+      appliedUnitPrice: 600,
+      areaPerItem: 1.44,
+      quantity: 1,
+    }),
+    { measurePerItem: 1.44, commercialMeasure: 1.44, itemUnitPrice: 864, productTotal: 864 },
+  );
+  assert.equal(calculateQuoteProductPrice({
+    commercialUnit: 'M2',
+    appliedUnitPrice: 600,
+    areaPerItem: 1.44,
+    quantity: 2,
+  }).productTotal, 1728);
+});
+
+test('PUNIT04/PUNIT05: override permanece unitário quando a área muda', () => {
+  assert.equal(syncAppliedQuotePrice('600,00', true, 520), '600,00');
+  assert.equal(calculateQuoteProductPrice({
+    commercialUnit: 'M2',
+    appliedUnitPrice: 600,
+    areaPerItem: 2,
+    quantity: 1,
+  }).productTotal, 1200);
+});
+
+test('PUNIT07/PUNIT08: UNIT não usa área e null não vira preço', () => {
+  assert.equal(calculateQuoteProductPrice({
+    commercialUnit: 'UNIT',
+    appliedUnitPrice: 600,
+    areaPerItem: 9,
+    quantity: 2,
+  }).productTotal, 1200);
+  assert.equal(calculateQuoteProductPrice({
+    commercialUnit: 'M2',
+    appliedUnitPrice: null,
+    areaPerItem: 1.44,
+    quantity: 1,
+  }).productTotal, 0);
+  assert.equal(commercialUnitLabel('M2'), 'm²');
+  assert.equal(commercialUnitLabel('UNIT'), 'un');
+});
+
+test('STOCKUX01/PARTIAL: somente warnings comerciais são apresentados no orçamento', () => {
+  assert.equal(isCommercialPricingWarning('MISSING_PRICE'), true);
+  assert.equal(isCommercialPricingWarning('MISSING_PRICE_VARIANT'), true);
+  assert.equal(isCommercialPricingWarning('INSUFFICIENT_STOCK'), false);
+  assert.equal(isCommercialPricingWarning('MISSING_STOCK'), false);
 });
 
 test('UX01/UX06/UX11: campo único usa formato monetário sem transformar ausência em zero', () => {

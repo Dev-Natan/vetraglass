@@ -298,11 +298,13 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Preço/m²</label>
+                <label className="text-xs text-muted-foreground">
+                  Preço/{item.commercial_unit === 'UNIT' ? 'un' : 'm²'}
+                </label>
                 <Input
                   type="number"
-                  value={item.base_price_m2 || ''}
-                  onChange={(e) => onUpdate(index, 'base_price_m2', Number(e.target.value))}
+                  value={item.applied_unit_price ?? item.base_price_m2 ?? ''}
+                  onChange={(e) => onUpdate(index, 'applied_unit_price', Number(e.target.value))}
                   min={0}
                   step={0.01}
                   disabled={isParametric}

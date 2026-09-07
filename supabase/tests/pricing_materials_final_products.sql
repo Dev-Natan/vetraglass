@@ -273,10 +273,10 @@ VALUES((SELECT v FROM pricing_phase_ctx WHERE k='company_b'),'TEST ACCESSORY B',
 RETURNING id;
 INSERT INTO pricing_phase_ctx SELECT 'item_b',id FROM public.company_items
 WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b') AND name='TEST ACCESSORY B';
-INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id)
+INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id,commercial_unit)
 VALUES((SELECT v FROM pricing_phase_ctx WHERE k='company_b'),'PRIVATE PRODUCT B',true,true,'COMPOSITION',
   (SELECT slug FROM public.product_linhas WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='line')),
-  (SELECT v FROM pricing_phase_ctx WHERE k='line')) RETURNING id;
+  (SELECT v FROM pricing_phase_ctx WHERE k='line'),'M2') RETURNING id;
 INSERT INTO pricing_phase_ctx SELECT 'product_b',id FROM public.company_products
 WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_b') AND commercial_name='PRIVATE PRODUCT B';
 INSERT INTO public.company_product_items(company_product_id,company_item_id,company_id,quantity_formula,pieces_quantity)
@@ -388,8 +388,8 @@ END $$;
 SELECT pg_temp.ok(true,'T12','Forged tenant identifiers rejected');
 
 -- Private A product uses the same engine and BOM.
-INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id)
-SELECT company_id,'PRIVATE PRODUCT A',true,true,'COMPOSITION',linha,product_line_id
+INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id,commercial_unit)
+SELECT company_id,'PRIVATE PRODUCT A',true,true,'COMPOSITION',linha,product_line_id,'M2'
 FROM public.company_products WHERE id=(SELECT v FROM pricing_phase_ctx WHERE k='product_a') RETURNING id;
 INSERT INTO pricing_phase_ctx SELECT 'private_a',id FROM public.company_products
 WHERE company_id=(SELECT v FROM pricing_phase_ctx WHERE k='company_a') AND commercial_name='PRIVATE PRODUCT A';

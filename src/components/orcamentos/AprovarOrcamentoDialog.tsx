@@ -10,7 +10,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { usePaymentOptions } from '@/hooks/usePaymentOptions';
-import type { CompositionStockResult } from '@/utils/checkCompositionStock';
 
 import type {
   AprovarOrcamentoDialogProps,
@@ -49,7 +48,6 @@ export function AprovarOrcamentoDialog({
 
   const [currentStep, setCurrentStep] = useState<ApprovalStep>('payment');
   const [formState, setFormState] = useState<ApprovalFormState>(DEFAULT_FORM_STATE);
-  const [stockCheckResult, setStockCheckResult] = useState<CompositionStockResult | null>(null);
 
   const { formasPagamento, condicoesPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
 
@@ -201,13 +199,10 @@ export function AprovarOrcamentoDialog({
           {currentStep === 'confirm' && (
             <ConfirmStep
               quote={quote}
-              items={items}
               state={formState}
-              companyId={currentCompany?.id}
               valorFinal={valorFinal}
               isCaixaAberto={isCaixaAberto}
               selectedForma={selectedForma}
-              onStockCheck={setStockCheckResult}
             />
           )}
         </div>
@@ -217,7 +212,6 @@ export function AprovarOrcamentoDialog({
           isApproving={approveMutation.isPending}
           hasEntry={hasEntry}
           isCaixaAberto={isCaixaAberto}
-          hasShortage={!!stockCheckResult?.hasShortage}
           canApprove={
             !approveMutation.isSuccess
             && !!formState.selectedFormaId

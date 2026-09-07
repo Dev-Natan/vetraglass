@@ -5,6 +5,7 @@ export interface PricingIssue {
 }
 
 export type SuggestionStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+export type CommercialUnit = 'M2' | 'UNIT';
 
 export function getCompositionSuggestionNotice(status: SuggestionStatus): string | null {
   if (status === 'PARTIAL') {
@@ -18,9 +19,13 @@ export function getCompositionSuggestionNotice(status: SuggestionStatus): string
 
 export function readCompositionSuggestion(snapshot?: {
   suggestion_status?: SuggestionStatus;
-  totals: { sale_price: number | null };
+  suggested_unit_price?: number | null;
+  totals: {
+    suggested_unit_price?: number | null;
+    sale_price: number | null;
+  };
 }) {
-  const value = snapshot?.totals.sale_price;
+  const value = snapshot?.suggested_unit_price ?? snapshot?.totals.suggested_unit_price;
   const price = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
   const status: SuggestionStatus = price === null ? 'UNAVAILABLE' : snapshot?.suggestion_status ?? 'UNAVAILABLE';
   return {
@@ -32,6 +37,57 @@ export function readCompositionSuggestion(snapshot?: {
         ? 'Preço sugerido parcialmente calculado. Existem componentes sem preço ou composição incompleta.'
         : 'Preço sugerido não disponível. Informe o preço aplicado para continuar.',
   };
+}
+
+export function calculateQuoteProductPrice({
+  commercialUnit,
+  appliedUnitPrice,
+  areaPerItem,
+  quantity,
+}: {
+  commercialUnit: CommercialUnit | null;
+  appliedUnitPrice: number | null;
+  areaPerItem: number;
+  quantity: number;
+}) {
+  const measurePerItem = commercialUnit === 'M2'
+    ? areaPerItem
+    : commercialUnit === 'UNIT'
+      ? 1
+      : 0;
+  const commercialMeasure = measurePerItem > 0 && quantity > 0
+    ? measurePerItem * quantity
+    : 0;
+  const itemUnitPrice = appliedUnitPrice !== null && measurePerItem > 0
+    ? appliedUnitPrice * measurePerItem
+    : 0;
+
+  return {
+    measurePerItem,
+    commercialMeasure,
+    itemUnitPrice,
+    productTotal: itemUnitPrice * Math.max(quantity, 0),
+  };
+}
+
+export function commercialUnitLabel(unit: CommercialUnit | null): string {
+  if (unit === 'M2') return 'm²';
+  if (unit === 'UNIT') return 'un';
+  return '';
+}
+
+const COMMERCIAL_WARNING_CODES = new Set([
+  'MISSING_COMPANY_ITEM',
+  'MISSING_COMPOSITION',
+  'INCOMPLETE_COMPOSITION',
+  'MISSING_PRICE_VARIANT',
+  'MISSING_VARIANT',
+  'MISSING_COST',
+  'MISSING_PRICE',
+]);
+
+export function isCommercialPricingWarning(code: string): boolean {
+  return COMMERCIAL_WARNING_CODES.has(code);
 }
 
 function humanizeAttributeValue(value: string): string {

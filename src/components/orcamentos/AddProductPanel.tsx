@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParametricEngineering } from '@/hooks/useParametricEngineering';
 
-import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +34,19 @@ import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
-import { describeQuotePricingError, parseAppliedQuotePrice, syncAppliedQuotePrice, readCompositionSuggestion, formatAppliedQuotePriceInput, getCompositionSuggestionNotice, type SuggestionStatus } from '@/utils/quotePricing';
+import {
+  calculateQuoteProductPrice,
+  commercialUnitLabel,
+  describeQuotePricingError,
+  formatAppliedQuotePriceInput,
+  getCompositionSuggestionNotice,
+  isCommercialPricingWarning,
+  parseAppliedQuotePrice,
+  readCompositionSuggestion,
+  syncAppliedQuotePrice,
+  type CommercialUnit,
+  type SuggestionStatus,
+} from '@/utils/quotePricing';
 import type { Json } from '@/integrations/supabase/types';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -44,10 +55,14 @@ import { AddItemPanel } from './AddItemPanel';
 interface CanonicalPricingSnapshot {
   pricing_mode: 'COMPOSITION';
   suggestion_status?: SuggestionStatus;
+  commercial_unit?: CommercialUnit;
+  commercial_measure?: number | null;
+  composition_total?: number | null;
+  suggested_unit_price?: number | null;
   commercial_pricing_method?: 'COMPOSITION';
   pricing_source?: string;
   materials: Array<Record<string, unknown>>;
-  warnings: Array<{ code: string; item_name: string; required: number; available: number }>;
+  warnings: Array<{ code: string; item_name?: string }>;
   totals: {
     area_m2: number;
     cost: number | null;
@@ -56,6 +71,9 @@ interface CanonicalPricingSnapshot {
     margin_percent: number | null;
     composition_sale_price: number | null;
     fixed_price_per_sqm: number | null;
+    commercial_measure?: number | null;
+    composition_total?: number | null;
+    suggested_unit_price?: number | null;
   };
   [key: string]: unknown;
 }
@@ -85,6 +103,7 @@ interface ProductTemplateRef {
   fulfillment_mode?: 'IMMEDIATE' | 'PRODUCTION' | 'SERVICE' | null;
   installation_gap_width_mm?: number | null;
   installation_gap_height_mm?: number | null;
+  commercial_unit?: CommercialUnit | null;
 }
 
 interface AddProductPanelProps {
@@ -115,6 +134,8 @@ interface AddProductPanelProps {
     sides_count?: number;
     unit_price: number;
     total_price: number;
+    commercial_unit?: CommercialUnit;
+    applied_unit_price?: number;
     has_glass?: boolean;
     glass_type?: string;
     glass_color?: string;
@@ -217,6 +238,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           uses_glass,
           pricing_type,
           commercial_pricing_method,
+          commercial_unit,
           product_line_id,
           product_template_id,
           leaves_count,
@@ -226,7 +248,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           product_template:product_templates (
             id, name, description, category, linha, image_url, has_multiple_sides, has_cutting_plan,
             default_leaves_count, default_glasses_count, default_panels_count, default_sides_count,
-            composition_mode, fulfillment_mode,
+            composition_mode, fulfillment_mode, commercial_unit,
             installation_gap_width_mm, installation_gap_height_mm
           )
         `)
@@ -260,7 +282,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           default_glasses_count,
           default_panels_count,
           default_sides_count
-          ,composition_mode, fulfillment_mode,
+          ,composition_mode, fulfillment_mode, commercial_unit,
           installation_gap_width_mm, installation_gap_height_mm
         `)
         .eq('is_active', true)
@@ -306,6 +328,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         sides_count: cp.sides_count || template?.default_sides_count || 1,
         composition_mode: template?.composition_mode || 'fixed',
         fulfillment_mode: template?.fulfillment_mode || 'PRODUCTION',
+        commercial_unit: (cp.commercial_unit || template?.commercial_unit) as CommercialUnit | null,
         installation_gap_width_mm: Number(template?.installation_gap_width_mm || 0),
         installation_gap_height_mm: Number(template?.installation_gap_height_mm || 0),
       };
@@ -340,6 +363,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         sides_count: template.default_sides_count || 1,
         composition_mode: template.composition_mode || 'fixed',
         fulfillment_mode: template.fulfillment_mode || 'PRODUCTION',
+        commercial_unit: template.commercial_unit as CommercialUnit | null,
         installation_gap_width_mm: Number(template.installation_gap_width_mm || 0),
         installation_gap_height_mm: Number(template.installation_gap_height_mm || 0),
       }));
@@ -418,16 +442,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     return products;
   }, [catalogProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
 
-
-  // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
-  const filteredProductIds = useMemo(
-    () => filteredProducts
-      .filter(p => Boolean(p.company_product?.id))
-      .map(p => p.id)
-      .filter(Boolean),
-    [filteredProducts],
-  );
-  const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
   const selectedProductTemplateId = selectedProduct?.product_template_id
@@ -622,26 +636,48 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   });
   const canonicalSnapshot = canonicalPricing.data;
   const suggestion = readCompositionSuggestion(canonicalSnapshot);
-  const suggestedPrice = suggestion.price;
+  const suggestedUnitPrice = suggestion.price;
   const suggestionNotice = getCompositionSuggestionNotice(suggestion.status);
   const pricingIssue = canonicalPricing.error ? describeQuotePricingError(canonicalPricing.error) : null;
 
   useEffect(() => {
     if (mode !== 'quote' || appliedPriceEdited) return;
-    setAppliedPriceInput((current) => syncAppliedQuotePrice(current, appliedPriceEdited, suggestedPrice));
-  }, [appliedPriceEdited, mode, suggestedPrice]);
+    setAppliedPriceInput((current) => syncAppliedQuotePrice(current, appliedPriceEdited, suggestedUnitPrice));
+  }, [appliedPriceEdited, mode, suggestedUnitPrice]);
 
   // Get optional items for toggle UI
   const optionalItems: Array<{ id: string; name: string }> = [];
-  const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
+  const geometricAreaPerItem = width && height
+    ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000)
+    : 0;
+  const commercialUnit = (
+    canonicalSnapshot?.commercial_unit
+    || selectedProduct?.commercial_unit
+    || companyProduct?.commercial_unit
+  ) as CommercialUnit | null;
+  const canonicalMeasure = Number(canonicalSnapshot?.commercial_measure);
+  const canonicalMeasurePerItem = Number.isFinite(canonicalMeasure) && canonicalMeasure > 0 && quantity > 0
+    ? canonicalMeasure / quantity
+    : 0;
+  const commercialAreaPerItem = commercialUnit === 'M2' && canonicalMeasurePerItem > 0
+    ? canonicalMeasurePerItem
+    : geometricAreaPerItem;
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const appliedProductPrice = parseAppliedQuotePrice(appliedPriceInput);
-  const hasValidAppliedPrice = appliedProductPrice !== null;
-  const totalPrice = (appliedProductPrice ?? 0) + componentsTotal;
-  const unitPrice = quantity > 0 && appliedProductPrice !== null ? appliedProductPrice / quantity : 0;
-  const effectiveUnitPrice = quantity > 0
-    ? (totalPrice - componentsTotal) / quantity
-    : unitPrice;
+  const appliedUnitPrice = parseAppliedQuotePrice(appliedPriceInput);
+  const hasValidAppliedPrice = appliedUnitPrice !== null;
+  const productPricing = calculateQuoteProductPrice({
+    commercialUnit,
+    appliedUnitPrice,
+    areaPerItem: commercialAreaPerItem,
+    quantity,
+  });
+  const productTotal = productPricing.productTotal;
+  const totalPrice = productTotal + componentsTotal;
+  const effectiveUnitPrice = productPricing.itemUnitPrice;
+  const compositionTotal = canonicalSnapshot?.composition_total
+    ?? canonicalSnapshot?.totals.composition_total
+    ?? canonicalSnapshot?.totals.sale_price
+    ?? null;
 
   // Check if the selected product is from "Temperado" line (always has glass)
   const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
@@ -678,7 +714,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       name: [
         useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
       ].filter(Boolean).join(' '),
-      base_price: effectiveUnitPrice,
+      base_price: appliedUnitPrice ?? 0,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
@@ -699,6 +735,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       sides_count: selectedProduct.sides_count || companyProduct?.sides_count || 1,
       unit_price: effectiveUnitPrice,
       total_price: totalPrice,
+      commercial_unit: commercialUnit ?? undefined,
+      applied_unit_price: appliedUnitPrice ?? undefined,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
       glass_type: hasGlass ? (selectedGlassType || undefined) : undefined,
       glass_color: hasGlass ? (selectedGlassColor || undefined) : undefined,
@@ -734,7 +772,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           items: [],
           warnings: [],
           totals: {
-            area_m2: area * quantity,
+            area_m2: commercialAreaPerItem * quantity,
             cost: null,
             sale_price: null,
             profit: null,
@@ -752,17 +790,28 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           name: selectedProduct.linha ?? null,
         },
         specification: canonicalVariantPayload,
-        dimensions: { width_mm: width, height_mm: height, quantity, area_m2: area * quantity },
-        suggested_price: suggestedPrice,
-        applied_product_price: appliedProductPrice,
+        dimensions: { width_mm: width, height_mm: height, quantity, area_m2: commercialAreaPerItem * quantity },
+        commercial_unit: commercialUnit,
+        commercial_measure: productPricing.commercialMeasure,
+        composition_total: compositionTotal,
+        suggested_unit_price: suggestedUnitPrice,
+        applied_unit_price: appliedUnitPrice,
+        suggested_price: compositionTotal,
+        applied_product_price: productTotal,
         applied_price: totalPrice,
+        item_total: totalPrice,
         manual_override: appliedPriceEdited,
         pricing_unavailable_reason: pricingIssue?.code ?? null,
         technical_snapshot: parametricResult ?? null,
         totals: {
           ...(canonicalSnapshot?.totals ?? {}),
-          suggested_price: suggestedPrice,
-          applied_product_price: appliedProductPrice,
+          commercial_unit: commercialUnit,
+          commercial_measure: productPricing.commercialMeasure,
+          composition_total: compositionTotal,
+          suggested_unit_price: suggestedUnitPrice,
+          applied_unit_price: appliedUnitPrice,
+          suggested_price: compositionTotal,
+          applied_product_price: productTotal,
           additional_components_total: componentsTotal,
           quote_unit_price: effectiveUnitPrice,
           quote_total: totalPrice,
@@ -994,14 +1043,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                         {filteredProducts.map((product) => {
                           const imageUrl = getProductImage(product.image_url);
                           const isCustomProduct = product.is_custom;
-                          const stockInfo = productsProfileStock?.get(product.id);
-                          const stockBadge = stockInfo && stockInfo.totalProfiles > 0
-                            ? stockInfo.withStock === 0
-                              ? { label: 'Sem estoque de perfis', tone: 'danger' as const }
-                              : stockInfo.withStock < stockInfo.totalProfiles
-                                ? { label: `${stockInfo.withStock}/${stockInfo.totalProfiles} perfis c/ saldo`, tone: 'warning' as const }
-                                : { label: 'Perfis em estoque', tone: 'ok' as const }
-                            : null;
                           return (
                             <button
                               key={product.id}
@@ -1049,19 +1090,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
                                     {categoryLabels[product.category] || product.category}
                                   </p>
-                                )}
-                                {stockBadge && (
-                                  <div
-                                    className={cn(
-                                      "mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit",
-                                      stockBadge.tone === 'ok' && "bg-success/15 text-success",
-                                      stockBadge.tone === 'warning' && "bg-warning/15 text-warning",
-                                      stockBadge.tone === 'danger' && "bg-destructive/15 text-destructive",
-                                    )}
-                                  >
-                                    <Package className="w-3 h-3" />
-                                    {stockBadge.label}
-                                  </div>
                                 )}
                               </div>
                             </button>
@@ -1318,8 +1346,11 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                       }}
                       placeholder="0,00"
                       aria-describedby="quote-price-notice"
-                      className="h-11 pl-10 font-mono text-base font-semibold"
+                      className="h-11 pl-10 pr-16 font-mono text-base font-semibold"
                     />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground">
+                      / {commercialUnitLabel(commercialUnit)}
+                    </span>
                   </div>
                 </div>
                 {!canonicalPricing.isFetching && suggestionNotice ? (
@@ -1349,13 +1380,13 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-2 pt-2">
                       <div className="grid grid-cols-2 gap-2 rounded-md border bg-background p-3 text-xs sm:grid-cols-4">
-                        <div><span className="text-muted-foreground">Preço calculado</span><strong className="block">{canonicalSnapshot.totals.sale_price == null ? '—' : formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
+                        <div><span className="text-muted-foreground">Preço sugerido/{commercialUnitLabel(commercialUnit)}</span><strong className="block">{suggestedUnitPrice == null ? '—' : formatCurrency(suggestedUnitPrice)}</strong></div>
                         <div><span className="text-muted-foreground">Custo conhecido</span><strong className="block">{canonicalSnapshot.totals.cost == null ? '—' : formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
                         <div><span className="text-muted-foreground">Lucro estimado</span><strong className="block">{canonicalSnapshot.totals.profit == null ? '—' : formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
                         <div><span className="text-muted-foreground">Margem estimada</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
                       </div>
                       <p className="text-xs text-muted-foreground">Status da composição: {suggestion.status}</p>
-                      {canonicalSnapshot.warnings.map((warning, index) => (
+                      {canonicalSnapshot.warnings.filter((warning) => isCommercialPricingWarning(warning.code)).map((warning, index) => (
                         <p key={`${warning.code}-${warning.item_name}-${index}`} className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                           {warning.item_name || 'Componente'}: {warning.code === 'MISSING_PRICE' ? 'sem preço configurado' : warning.code}.
@@ -1618,10 +1649,22 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             <div className="shrink-0 mt-4 overflow-hidden rounded-xl border shadow-sm">
               <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/95 to-primary text-primary-foreground">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <span>{area.toFixed(2)} m²</span>
-                  <span className="opacity-70">×</span>
-                  <span>{quantity} un</span>
-                  {suggestedPrice != null && (
+                  {commercialUnit === 'M2' ? (
+                    <>
+                      <span>{commercialAreaPerItem.toFixed(2)} m²</span>
+                      <span className="opacity-70">×</span>
+                      <span>{quantity} un</span>
+                    </>
+                  ) : (
+                    <span>{quantity} un</span>
+                  )}
+                  {appliedUnitPrice != null ? (
+                    <>
+                      <span className="opacity-70">×</span>
+                      <span>{formatCurrency(appliedUnitPrice)}/{commercialUnitLabel(commercialUnit)}</span>
+                    </>
+                  ) : null}
+                  {suggestedUnitPrice != null && (
                     <Badge variant="outline" className="ml-2 text-[10px] bg-white/15 border-white/30 text-primary-foreground">
                       <Sparkles className="w-3 h-3 mr-1" />
                       Composição

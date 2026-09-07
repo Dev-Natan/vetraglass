@@ -2571,6 +2571,7 @@ export type Database = {
           code: string | null
           commercial_name: string
           commercial_pricing_method: string | null
+          commercial_unit: string | null
           company_id: string
           contramarco: string | null
           cor_componentes: string | null
@@ -2612,6 +2613,7 @@ export type Database = {
           code?: string | null
           commercial_name: string
           commercial_pricing_method?: string | null
+          commercial_unit?: string | null
           company_id: string
           contramarco?: string | null
           cor_componentes?: string | null
@@ -2653,6 +2655,7 @@ export type Database = {
           code?: string | null
           commercial_name?: string
           commercial_pricing_method?: string | null
+          commercial_unit?: string | null
           company_id?: string
           contramarco?: string | null
           cor_componentes?: string | null
@@ -7117,6 +7120,7 @@ export type Database = {
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           company_id: string | null
+          commercial_unit: string
           composition_mode: string
           contramarco: string | null
           cor_componentes: string | null
@@ -7159,6 +7163,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string | null
+          commercial_unit: string
           composition_mode?: string
           contramarco?: string | null
           cor_componentes?: string | null
@@ -7201,6 +7206,7 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string | null
+          commercial_unit?: string
           composition_mode?: string
           contramarco?: string | null
           cor_componentes?: string | null

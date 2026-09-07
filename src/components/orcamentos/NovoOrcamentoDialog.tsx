@@ -195,6 +195,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
     sides_count?: number;
     unit_price: number;
     total_price: number;
+    commercial_unit?: 'M2' | 'UNIT';
+    applied_unit_price?: number;
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
@@ -227,6 +229,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       panels_count: product.panels_count,
       sides_count: product.sides_count,
       base_price_m2: product.base_price,
+      commercial_unit: product.commercial_unit,
+      applied_unit_price: product.applied_unit_price ?? product.base_price,
       unit_price: product.unit_price,
       total_price: product.total_price,
       image_url: product.image_url,

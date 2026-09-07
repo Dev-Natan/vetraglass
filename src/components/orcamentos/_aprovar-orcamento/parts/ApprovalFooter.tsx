@@ -8,7 +8,6 @@ interface Props {
   isApproving: boolean;
   hasEntry: boolean;
   isCaixaAberto: boolean;
-  hasShortage: boolean;
   canApprove: boolean;
   onCancel: () => void;
   onBack: () => void;
@@ -17,7 +16,7 @@ interface Props {
 }
 
 export function ApprovalFooter({
-  currentStep, isApproving, hasShortage, canApprove,
+  currentStep, isApproving, canApprove,
   onCancel, onBack, onNext, onApprove,
 }: Props) {
   const currentStepIndex = APPROVAL_STEPS.findIndex(s => s.key === currentStep);
@@ -65,7 +64,7 @@ export function ApprovalFooter({
               className="gap-2 bg-green-600 hover:bg-green-700 min-w-[140px]"
             >
               {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              {hasShortage ? 'Aprovar (com falta)' : 'Aprovar'}
+              Aprovar
             </Button>
           )}
         </div>

@@ -82,8 +82,8 @@ VALUES((SELECT v FROM pricing_flex_ctx WHERE k='company_a'),'PRICING FLEX COMPON
 RETURNING id;
 INSERT INTO pricing_flex_ctx SELECT 'component_a',id FROM public.company_items
 WHERE company_id=(SELECT v FROM pricing_flex_ctx WHERE k='company_a') AND name='PRICING FLEX COMPONENT';
-INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id)
-SELECT (SELECT v FROM pricing_flex_ctx WHERE k='company_a'),'PRICING FLEX PRODUCT',true,true,'COMPOSITION',pl.slug,pl.id
+INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,linha,product_line_id,commercial_unit)
+SELECT (SELECT v FROM pricing_flex_ctx WHERE k='company_a'),'PRICING FLEX PRODUCT',true,true,'COMPOSITION',pl.slug,pl.id,'M2'
 FROM public.product_linhas pl WHERE pl.id=(SELECT v FROM pricing_flex_ctx WHERE k='line')
 RETURNING id;
 INSERT INTO pricing_flex_ctx SELECT 'product_test',id FROM public.company_products

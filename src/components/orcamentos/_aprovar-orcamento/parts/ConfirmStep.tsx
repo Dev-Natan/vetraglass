@@ -2,24 +2,19 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { MaterialsAvailabilityPreview } from '../../MaterialsAvailabilityPreview';
-import type { CompositionStockResult } from '@/utils/checkCompositionStock';
 import { formatCurrency, parseAmount } from '../utils';
-import type { ApprovalQuote, ApprovalQuoteItem, ApprovalFormState } from '../types';
+import type { ApprovalQuote, ApprovalFormState } from '../types';
 
 interface Props {
   quote: ApprovalQuote;
-  items: ApprovalQuoteItem[];
   state: ApprovalFormState;
-  companyId: string | undefined;
   valorFinal: number;
   isCaixaAberto: boolean;
   selectedForma?: { tipo: string };
-  onStockCheck: (result: CompositionStockResult | null) => void;
 }
 
 export function ConfirmStep({
-  quote, items, state, companyId, valorFinal, isCaixaAberto, selectedForma, onStockCheck,
+  quote, state, valorFinal, isCaixaAberto, selectedForma,
 }: Props) {
   const entryValue = parseAmount(state.entryAmount);
   const hasEntry = entryValue > 0;
@@ -27,16 +22,6 @@ export function ConfirmStep({
 
   return (
     <div className="space-y-6 px-1">
-      {items.length > 0 && (
-        <div className="p-4 border rounded-xl bg-card">
-          <MaterialsAvailabilityPreview
-            quoteItems={items}
-            companyId={companyId}
-            onStockCheck={onStockCheck}
-          />
-        </div>
-      )}
-
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="p-4 border rounded-xl bg-card">

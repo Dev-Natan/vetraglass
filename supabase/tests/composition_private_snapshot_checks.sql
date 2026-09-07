@@ -10,8 +10,8 @@ BEGIN
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
  INSERT INTO public.company_items(company_id,name,type,unit,cost,sale_price,is_active,pricing_basis,catalog_origin)
  VALUES(c,'CHECK COMPONENT','accessory','un',10,20,true,'UNIT','PRIVATE') RETURNING id INTO i;
- INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type)
- VALUES(c,'CHECK PRODUCT',true,true,'COMPOSITION') RETURNING id INTO p;
+ INSERT INTO public.company_products(company_id,commercial_name,is_active,is_custom,pricing_type,commercial_unit)
+ VALUES(c,'CHECK PRODUCT',true,true,'COMPOSITION','M2') RETURNING id INTO p;
  INSERT INTO public.company_product_items(company_product_id,company_item_id,company_id,quantity_formula,pieces_quantity)
  VALUES(p,i,c,'2',1);
  result:=public.resolve_company_final_product_pricing(c,p,1000,1000,1,'{}');

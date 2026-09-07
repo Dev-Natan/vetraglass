@@ -78,8 +78,8 @@ UPDATE public.company_items
 SET cost=3.75, sale_price=6
 WHERE id=(SELECT v FROM phase4b1b_ctx WHERE k='item_a');
 
-INSERT INTO public.company_products(company_id,commercial_name,is_custom)
-VALUES ((SELECT v FROM phase4b1b_ctx WHERE k='company_a'),'Porta XP',true) RETURNING id;
+INSERT INTO public.company_products(company_id,commercial_name,is_custom,commercial_unit)
+VALUES ((SELECT v FROM phase4b1b_ctx WHERE k='company_a'),'Porta XP',true,'M2') RETURNING id;
 INSERT INTO phase4b1b_ctx SELECT 'product_a',id FROM public.company_products WHERE commercial_name='Porta XP' AND company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a');
 INSERT INTO public.company_product_items(company_product_id,company_item_id,quantity_formula,pieces_formula,height_formula)
 VALUES ((SELECT v FROM phase4b1b_ctx WHERE k='product_a'),(SELECT v FROM phase4b1b_ctx WHERE k='item_a'),'1','2','A - 30');
@@ -231,18 +231,22 @@ DO $$ BEGIN
   END;
 END $$;
 
-INSERT INTO public.company_products(company_id,commercial_name,is_custom)
-VALUES ((SELECT v FROM phase4b1b_ctx WHERE k='company_a'),'Produto sem composição',true) RETURNING id;
+INSERT INTO public.company_products(company_id,commercial_name,is_custom,commercial_unit)
+VALUES ((SELECT v FROM phase4b1b_ctx WHERE k='company_a'),'Produto sem composição',true,'M2') RETURNING id;
 INSERT INTO phase4b1b_ctx SELECT 'empty_product_a',id FROM public.company_products WHERE commercial_name='Produto sem composição' AND company_id=(SELECT v FROM phase4b1b_ctx WHERE k='company_a');
-DO $$ BEGIN
-  BEGIN
-    PERFORM public.resolve_company_product_pricing(
-      (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),(SELECT v FROM phase4b1b_ctx WHERE k='empty_product_a'),900,2100,1,'{}'
-    );
-    PERFORM pg_temp.ok(false,'T56','empty private composition accepted');
-  EXCEPTION WHEN check_violation THEN
-    PERFORM pg_temp.ok(SQLERRM='MISSING_COMPANY_ITEM','T56',SQLERRM);
-  END;
+DO $$ DECLARE result jsonb; BEGIN
+  result:=public.resolve_company_final_product_pricing(
+    (SELECT v FROM phase4b1b_ctx WHERE k='company_a'),
+    (SELECT v FROM phase4b1b_ctx WHERE k='empty_product_a'),900,2100,1,'{}'
+  );
+  PERFORM pg_temp.ok(
+    result->>'suggestion_status'='UNAVAILABLE'
+      AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(result->'warnings') warning
+        WHERE warning->>'code'='MISSING_COMPOSITION'
+      ),
+    'T56','empty private composition remains explicitly unavailable'
+  );
 END $$;
 
 INSERT INTO public.company_product_items(company_product_id,company_item_id,item_template_id,quantity_formula,height_formula)

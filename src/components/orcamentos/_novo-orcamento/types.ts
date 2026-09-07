@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Json } from '@/integrations/supabase/types';
+import type { CommercialUnit } from '@/utils/quotePricing';
 
 export const quoteSchema = z.object({
   client_id: z.string().uuid().nullable().optional(),
@@ -51,6 +52,8 @@ export interface QuoteItem {
   panels_count?: number;
   sides_count?: number;
   base_price_m2: number;
+  commercial_unit?: CommercialUnit;
+  applied_unit_price?: number;
   unit_price: number;
   total_price: number;
   image_url?: string | null;
