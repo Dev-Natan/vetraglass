@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, AlertTriangle } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, AlertTriangle, ChevronDown } from 'lucide-react';
 
 // Ícone específico por categoria (slug ou nome normalizado)
 function getCategoryIcon(value?: string) {
@@ -33,8 +33,9 @@ import { cn } from '@/lib/utils';
 import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
-import { describeQuotePricingError, parseAppliedQuotePrice, syncAppliedQuotePrice, readCompositionSuggestion, type SuggestionStatus } from '@/utils/quotePricing';
+import { describeQuotePricingError, parseAppliedQuotePrice, syncAppliedQuotePrice, readCompositionSuggestion, formatAppliedQuotePriceInput, getCompositionSuggestionNotice, type SuggestionStatus } from '@/utils/quotePricing';
 import type { Json } from '@/integrations/supabase/types';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -622,6 +623,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const canonicalSnapshot = canonicalPricing.data;
   const suggestion = readCompositionSuggestion(canonicalSnapshot);
   const suggestedPrice = suggestion.price;
+  const suggestionNotice = getCompositionSuggestionNotice(suggestion.status);
   const pricingIssue = canonicalPricing.error ? describeQuotePricingError(canonicalPricing.error) : null;
 
   useEffect(() => {
@@ -754,6 +756,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         suggested_price: suggestedPrice,
         applied_product_price: appliedProductPrice,
         applied_price: totalPrice,
+        manual_override: appliedPriceEdited,
         pricing_unavailable_reason: pricingIssue?.code ?? null,
         technical_snapshot: parametricResult ?? null,
         totals: {
@@ -1294,66 +1297,37 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             </div>
             )}
 
-            {/* O motor recomenda; o preço aplicado pertence somente a este orçamento. */}
+            {/* A composição recomenda internamente; o vendedor trabalha com um único preço. */}
             {mode !== 'cutting' && (
               <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Precificação</p>
-                    <p className="text-sm font-medium">
-                      Preço por composição
-                    </p>
-                  </div>
-                  {selectedProduct?.linha ? (
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Linha</p>
-                      <p className="text-sm font-medium">{selectedProduct.linha}</p>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground">Preço sugerido pelo Vetra</label>
+                <div className="space-y-1.5">
+                  <label htmlFor="quote-price" className="text-sm font-semibold text-foreground">Preço</label>
+                  <div className="relative max-w-sm">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-medium text-muted-foreground">R$</span>
                     <Input
-                      value={suggestedPrice == null ? '' : formatCurrency(suggestedPrice)}
-                      placeholder={canonicalPricing.isLoading ? 'Calculando...' : 'Não disponível'}
-                      readOnly
-                      className="bg-muted h-10 font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="quote-applied-price" className="text-xs font-medium text-foreground">Preço aplicado</label>
-                    <Input
-                      id="quote-applied-price"
+                      id="quote-price"
                       inputMode="decimal"
                       value={appliedPriceInput}
                       onChange={(event) => {
                         setAppliedPriceInput(event.target.value);
                         setAppliedPriceEdited(true);
                       }}
+                      onBlur={() => {
+                        const value = parseAppliedQuotePrice(appliedPriceInput);
+                        if (value != null) setAppliedPriceInput(formatAppliedQuotePriceInput(value));
+                      }}
                       placeholder="0,00"
-                      className="h-10 font-mono"
+                      aria-describedby="quote-price-notice"
+                      className="h-11 pl-10 font-mono text-base font-semibold"
                     />
-                    {appliedPriceEdited && suggestedPrice != null ? (
-                      <button
-                        type="button"
-                        className="text-xs text-primary hover:underline"
-                        onClick={() => {
-                          setAppliedPriceInput(suggestedPrice.toFixed(2));
-                          setAppliedPriceEdited(false);
-                        }}
-                      >
-                        Usar preço sugerido
-                      </button>
-                    ) : null}
                   </div>
                 </div>
-                {!canonicalPricing.isFetching && (
-                  <p role="status" className="text-sm text-muted-foreground">{suggestion.message}</p>
-                )}
-                {appliedPriceEdited && (
-                  <p className="text-xs text-muted-foreground">O preço aplicado foi alterado manualmente e será mantido ao recalcular a composição.</p>
-                )}
+                {!canonicalPricing.isFetching && suggestionNotice ? (
+                  <p id="quote-price-notice" role="status" className="text-xs text-amber-700 dark:text-amber-300">{suggestionNotice}</p>
+                ) : null}
+                {appliedPriceEdited && !canonicalPricing.isFetching ? (
+                  <p id={suggestionNotice ? undefined : 'quote-price-notice'} className="text-xs text-muted-foreground">Composição recalculada. O preço informado manualmente foi mantido.</p>
+                ) : null}
                 {pricingIssue ? (
                   <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
                     <p className="flex gap-2">
@@ -1364,15 +1338,32 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   </div>
                 ) : null}
                 {!hasValidAppliedPrice && appliedPriceInput ? (
-                  <p className="text-xs text-destructive">Informe um preço aplicado maior que zero.</p>
+                  <p className="text-xs text-destructive">Informe um preço maior que zero.</p>
                 ) : null}
-                {canonicalSnapshot && <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 text-xs sm:grid-cols-4">
-                  <div><span className="text-muted-foreground">Custo</span><strong className="block">{canonicalSnapshot.totals.cost == null ? '—' : formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
-                  <div><span className="text-muted-foreground">Sugestão</span><strong className="block">{canonicalSnapshot.totals.sale_price == null ? '—' : formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
-                  <div><span className="text-muted-foreground">Lucro</span><strong className="block">{canonicalSnapshot.totals.profit == null ? '—' : formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
-                  <div><span className="text-muted-foreground">Margem</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
-                </div>}
-                {canonicalSnapshot?.warnings.filter(warning => typeof warning.required === 'number' && typeof warning.available === 'number').map(warning => <p key={`${warning.code}-${warning.item_name}`} className="flex items-center gap-1 text-xs text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />{warning.item_name}: necessário {warning.required}, disponível {warning.available}. O orçamento não é bloqueado.</p>)}
+                {canonicalSnapshot ? (
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground">
+                        Ver detalhes <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-md border bg-background p-3 text-xs sm:grid-cols-4">
+                        <div><span className="text-muted-foreground">Preço calculado</span><strong className="block">{canonicalSnapshot.totals.sale_price == null ? '—' : formatCurrency(canonicalSnapshot.totals.sale_price)}</strong></div>
+                        <div><span className="text-muted-foreground">Custo conhecido</span><strong className="block">{canonicalSnapshot.totals.cost == null ? '—' : formatCurrency(canonicalSnapshot.totals.cost)}</strong></div>
+                        <div><span className="text-muted-foreground">Lucro estimado</span><strong className="block">{canonicalSnapshot.totals.profit == null ? '—' : formatCurrency(canonicalSnapshot.totals.profit)}</strong></div>
+                        <div><span className="text-muted-foreground">Margem estimada</span><strong className="block">{canonicalSnapshot.totals.margin_percent == null ? '—' : `${canonicalSnapshot.totals.margin_percent.toFixed(2)}%`}</strong></div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Status da composição: {suggestion.status}</p>
+                      {canonicalSnapshot.warnings.map((warning, index) => (
+                        <p key={`${warning.code}-${warning.item_name}-${index}`} className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          {warning.item_name || 'Componente'}: {warning.code === 'MISSING_PRICE' ? 'sem preço configurado' : warning.code}.
+                        </p>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : null}
               </div>
             )}
 

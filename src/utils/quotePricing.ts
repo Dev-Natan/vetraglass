@@ -6,6 +6,16 @@ export interface PricingIssue {
 
 export type SuggestionStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
 
+export function getCompositionSuggestionNotice(status: SuggestionStatus): string | null {
+  if (status === 'PARTIAL') {
+    return 'Alguns componentes ainda estão sem preço. Revise o valor antes de continuar.';
+  }
+  if (status === 'UNAVAILABLE') {
+    return 'Não foi possível calcular o preço automaticamente. Informe o valor.';
+  }
+  return null;
+}
+
 export function readCompositionSuggestion(snapshot?: {
   suggestion_status?: SuggestionStatus;
   totals: { sale_price: number | null };
@@ -67,8 +77,20 @@ export function describeQuotePricingError(error: unknown): PricingIssue {
 }
 
 export function parseAppliedQuotePrice(value: string): number | null {
-  const parsed = Number(value.replace(',', '.'));
+  const normalized = value
+    .replace(/R\$/gi, '')
+    .replace(/\s/g, '')
+    .replace(/\.(?=\d{3}(?:\D|$))/g, '')
+    .replace(',', '.');
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function formatAppliedQuotePriceInput(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 export function syncAppliedQuotePrice(
@@ -77,5 +99,7 @@ export function syncAppliedQuotePrice(
   suggestedPrice: number | null,
 ): string {
   if (manuallyEdited) return currentValue;
-  return suggestedPrice != null && Number.isFinite(suggestedPrice) ? suggestedPrice.toFixed(2) : '';
+  return suggestedPrice != null && Number.isFinite(suggestedPrice)
+    ? formatAppliedQuotePriceInput(suggestedPrice)
+    : '';
 }
