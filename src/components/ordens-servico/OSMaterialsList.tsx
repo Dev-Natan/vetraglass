@@ -11,18 +11,22 @@ import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-
 import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
 import { osService } from '@/services/osService';
 import { Link } from 'react-router-dom';
+import { formatOperationalQuantity, getOsMaterialSituation } from '@/utils/osMaterialStatus';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
 }
 
 interface MaterialAvailabilityItem {
+  requirement_id?: string;
   company_item_id: string | null;
   item_name: string;
   unit: string;
+  canonical_unit: string;
   required: number;
   reserved_for_os: number;
   missing: number;
+  status: string;
   sufficient: boolean;
 }
 
@@ -127,28 +131,45 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-right">Necessário</TableHead>
-                  <TableHead className="text-right">Reservado p/ OS</TableHead>
-                  <TableHead className="text-right">Falta</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {availability.items.map((item, index) => (
-                  <TableRow key={item.company_item_id ?? `${item.item_name}-${index}`}>
-                    <TableCell className="font-medium">{item.item_name}</TableCell>
-                    <TableCell className="text-right font-mono">{Number(item.required).toFixed(3)} {item.unit}</TableCell>
-                    <TableCell className="text-right font-mono">{Number(item.reserved_for_os).toFixed(3)}</TableCell>
-                    <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'text-destructive font-semibold' : 'text-green-600'}`}>
-                      {Number(item.missing).toFixed(3)}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead className="text-right">Necessário</TableHead>
+                    <TableHead className="text-right">Reservado p/ OS</TableHead>
+                    <TableHead className="text-right">Falta</TableHead>
+                    <TableHead>Situação</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {availability.items.map((item, index) => {
+                    const situation = getOsMaterialSituation({
+                      status: item.status,
+                      reserved: item.reserved_for_os,
+                      missing: item.missing,
+                    });
+                    const badgeVariant = situation === 'Comprar'
+                      ? 'destructive'
+                      : situation === 'Atendido'
+                        ? 'default'
+                        : 'secondary';
+
+                    return (
+                      <TableRow key={item.requirement_id ?? item.company_item_id ?? `${item.item_name}-${index}`}>
+                        <TableCell className="font-medium">{item.item_name}</TableCell>
+                        <TableCell className="text-right font-mono">{formatOperationalQuantity(item.required, item.canonical_unit)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatOperationalQuantity(item.reserved_for_os, item.canonical_unit)}</TableCell>
+                        <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'text-destructive font-semibold' : 'text-green-600'}`}>
+                          {formatOperationalQuantity(item.missing, item.canonical_unit)}
+                        </TableCell>
+                        <TableCell><Badge variant={badgeVariant}>{situation}</Badge></TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
             {!availability.sufficient ? (
               <Button asChild variant="outline">
                 <Link to="/pedidos-compra">Ver necessidades de compra</Link>
