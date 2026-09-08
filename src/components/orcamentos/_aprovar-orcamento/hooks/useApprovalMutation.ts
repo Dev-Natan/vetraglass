@@ -17,6 +17,7 @@ interface Params {
   formState: ApprovalFormState;
   onClose: () => void;
   onSuccess?: () => void;
+  onCashRegisterRequired?: () => void;
 }
 
 interface ApprovalRpcResult {
@@ -34,7 +35,7 @@ interface ApprovalRpcResult {
 }
 
 export function useApprovalMutation({
-  quote, companyId, valorFinal, formState, onClose, onSuccess,
+  quote, companyId, valorFinal, formState, onClose, onSuccess, onCashRegisterRequired,
 }: Params) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -120,6 +121,11 @@ export function useApprovalMutation({
       onSuccess?.();
     },
     onError: (error: Error) => {
+      console.error('[quote-approval] transactional approval failed', error);
+      if (error.message.includes('open_cash_register_required')) {
+        onCashRegisterRequired?.();
+        return;
+      }
       toast({
         title: 'Erro ao aprovar orçamento',
         description: operationalErrorMessage(error, 'Não foi possível aprovar o orçamento.'),

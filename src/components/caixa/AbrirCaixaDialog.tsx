@@ -68,7 +68,7 @@ export function AbrirCaixaDialog({
             Abrir Caixa do Dia
           </DialogTitle>
           <DialogDescription>
-            Informe o valor inicial em caixa para começar o dia.
+            Você pode iniciar o dia com saldo zero ou informar um aporte opcional.
           </DialogDescription>
         </DialogHeader>
 
@@ -90,7 +90,7 @@ export function AbrirCaixaDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="opening-amount">Fundo de Abertura</Label>
+            <Label htmlFor="opening-amount">Saldo inicial (opcional)</Label>
             <Input
               id="opening-amount"
               type="text"
@@ -104,15 +104,15 @@ export function AbrirCaixaDialog({
             <p className="text-xs text-muted-foreground">
               {hasSuggestion
                 ? 'Você pode ajustar se recolheu ou reforçou algo entre o fechamento e agora.'
-                : 'Digite quanto está entrando no caixa para iniciar o dia.'}
+                : 'Deixe em zero para abrir sem aporte ou informe quanto será transferido para o caixa.'}
             </p>
           </div>
 
-          {parsedAmount <= 0 && (
+          {parsedAmount < 0 && (
             <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-start gap-2 text-xs">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
               <span className="text-amber-700 dark:text-amber-400">
-                Informe um valor maior que zero para abrir o caixa.
+                O saldo inicial não pode ser negativo.
               </span>
             </div>
           )}
@@ -122,7 +122,7 @@ export function AbrirCaixaDialog({
           <Button variant="outline" onClick={handleClose} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={isLoading || parsedAmount <= 0}>
+          <Button onClick={handleConfirm} disabled={isLoading || parsedAmount < 0}>
             {isLoading ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</>
             ) : (

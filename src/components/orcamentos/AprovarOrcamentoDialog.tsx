@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { addDays, differenceInDays } from 'date-fns';
 import {
@@ -7,6 +8,16 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { usePaymentOptions } from '@/hooks/usePaymentOptions';
@@ -45,9 +56,11 @@ export function AprovarOrcamentoDialog({
   onSuccess,
 }: AprovarOrcamentoDialogProps) {
   const { currentCompany, user } = useAuth();
+  const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState<ApprovalStep>('payment');
   const [formState, setFormState] = useState<ApprovalFormState>(DEFAULT_FORM_STATE);
+  const [cashRequiredOpen, setCashRequiredOpen] = useState(false);
 
   const { formasPagamento, condicoesPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
 
@@ -98,6 +111,7 @@ export function AprovarOrcamentoDialog({
     if (open) {
       setCurrentStep('payment');
       setFormState(DEFAULT_FORM_STATE);
+      setCashRequiredOpen(false);
     }
   }, [open]);
 
@@ -132,6 +146,7 @@ export function AprovarOrcamentoDialog({
     formState,
     onClose: () => onOpenChange(false),
     onSuccess,
+    onCashRegisterRequired: () => setCashRequiredOpen(true),
   });
 
   if (!quote) return null;
@@ -150,9 +165,18 @@ export function AprovarOrcamentoDialog({
     const targetIndex = APPROVAL_STEPS.findIndex(s => s.key === stepKey);
     if (targetIndex <= currentStepIndex + 1) setCurrentStep(stepKey);
   };
+  const handleApprove = () => {
+    if (hasEntry && !isCaixaAberto) {
+      setCashRequiredOpen(true);
+      return;
+    }
+    approveMutation.mutate();
+  };
+
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col min-h-0 p-0">
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent shrink-0">
@@ -222,9 +246,33 @@ export function AprovarOrcamentoDialog({
           onCancel={() => onOpenChange(false)}
           onBack={handleBack}
           onNext={handleNext}
-          onApprove={() => approveMutation.mutate()}
+          onApprove={handleApprove}
         />
       </DialogContent>
-    </Dialog>
+      </Dialog>
+      <AlertDialog open={cashRequiredOpen} onOpenChange={setCashRequiredOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Caixa fechado</AlertDialogTitle>
+            <AlertDialogDescription>
+              O caixa precisa estar aberto para registrar a entrada deste orçamento.
+              Abra o caixa para continuar com a aprovação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setCashRequiredOpen(false);
+                onOpenChange(false);
+                navigate('/caixa-vendas');
+              }}
+            >
+              Abrir caixa agora
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
