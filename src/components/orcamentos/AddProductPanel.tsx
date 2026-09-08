@@ -46,6 +46,10 @@ import {
   type SuggestionStatus,
 } from '@/utils/quotePricing';
 import type { Json } from '@/integrations/supabase/types';
+import {
+  resolveProfileColorIdentities,
+  type ResolvedProfileColorOption,
+} from '@/utils/profileColorIdentity';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
@@ -76,13 +80,7 @@ interface CanonicalPricingSnapshot {
   [key: string]: unknown;
 }
 
-interface ProfileColorOption {
-  color_id: string;
-  color_code: string;
-  color_name: string;
-  hex_color: string | null;
-  sort_order: number;
-}
+type ProfileColorOption = ResolvedProfileColorOption;
 
 interface ProductTemplateRef {
   id?: string | null;
@@ -528,22 +526,33 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const { data: profileAvailableColors = [] } = useQuery({
     queryKey: ['phase4b1a-product-profile-colors', currentCompany?.id, companyProduct?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_company_product_profile_colors', {
-        _company_id: currentCompany!.id,
-        _company_product_id: companyProduct!.id,
-      });
-      if (error) throw error;
-      return (data ?? []) as ProfileColorOption[];
+      const [availableResult, tenantResult] = await Promise.all([
+        supabase.rpc('get_company_product_profile_colors', {
+          _company_id: currentCompany!.id,
+          _company_product_id: companyProduct!.id,
+        }),
+        supabase
+          .from('company_colors')
+          .select('id, admin_color_id, code, name')
+          .eq('company_id', currentCompany!.id)
+          .eq('is_active', true),
+      ]);
+      if (availableResult.error) throw availableResult.error;
+      if (tenantResult.error) throw tenantResult.error;
+      return resolveProfileColorIdentities(
+        availableResult.data ?? [],
+        tenantResult.data ?? [],
+      );
     },
     enabled: mode === 'quote' && !!currentCompany?.id && !!companyProduct?.id,
     staleTime: 30_000,
   });
   const selectedProfileColor = profileAvailableColors.find(
-    (color) => color.color_id === selectedAluminumColor,
+    (color) => color.company_color_id === selectedAluminumColor,
   ) ?? null;
   const profileFinishOptions = useMemo(() => Array.from(new Set(canonicalVariants
     .filter(row => row.variant_type === 'PROFILE' && row.profile_finish
-      && (!selectedProfileColor || row.company_color_id === selectedProfileColor.color_id))
+      && (!selectedProfileColor || row.company_color_id === selectedProfileColor.company_color_id))
     .map(row => row.profile_finish as string))).sort(), [canonicalVariants, selectedProfileColor]);
   const hasProfileColorPrices = profileAvailableColors.length > 0;
   const glassTypeOptions = useMemo(() => Array.from(new Set(canonicalVariants
@@ -607,8 +616,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     glass_color: selectedGlassColor || null,
     glass_thickness_mm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
     glass_finish: 'PADRAO',
-    profile_company_color_id: selectedProfileColor?.color_id || null,
-    profile_color_id: null,
+    profile_company_color_id: selectedProfileColor?.company_color_id || null,
+    profile_color_id: selectedProfileColor?.admin_color_id || null,
     profile_color_code: selectedProfileColor?.color_code || null,
     profile_color_name: selectedProfileColor?.color_name || null,
     profile_color: selectedProfileColor?.color_name || null,
@@ -1294,7 +1303,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                       </SelectTrigger>
                       <SelectContent className="bg-popover border shadow-lg z-50">
                         {profileAvailableColors.map((color) => (
-                          <SelectItem key={color.color_id} value={color.color_id}>
+                          <SelectItem key={color.company_color_id} value={color.company_color_id}>
                             <span className="flex items-center gap-2">
                               <span
                                 className="h-3 w-3 rounded-full border"
