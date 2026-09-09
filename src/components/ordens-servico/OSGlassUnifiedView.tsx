@@ -432,9 +432,6 @@ export function OSGlassUnifiedView({ glassCuts, vaoWidth, vaoHeight, productQuan
               {/* Glass name */}
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm truncate">{glass.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {glass.isMovable ? 'Vidro Móvel' : 'Vidro Fixo'}
-                </div>
               </div>
               
               {/* Dimensions */}

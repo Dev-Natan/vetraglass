@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown, Printer } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
+import { OSProfilePreparationList } from './OSProfilePreparationList';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
@@ -228,7 +229,12 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   }
 
   if (!plans || plans.length === 0) {
-    return <FallbackDynamicCuttingPlan ordemServicoId={ordemServicoId} />;
+    return (
+      <div className="space-y-6">
+        <OSProfilePreparationList ordemServicoId={ordemServicoId} />
+        <FallbackDynamicCuttingPlan ordemServicoId={ordemServicoId} />
+      </div>
+    );
   }
 
 
@@ -305,6 +311,8 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
 
   return (
     <div className="space-y-6">
+      <OSProfilePreparationList ordemServicoId={ordemServicoId} />
+
       {/* Print / PDF actions (hidden on print) */}
       <div className="flex items-center justify-end gap-2 no-print">
         <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>

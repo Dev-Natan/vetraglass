@@ -76,6 +76,8 @@ export interface OsMaterialPresentationInput {
   item_type?: string | null;
   unit?: string | null;
   required_quantity?: number | null;
+  os_item_id?: string | null;
+  snapshot_key?: string | null;
   bar_length_mm?: number | null;
   notes?: string | null;
 }
@@ -153,7 +155,8 @@ export function consolidateOsMaterials(
     const type = resolveCanonicalMaterialType(material.item_type, material.unit);
     const canonical = canonicalMaterialQuantity(material.required_quantity, material.unit, type);
     const identity = material.company_item_id ?? material.item_template_id ?? material.item_name;
-    const key = `${identity}:${material.variant_id ?? 'default'}:${canonical.unit}`;
+    const technicalIdentity = material.snapshot_key ?? material.item_name;
+    const key = `${material.os_item_id ?? 'os'}:${technicalIdentity}:${identity}:${material.variant_id ?? 'default'}:${canonical.unit}`;
     const current = groups.get(key);
 
     if (current) {

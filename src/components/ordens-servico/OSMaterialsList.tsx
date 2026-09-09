@@ -1,21 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
-import { distributeAcrossBars } from '@/utils/profileOptimization';
-import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import {
-  basicProfilePurchasePlan,
   canonicalMaterialQuantity,
-  consolidateOsMaterials,
-  formatOperationalQuantity,
-  getOsMaterialSituation,
   materialTypeLabel,
   resolveCanonicalMaterialType,
 } from '@/utils/osMaterialStatus';
@@ -24,402 +16,184 @@ interface OSMaterialsListProps {
   ordemServicoId: string;
 }
 
-interface MaterialAvailabilityItem {
-  requirement_id?: string;
-  company_item_id: string | null;
-  item_name: string;
-  unit: string;
-  canonical_unit: string;
-  required: number;
-  reserved_for_os: number;
-  missing: number;
-  status: string;
-  sufficient: boolean;
+type MaterialRow = Tables<'os_materials'> & {
+  os_items: { product_name: string } | null;
+};
+
+const quantityFormatter = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 3,
+});
+
+function displayQuantity(quantity: number, unit: string): string {
+  if (unit === 'MM') return quantityFormatter.format(quantity / 1_000);
+  if (unit === 'MM2') return quantityFormatter.format(quantity / 1_000_000);
+  return quantityFormatter.format(quantity);
 }
 
-interface MaterialAvailability {
-  success: boolean;
-  sufficient: boolean;
-  items: MaterialAvailabilityItem[];
+function displayUnit(unit: string): string {
+  if (unit === 'MM') return 'm';
+  if (unit === 'MM2') return 'm²';
+  if (unit === 'UNIT' || unit === 'UN') return 'un';
+  return unit.toLowerCase();
 }
-
 
 export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
-  const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
-
-  const { data: materials, isLoading } = useQuery({
+  const { data: materials = [], isLoading } = useQuery({
     queryKey: ['os-materials', ordemServicoId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('os_materials')
-        .select('*')
+        .select('*, os_items!os_materials_os_item_id_fkey(product_name)')
         .eq('ordem_servico_id', ordemServicoId)
         .order('item_name');
 
       if (error) throw error;
-      return data || [];
+      return (data ?? []) as MaterialRow[];
     },
   });
 
-  const { data: availability } = useQuery({
-    queryKey: ['os-material-availability', ordemServicoId],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_os_material_availability', {
-        _ordem_servico_id: ordemServicoId,
-      });
-      if (error) throw error;
-      return data as unknown as MaterialAvailability;
-    },
-  });
+  const groups = useMemo(() => {
+    const grouped = new Map<string, { name: string; materials: MaterialRow[] }>();
 
-  const consolidatedMaterials = useMemo(() => consolidateOsMaterials(materials ?? []), [materials]);
+    for (const material of materials) {
+      const key = material.os_item_id ?? 'os';
+      const current = grouped.get(key);
+      if (current) {
+        current.materials.push(material);
+      } else {
+        grouped.set(key, {
+          name: material.os_items?.product_name ?? 'Materiais gerais da OS',
+          materials: [material],
+        });
+      }
+    }
+
+    return Array.from(grouped.entries());
+  }, [materials]);
+
+  const totals = useMemo(
+    () => materials.reduce(
+      (summary, material) => {
+        summary[resolveCanonicalMaterialType(material.item_type, material.unit)] += 1;
+        return summary;
+      },
+      { profile: 0, glass: 0, accessory: 0 },
+    ),
+    [materials],
+  );
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
 
-  const snapshotEmpty = !materials || materials.length === 0;
-
-  if (snapshotEmpty) {
+  if (!materials.length) {
     return (
       <Card className="border-destructive/40">
         <CardContent className="py-8 text-center text-muted-foreground">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-destructive" />
           <p className="font-medium text-foreground">Snapshot de materiais indisponível</p>
-          <p className="text-sm mt-1">
+          <p className="mt-1 text-sm">
             A composição histórica desta OS não pode ser recalculada pelo catálogo atual.
           </p>
         </CardContent>
       </Card>
     );
   }
-  const consolidatedProfiles = consolidatedMaterials.filter((material) => material.item_type === 'profile');
-  const profiles = materials.filter(
-    (material) => resolveCanonicalMaterialType(material.item_type, material.unit) === 'profile',
-  );
-  const totalBars = consolidatedProfiles.reduce((sum, profile) => sum + (profile.bars_needed ?? 0), 0);
-  const totalWaste = consolidatedProfiles.reduce((sum, profile) => sum + (profile.theoretical_waste_mm ?? 0), 0);
-  const totalLength = consolidatedProfiles.reduce(
-    (sum, profile) => sum + profile.required_canonical_quantity,
-    0,
-  );
-  const avgWaste = totalLength > 0
-    ? Math.round((totalWaste / (totalLength + totalWaste)) * 1000) / 10 
-    : 0;
-
 
   return (
-    <div className="space-y-6">
-      {availability && (
-        <Card className={availability.sufficient ? 'border-green-500/30' : 'border-amber-500/50'}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              {availability.sufficient ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              )}
-              Disponibilidade operacional
-              <Badge variant={availability.sufficient ? 'default' : 'secondary'}>
-                {availability.sufficient ? 'Material suficiente' : 'Material faltante'}
-              </Badge>
-            </CardTitle>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Package className="h-5 w-5" />
+            Materiais técnicos da OS
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <div className="text-xl font-bold">{totals.profile}</div>
+              <div className="text-xs text-muted-foreground">Perfis</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <div className="text-xl font-bold">{totals.glass}</div>
+              <div className="text-xs text-muted-foreground">Vidros</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <div className="text-xl font-bold">{totals.accessory}</div>
+              <div className="text-xs text-muted-foreground">Acessórios</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {groups.map(([groupKey, group]) => (
+        <Card key={groupKey}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{group.name}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="overflow-x-auto">
+          <CardContent>
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Material</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Necessário</TableHead>
-                    <TableHead className="text-right">Reservado p/ OS</TableHead>
-                    <TableHead className="text-right">Falta</TableHead>
-                    <TableHead>Situação</TableHead>
+                    <TableHead>Unidade</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {availability.items.map((item, index) => {
-                    const situation = getOsMaterialSituation({
-                      status: item.status,
-                      reserved: item.reserved_for_os,
-                      missing: item.missing,
-                    });
-                    const badgeVariant = situation === 'Comprar'
-                      ? 'destructive'
-                      : situation === 'Atendido'
-                        ? 'default'
-                        : 'secondary';
-
+                  {group.materials.map((material) => {
+                    const type = resolveCanonicalMaterialType(material.item_type, material.unit);
+                    const canonical = canonicalMaterialQuantity(material.required_quantity, material.unit, type);
                     return (
-                      <TableRow key={item.requirement_id ?? item.company_item_id ?? `${item.item_name}-${index}`}>
-                        <TableCell className="font-medium">{item.item_name}</TableCell>
-                        <TableCell className="text-right font-mono">{formatOperationalQuantity(item.required, item.canonical_unit)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatOperationalQuantity(item.reserved_for_os, item.canonical_unit)}</TableCell>
-                        <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'text-destructive font-semibold' : 'text-green-600'}`}>
-                          {formatOperationalQuantity(item.missing, item.canonical_unit)}
+                      <TableRow key={material.id}>
+                        <TableCell className="font-medium">{material.item_name}</TableCell>
+                        <TableCell><Badge variant="outline">{materialTypeLabel(type)}</Badge></TableCell>
+                        <TableCell className="text-right font-mono">
+                          {displayQuantity(canonical.quantity, canonical.unit)}
                         </TableCell>
-                        <TableCell><Badge variant={badgeVariant}>{situation}</Badge></TableCell>
+                        <TableCell>{displayUnit(canonical.unit)}</TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </div>
-            {!availability.sufficient ? (
-              <Button asChild variant="outline">
-                <Link to="/pedidos-compra">Ver necessidades de compra</Link>
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-      )}
 
-      <div className="flex justify-start">
-        <Tabs
-          value={viewMode}
-          onValueChange={(value) => {
-            if (value === 'individual' || value === 'consolidated') setViewMode(value);
-          }}
-          className="w-auto"
-        >
-          <TabsList>
-            <TabsTrigger value="individual" className="gap-2">
-              <List className="w-4 h-4" />
-              Individual
-            </TabsTrigger>
-            <TabsTrigger value="consolidated" className="gap-2">
-              <Boxes className="w-4 h-4" />
-              Consolidado
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {viewMode === 'individual' ? (
-        <>
-          {/* Summary Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Resumo de Materiais
-              </CardTitle>
-            </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{consolidatedProfiles.length}</div>
-              <div className="text-sm text-muted-foreground">Tipos de Perfis</div>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{totalBars}</div>
-              <div className="text-sm text-muted-foreground">Barras Necessárias</div>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold">{formatOperationalQuantity(totalLength, 'MM')}</div>
-              <div className="text-sm text-muted-foreground">Comprimento Total</div>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className={`text-2xl font-bold ${avgWaste > 20 ? 'text-destructive' : avgWaste > 10 ? 'text-yellow-600' : 'text-green-600'}`}>
-                {avgWaste}%
-              </div>
-              <div className="text-sm text-muted-foreground">Desperdício Médio</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Profiles List */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Ruler className="w-5 h-5" />
-            Perfis de Alumínio
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {profiles.map((profile) => {
-              // Parse cuts from notes
-              const canonical = canonicalMaterialQuantity(
-                profile.required_quantity,
-                profile.unit,
-                'profile',
-              );
-              const purchasePlan = basicProfilePurchasePlan(canonical.quantity, profile.bar_length_mm);
-              const wastePercent = purchasePlan ? (purchasePlan.theoreticalWasteMm / (canonical.quantity + purchasePlan.theoreticalWasteMm)) * 100 : null;
-              const cutsFromNotes = profile.notes?.split(', ').map(s => {
-                const match = s.match(/(\d+)x\s*(\d+)mm/);
-                if (match) {
-                  return { qty: parseInt(match[1]), length: parseInt(match[2]) };
-                }
-                return null;
-              }).filter(Boolean) || [];
-
-              const bars = profile.bar_length_mm
-                ? distributeAcrossBars(
-                    cutsFromNotes as Array<{ length: number; qty: number }>,
-                    profile.bar_length_mm,
-                  )
-                : [];
-
-              return (
-                <div key={profile.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-lg">{profile.item_name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Barra: {profile.bar_length_mm ? formatOperationalQuantity(profile.bar_length_mm, 'MM') : 'não definida'}
-                      </p>
+            <div className="grid gap-3 md:hidden">
+              {group.materials.map((material) => {
+                const type = resolveCanonicalMaterialType(material.item_type, material.unit);
+                const canonical = canonicalMaterialQuantity(material.required_quantity, material.unit, type);
+                return (
+                  <div key={material.id} className="rounded-lg border p-3">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <span className="font-medium">{material.item_name}</span>
+                      <Badge variant="outline">{materialTypeLabel(type)}</Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">
-                        {purchasePlan ? `${purchasePlan.barsNeeded} ${purchasePlan.barsNeeded === 1 ? 'barra' : 'barras'}` : 'Barra não definida'}
-                      </Badge>
-                      {wastePercent != null ? (
-                        <Badge variant={wastePercent > 20 ? 'destructive' : wastePercent > 10 ? 'secondary' : 'default'}>
-                          {wastePercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% sobra teórica
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <Separator className="my-3" />
-
-                  {/* Cuts breakdown */}
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Cortes necessários:</div>
-                    {cutsFromNotes.length > 0 ? <div className="flex flex-wrap gap-2">
-                      {cutsFromNotes.map((cut, idx) => (
-                        <Badge key={idx} variant="secondary" className="font-mono">
-                          {cut?.qty}x {cut?.length}mm
-                        </Badge>
-                      ))}
-                    </div> : (
-                      <p className="text-sm text-muted-foreground">
-                        Detalhamento de corte ainda não disponível.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Bar distribution visualization */}
-                  {bars.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <div className="text-sm font-medium">Distribuição nas barras:</div>
-                      <div className="space-y-2">
-                        {bars.slice(0, 5).map((bar) => (
-                          <div key={bar.barIndex} className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground w-16">
-                              Barra {bar.barIndex}
-                            </span>
-                            <div className="flex-1 h-6 bg-muted rounded overflow-hidden flex">
-                              {bar.cuts.map((cut, idx) => {
-                                const widthPercent = (cut.length / (profile.bar_length_mm || 6000)) * 100;
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="h-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground border-r border-background"
-                                    style={{ width: `${widthPercent * cut.qty}%` }}
-                                    title={`${cut.qty}x ${cut.length}mm`}
-                                  >
-                                    {widthPercent > 8 && `${cut.length}`}
-                                  </div>
-                                );
-                              })}
-                              {bar.remainingLength > 0 && (
-                                <div 
-                                  className="h-full bg-muted-foreground/20 flex items-center justify-center text-[10px]"
-                                  style={{ width: `${(bar.remainingLength / (profile.bar_length_mm || 6000)) * 100}%` }}
-                                >
-                                  {bar.remainingLength > 200 && `${bar.remainingLength}mm`}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground w-20 text-right">
-                              {bar.remainingLength > 0 ? (
-                                <span className="text-yellow-600">
-                                  <AlertTriangle className="w-3 h-3 inline mr-1" />
-                                  {formatOperationalQuantity(bar.remainingLength, 'MM')}
-                                </span>
-                              ) : (
-                                <span className="text-green-600">
-                                  <CheckCircle className="w-3 h-3 inline mr-1" />
-                                  Exato
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                        {bars.length > 5 && (
-                          <p className="text-xs text-muted-foreground">
-                            ... e mais {bars.length - 5} barras
-                          </p>
-                        )}
+                    <dl className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Necessário</dt>
+                        <dd className="font-mono">{displayQuantity(canonical.quantity, canonical.unit)}</dd>
                       </div>
-                    </div>
-                  )}
-
-                  <Separator className="my-3" />
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Necessário: {formatOperationalQuantity(canonical.quantity, canonical.unit)}
-                    </span>
-                    {purchasePlan ? <span className="text-muted-foreground">
-                      Sobra teórica: {formatOperationalQuantity(purchasePlan.theoreticalWasteMm, 'MM')}
-                    </span> : null}
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Unidade</dt>
+                        <dd>{displayUnit(canonical.unit)}</dd>
+                      </div>
+                    </dl>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-        </>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Boxes className="w-5 h-5" />
-              Materiais Consolidados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="p-3 text-left">Item</th>
-                    <th className="p-3 text-left">Tipo</th>
-                    <th className="p-3 text-right">Qtd Total</th>
-                    <th className="p-3 text-left">Unidade</th>
-                    <th className="p-3 text-right">Barras</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {consolidatedMaterials.map((item) => (
-                    <tr key={item.key}>
-                      <td className="p-3 font-medium">{item.item_name}</td>
-                      <td className="p-3">
-                        <Badge variant="outline">{materialTypeLabel(item.item_type)}</Badge>
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {formatOperationalQuantity(item.required_canonical_quantity, item.canonical_unit)}
-                      </td>
-                      <td className="p-3">{item.canonical_unit === 'MM' ? 'm' : item.canonical_unit === 'MM2' ? 'm²' : 'un'}</td>
-                      <td className="p-3 text-right">{item.bars_needed ?? '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
-      )}
+      ))}
     </div>
   );
 }

@@ -135,4 +135,37 @@ describe('OS material presentation', () => {
     expect(formatPurchaseQuantity(1, 'BAR')).toBe('1 barra');
     expect(formatPurchaseQuantity(2, 'BAR')).toBe('2 barras');
   });
+
+  it('DATA01-DATA04 preserves distinct technical glass identities', () => {
+    const materials = consolidateOsMaterials([
+      {
+        os_item_id: 'product-one',
+        snapshot_key: 'fixed-panel',
+        company_item_id: 'same-glass',
+        variant_id: 'same-variant',
+        item_name: 'VIDRO FIXO',
+        item_type: 'glass',
+        unit: 'm²',
+        required_quantity: 0.864,
+      },
+      {
+        os_item_id: 'product-one',
+        snapshot_key: 'moving-panel',
+        company_item_id: 'same-glass',
+        variant_id: 'same-variant',
+        item_name: 'VIDRO MÓVEL',
+        item_type: 'glass',
+        unit: 'm²',
+        required_quantity: 0.962,
+      },
+    ]);
+
+    expect(materials).toHaveLength(2);
+    expect(materials.map((material) => material.required_canonical_quantity))
+      .toEqual([864000, 962000]);
+    expect(materials.reduce(
+      (total, material) => total + material.required_canonical_quantity,
+      0,
+    )).toBe(1826000);
+  });
 });

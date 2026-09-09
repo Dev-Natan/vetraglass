@@ -21,6 +21,10 @@ export interface OSItem {
   quantity: number;
   technical_notes: string | null;
   recalculation_required: boolean;
+  engineering_snapshot: unknown;
+  fulfillment_mode: string;
+  profile_color_name: string | null;
+  snapshot_version: number | null;
   last_recalculated_at: string | null;
   created_at: string;
 }

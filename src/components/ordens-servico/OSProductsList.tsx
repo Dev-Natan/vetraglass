@@ -25,6 +25,48 @@ interface OSProductsListProps {
   ordemServicoId: string;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function humanizeSpecification(value: unknown): string | null {
+  if (typeof value === 'number') return String(value);
+  if (typeof value !== 'string' || !value.trim()) return null;
+  if (/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value)) return null;
+  return value.replaceAll('_', ' ').trim();
+}
+
+function snapshotSpecifications(snapshot: unknown): string[] {
+  const root = asRecord(snapshot);
+  if (!root) return [];
+
+  const result = new Set<string>();
+  const entries = [
+    ...(Array.isArray(root.materials) ? root.materials : []),
+    ...(Array.isArray(root.glass_pieces) ? root.glass_pieces : []),
+  ];
+
+  for (const entry of entries) {
+    const specification = asRecord(asRecord(entry)?.specification);
+    if (!specification) continue;
+    const type = humanizeSpecification(specification.type);
+    const color = humanizeSpecification(specification.color);
+    const thickness = humanizeSpecification(specification.thickness_mm);
+    const finish = humanizeSpecification(specification.finish);
+    const label = [
+      type,
+      color,
+      thickness ? `${thickness} mm` : null,
+      finish,
+    ].filter(Boolean).join(' · ');
+    if (label) result.add(label);
+  }
+
+  return Array.from(result);
+}
+
 export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -106,7 +148,9 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
       </div>
 
       <div className="grid gap-4">
-        {items?.map(item => (
+        {items?.map((item) => {
+          const specifications = snapshotSpecifications(item.engineering_snapshot);
+          return (
           <Card key={item.id} className={item.recalculation_required ? 'border-amber-500 bg-amber-50/10' : ''}>
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -122,6 +166,17 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
                     )}
                   </div>
                   
+                  {(item.profile_color_name || specifications.length > 0) && (
+                    <div className="flex flex-wrap gap-2">
+                      {item.profile_color_name ? (
+                        <Badge variant="outline">Cor: {item.profile_color_name}</Badge>
+                      ) : null}
+                      {specifications.map((specification) => (
+                        <Badge key={specification} variant="outline">{specification}</Badge>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 gap-4 mt-4">
                     {/* Side A */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -228,7 +283,8 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Adjust Dimensions Dialog */}

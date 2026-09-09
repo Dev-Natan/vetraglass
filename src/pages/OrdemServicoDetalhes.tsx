@@ -5,8 +5,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History, Receipt } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Package, Scissors, ShoppingCart, FileText, User, Phone, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History, Receipt } from 'lucide-react';
 import { ReciboOSDialog } from '@/components/ordens-servico/ReciboOSDialog';
 import { useState } from 'react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
@@ -15,8 +15,7 @@ import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
 import { OSProductsList } from '@/components/ordens-servico/OSProductsList';
 import { OSDimensionHistoryList } from '@/components/ordens-servico/OSDimensionHistoryList';
-import { OSCompositionGlasses } from '@/components/ordens-servico/OSCompositionGlasses';
-import { OSCompositionAccessories } from '@/components/ordens-servico/OSCompositionAccessories';
+import { OSPurchasesList } from '@/components/ordens-servico/OSPurchasesList';
 
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { format } from 'date-fns';
@@ -404,7 +403,7 @@ export default function OrdemServicoDetalhes() {
 
         {/* Tabs */}
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 h-auto">
+          <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-5">
             <TabsTrigger value="products" className="flex items-center gap-2 py-2">
               <Package className="w-4 h-4" />
               <span>Produtos</span>
@@ -415,16 +414,11 @@ export default function OrdemServicoDetalhes() {
             </TabsTrigger>
             <TabsTrigger value="cutting" className="flex items-center gap-2 py-2">
               <Scissors className="w-4 h-4" />
-              <span>Corte</span>
+              <span>Cortes</span>
             </TabsTrigger>
-            <TabsTrigger value="glass" className="flex items-center gap-2 py-2">
-              <Layers className="w-4 h-4" />
-              <span>Vidros</span>
-            </TabsTrigger>
-
-            <TabsTrigger value="accessories" className="flex items-center gap-2 py-2">
-              <Package className="w-4 h-4" />
-              <span>Acessórios</span>
+            <TabsTrigger value="purchases" className="flex items-center gap-2 py-2">
+              <ShoppingCart className="w-4 h-4" />
+              <span>Compras</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2 py-2">
               <History className="w-4 h-4" />
@@ -450,41 +444,10 @@ export default function OrdemServicoDetalhes() {
           </TabsContent>
 
 
-          <TabsContent value="glass" className="mt-4 space-y-4">
-            <OSCompositionGlasses ordemServicoId={ordem.id} />
-          </TabsContent>
-          
-          <TabsContent value="accessories" className="mt-4">
-            <OSCompositionAccessories ordemServicoId={ordem.id} />
+          <TabsContent value="purchases" className="mt-4">
+            <OSPurchasesList ordemServicoId={ordem.id} />
           </TabsContent>
 
-          <TabsContent value="details" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações da OS</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {ordem.customer_address && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">Endereço</div>
-                      <div>{ordem.customer_address}</div>
-                    </div>
-                  </div>
-                )}
-                {ordem.notes && (
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Observações</div>
-                    <div className="p-3 bg-muted/50 rounded-lg">{ordem.notes}</div>
-                  </div>
-                )}
-                <div className="text-sm text-muted-foreground">
-                  Criada em: {format(new Date(ordem.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
