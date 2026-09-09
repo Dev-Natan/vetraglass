@@ -147,43 +147,6 @@ export const osService = {
     return data as any[];
   },
 
-  async getConsolidatedMaterials(osId: string) {
-    const { data, error } = await supabase
-      .from('os_materials')
-      .select('*')
-      .eq('ordem_servico_id', osId);
-    
-    if (error) throw error;
-    
-    const consolidated: Record<string, any> = {};
-    
-    (data || []).forEach(item => {
-      const key = `${item.item_name}-${item.item_type}-${item.unit}`;
-      if (!consolidated[key]) {
-        consolidated[key] = {
-          item_name: item.item_name,
-          item_type: item.item_type,
-          unit: item.unit,
-          total_quantity: 0,
-          total_length: 0,
-          pieces_count: 0,
-          bars_needed: 0
-        };
-      }
-      
-      if (item.item_type === 'profile') {
-        consolidated[key].total_length += Number(item.total_length_mm || 0);
-        consolidated[key].pieces_count += Number(item.pieces_count || 0);
-        consolidated[key].bars_needed += Number(item.bars_needed || 0);
-      } else {
-        // Accessories usually use pieces_count as the main quantity
-        consolidated[key].total_quantity += Number(item.pieces_count || 0);
-      }
-    });
-    
-    return Object.values(consolidated);
-  },
-
   async recalculateOSItem(osItemId: string, osId: string) {
     return regenerateOSDocuments(osId, osItemId);
   },

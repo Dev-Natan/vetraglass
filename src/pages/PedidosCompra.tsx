@@ -125,7 +125,7 @@ export default function PedidosCompra() {
           {capabilities?.canCreatePurchase ? (
             <Button onClick={() => setCreateOrderOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Novo pedido ({requirements.length})
+              Novo pedido · {requirements.length} {requirements.length === 1 ? 'necessidade' : 'necessidades'}
             </Button>
           ) : null}
         </div>

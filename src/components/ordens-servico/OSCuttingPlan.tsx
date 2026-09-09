@@ -18,6 +18,7 @@ import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationVie
 import { PrintableCuttingReport, type PrintableProfileCut, type PrintableProductSummary } from '@/components/plano-corte/PrintableCuttingReport';
 import { useOSComposition } from '@/hooks/useOSComposition';
 import { useMemo } from 'react';
+import { normalizeGlassCutSnapshot } from '@/utils/osMaterialStatus';
 
 
 
@@ -83,7 +84,19 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
         .order('created_at');
 
       if (error) throw error;
-      return (data || []) as any[];
+      return (data || []).map((plan) => {
+        const rawGlassCuts = Array.isArray(plan.glass_cuts_data)
+          ? plan.glass_cuts_data
+          : [];
+        const glassCuts = rawGlassCuts
+          .map((snapshot) => normalizeGlassCutSnapshot(snapshot as Record<string, unknown>))
+          .filter((glass): glass is GlassCutData => glass !== null);
+
+        return {
+          ...plan,
+          glass_cuts_data: glassCuts,
+        } as unknown as CuttingPlan;
+      });
     },
   });
 

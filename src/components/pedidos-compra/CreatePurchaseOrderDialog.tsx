@@ -19,6 +19,7 @@ import {
   useMaterialPurchaseRequirements,
 } from '@/hooks/usePurchaseOrders';
 import { createUuid } from '@/utils/createUuid';
+import { formatOperationalQuantity, formatPurchaseQuantity } from '@/utils/osMaterialStatus';
 
 interface CreatePurchaseOrderDialogProps {
   open: boolean;
@@ -201,15 +202,11 @@ export function CreatePurchaseOrderDialog({
                     <span className="block font-medium">{requirement.item_name}</span>
                     <span className="block text-xs text-muted-foreground">
                       OS #{String(requirement.os_number).padStart(4, '0')} · falta{' '}
-                      {requirement.purchase_required_canonical_quantity.toFixed(3)}{' '}
-                      {requirement.canonical_unit}
+                      {formatOperationalQuantity(requirement.purchase_required_canonical_quantity, requirement.canonical_unit)}
                     </span>
                   </span>
                   <span className="text-right text-sm">
-                    {requirement.suggested_purchase_quantity.toFixed(
-                      requirement.purchase_allows_fractional ? 3 : 0,
-                    )}{' '}
-                    {requirement.purchase_unit}
+                    {formatPurchaseQuantity(requirement.suggested_purchase_quantity, requirement.purchase_unit)}
                   </span>
                 </label>
               ))
@@ -225,7 +222,7 @@ export function CreatePurchaseOrderDialog({
                 <div key={group.key} className="rounded-lg border p-3">
                   <div className="text-sm font-medium">{group.itemName}</div>
                   <div className="mb-2 text-xs text-muted-foreground">
-                    {group.purchaseQuantity.toFixed(3)} {group.purchaseUnit} ·{' '}
+                    {formatPurchaseQuantity(group.purchaseQuantity, group.purchaseUnit)} ·{' '}
                     {group.requirements.length} OS/necessidade(s)
                   </div>
                   <Label htmlFor={`cost-${group.key}`} className="text-xs">

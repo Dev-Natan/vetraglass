@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +8,17 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
-import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
-import { osService } from '@/services/osService';
+import { distributeAcrossBars } from '@/utils/profileOptimization';
 import { Link } from 'react-router-dom';
-import { formatOperationalQuantity, getOsMaterialSituation } from '@/utils/osMaterialStatus';
+import {
+  basicProfilePurchasePlan,
+  canonicalMaterialQuantity,
+  consolidateOsMaterials,
+  formatOperationalQuantity,
+  getOsMaterialSituation,
+  materialTypeLabel,
+  resolveCanonicalMaterialType,
+} from '@/utils/osMaterialStatus';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
@@ -36,15 +43,6 @@ interface MaterialAvailability {
   items: MaterialAvailabilityItem[];
 }
 
-interface ConsolidatedMaterial {
-  item_name: string;
-  item_type: string;
-  total_length: number;
-  total_quantity: number;
-  unit: string;
-  bars_needed?: number;
-}
-
 
 export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
   const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
@@ -63,12 +61,6 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     },
   });
 
-  const { data: consolidatedMaterials, isLoading: isConsolidatedLoading } = useQuery({
-    queryKey: ['os-materials-consolidated', ordemServicoId],
-    queryFn: () => osService.getConsolidatedMaterials(ordemServicoId),
-    enabled: viewMode === 'consolidated'
-  });
-
   const { data: availability } = useQuery({
     queryKey: ['os-material-availability', ordemServicoId],
     queryFn: async () => {
@@ -80,7 +72,9 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     },
   });
 
-  if (isLoading || isConsolidatedLoading) {
+  const consolidatedMaterials = useMemo(() => consolidateOsMaterials(materials ?? []), [materials]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -103,12 +97,17 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
       </Card>
     );
   }
-  // Group by item type for individual view
-  const profiles = materials.filter(m => m.item_type === 'profile');
-  const totalBars = profiles.reduce((sum, p) => sum + (p.bars_needed || 0), 0);
-  const totalWaste = profiles.reduce((sum, p) => sum + (p.waste_mm || 0), 0);
-  const totalLength = profiles.reduce((sum, p) => sum + (p.total_length_mm || 0), 0);
-  const avgWaste = totalLength > 0 
+  const consolidatedProfiles = consolidatedMaterials.filter((material) => material.item_type === 'profile');
+  const profiles = materials.filter(
+    (material) => resolveCanonicalMaterialType(material.item_type, material.unit) === 'profile',
+  );
+  const totalBars = consolidatedProfiles.reduce((sum, profile) => sum + (profile.bars_needed ?? 0), 0);
+  const totalWaste = consolidatedProfiles.reduce((sum, profile) => sum + (profile.theoretical_waste_mm ?? 0), 0);
+  const totalLength = consolidatedProfiles.reduce(
+    (sum, profile) => sum + profile.required_canonical_quantity,
+    0,
+  );
+  const avgWaste = totalLength > 0
     ? Math.round((totalWaste / (totalLength + totalWaste)) * 1000) / 10 
     : 0;
 
@@ -213,7 +212,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{profiles.length}</div>
+              <div className="text-2xl font-bold text-primary">{consolidatedProfiles.length}</div>
               <div className="text-sm text-muted-foreground">Tipos de Perfis</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
@@ -221,7 +220,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
               <div className="text-sm text-muted-foreground">Barras Necessárias</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold">{formatMm(totalLength)}</div>
+              <div className="text-2xl font-bold">{formatOperationalQuantity(totalLength, 'MM')}</div>
               <div className="text-sm text-muted-foreground">Comprimento Total</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
@@ -246,6 +245,13 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
           <div className="space-y-4">
             {profiles.map((profile) => {
               // Parse cuts from notes
+              const canonical = canonicalMaterialQuantity(
+                profile.required_quantity,
+                profile.unit,
+                'profile',
+              );
+              const purchasePlan = basicProfilePurchasePlan(canonical.quantity, profile.bar_length_mm);
+              const wastePercent = purchasePlan ? (purchasePlan.theoreticalWasteMm / (canonical.quantity + purchasePlan.theoreticalWasteMm)) * 100 : null;
               const cutsFromNotes = profile.notes?.split(', ').map(s => {
                 const match = s.match(/(\d+)x\s*(\d+)mm/);
                 if (match) {
@@ -254,10 +260,12 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                 return null;
               }).filter(Boolean) || [];
 
-              const bars = distributeAcrossBars(
-                cutsFromNotes as Array<{ length: number; qty: number }>,
-                profile.bar_length_mm || 6000
-              );
+              const bars = profile.bar_length_mm
+                ? distributeAcrossBars(
+                    cutsFromNotes as Array<{ length: number; qty: number }>,
+                    profile.bar_length_mm,
+                  )
+                : [];
 
               return (
                 <div key={profile.id} className="border rounded-lg p-4">
@@ -265,22 +273,18 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                     <div>
                       <h4 className="font-semibold text-lg">{profile.item_name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Barra: {formatMm(profile.bar_length_mm || 6000)}
+                        Barra: {profile.bar_length_mm ? formatOperationalQuantity(profile.bar_length_mm, 'MM') : 'não definida'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="font-mono">
-                        {profile.bars_needed} barra{profile.bars_needed !== 1 ? 's' : ''}
+                        {purchasePlan ? `${purchasePlan.barsNeeded} ${purchasePlan.barsNeeded === 1 ? 'barra' : 'barras'}` : 'Barra não definida'}
                       </Badge>
-                      <Badge 
-                        variant={
-                          (profile.waste_percent || 0) > 20 ? 'destructive' : 
-                          (profile.waste_percent || 0) > 10 ? 'secondary' : 
-                          'default'
-                        }
-                      >
-                        {profile.waste_percent?.toFixed(1)}% sobra
-                      </Badge>
+                      {wastePercent != null ? (
+                        <Badge variant={wastePercent > 20 ? 'destructive' : wastePercent > 10 ? 'secondary' : 'default'}>
+                          {wastePercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% sobra teórica
+                        </Badge>
+                      ) : null}
                     </div>
                   </div>
 
@@ -289,13 +293,17 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                   {/* Cuts breakdown */}
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Cortes necessários:</div>
-                    <div className="flex flex-wrap gap-2">
+                    {cutsFromNotes.length > 0 ? <div className="flex flex-wrap gap-2">
                       {cutsFromNotes.map((cut, idx) => (
                         <Badge key={idx} variant="secondary" className="font-mono">
                           {cut?.qty}x {cut?.length}mm
                         </Badge>
                       ))}
-                    </div>
+                    </div> : (
+                      <p className="text-sm text-muted-foreground">
+                        Detalhamento de corte ainda não disponível.
+                      </p>
+                    )}
                   </div>
 
                   {/* Bar distribution visualization */}
@@ -335,7 +343,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                               {bar.remainingLength > 0 ? (
                                 <span className="text-yellow-600">
                                   <AlertTriangle className="w-3 h-3 inline mr-1" />
-                                  {formatMm(bar.remainingLength)}
+                                  {formatOperationalQuantity(bar.remainingLength, 'MM')}
                                 </span>
                               ) : (
                                 <span className="text-green-600">
@@ -359,11 +367,11 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
 
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Total: {profile.pieces_count} peças = {formatMm(profile.total_length_mm || 0)}
+                      Necessário: {formatOperationalQuantity(canonical.quantity, canonical.unit)}
                     </span>
-                    <span className="text-muted-foreground">
-                      Sobra: {formatMm(profile.waste_mm || 0)}
-                    </span>
+                    {purchasePlan ? <span className="text-muted-foreground">
+                      Sobra teórica: {formatOperationalQuantity(purchasePlan.theoreticalWasteMm, 'MM')}
+                    </span> : null}
                   </div>
                 </div>
               );
@@ -393,17 +401,17 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {(consolidatedMaterials as ConsolidatedMaterial[] | undefined)?.map((item, idx) => (
-                    <tr key={idx}>
+                  {consolidatedMaterials.map((item) => (
+                    <tr key={item.key}>
                       <td className="p-3 font-medium">{item.item_name}</td>
                       <td className="p-3">
-                        <Badge variant="outline">{item.item_type === 'profile' ? 'Perfil' : 'Acessório'}</Badge>
+                        <Badge variant="outline">{materialTypeLabel(item.item_type)}</Badge>
                       </td>
                       <td className="p-3 text-right font-mono">
-                        {item.item_type === 'profile' ? formatMm(item.total_length) : item.total_quantity}
+                        {formatOperationalQuantity(item.required_canonical_quantity, item.canonical_unit)}
                       </td>
-                      <td className="p-3">{item.unit}</td>
-                      <td className="p-3 text-right">{item.bars_needed || '-'}</td>
+                      <td className="p-3">{item.canonical_unit === 'MM' ? 'm' : item.canonical_unit === 'MM2' ? 'm²' : 'un'}</td>
+                      <td className="p-3 text-right">{item.bars_needed ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>
