@@ -51,17 +51,17 @@ test('TAB09 Cortes contém os detalhes de vidros', () => {
   assert.match(cutting, /OSGlassUnifiedView/);
 });
 
-test('TAB10 Compras usa todas as necessidades retornadas pela Phase 3G', () => {
-  assert.match(purchases, /get_os_material_availability/);
+test('TAB10 Compras usa a disponibilidade física dinâmica da Phase 01A', () => {
+  assert.match(purchases, /get_os_dynamic_material_availability/);
   assert.match(purchases, /availability\.items\.map/);
 });
 
-test('TAB11 Compras mostra necessário, reservado e falta', () => {
-  for (const label of ['Necessário', 'Reservado', 'Falta']) assert.match(purchases, new RegExp(label));
+test('TAB11 Compras mostra necessário, disponível e faltante como informação principal', () => {
+  for (const label of ['Necessário', 'Disponível', 'Faltante']) assert.match(purchases, new RegExp(label));
 });
 
 test('TAB12 material atendido não é classificado como faltante pela apresentação', () => {
-  assert.match(purchases, /getOsMaterialSituation/);
+  assert.match(purchases, /AVAILABLE: 'Disponível'/);
   assert.match(purchases, /availability\.sufficient/);
 });
 

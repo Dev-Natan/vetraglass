@@ -6,22 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { formatOperationalQuantity, getOsMaterialSituation } from '@/utils/osMaterialStatus';
+import { formatOperationalQuantity } from '@/utils/osMaterialStatus';
 
 interface OSPurchasesListProps {
   ordemServicoId: string;
 }
 
 interface MaterialAvailabilityItem {
-  requirement_id?: string;
-  company_item_id: string | null;
-  item_name: string;
+  os_material_id: string;
+  requirement_id: string;
+  company_item_id: string;
+  company_item_variant_id: string | null;
+  material_name: string;
+  variant_name: string | null;
+  required_quantity: number;
   canonical_unit: string;
-  required: number;
-  reserved_for_os: number;
-  missing: number;
-  status: string;
-  sufficient: boolean;
+  physical_on_hand: number;
+  reserved_total: number;
+  reserved_for_this_os: number;
+  available_free: number;
+  available_for_os: number | null;
+  missing_quantity: number | null;
+  purchase_coverage_open: number;
+  status: 'AVAILABLE' | 'PARTIAL' | 'TO_BUY';
+  availability_precision: 'EXACT' | 'ESTIMATED' | 'UNSUPPORTED';
+  dimension_validation_required: boolean;
 }
 
 interface MaterialAvailability {
@@ -30,17 +39,37 @@ interface MaterialAvailability {
   items: MaterialAvailabilityItem[];
 }
 
-function situationVariant(situation: ReturnType<typeof getOsMaterialSituation>) {
-  if (situation === 'Comprar') return 'destructive' as const;
-  if (situation === 'Atendido' || situation === 'Consumido') return 'default' as const;
+const situationLabels: Record<MaterialAvailabilityItem['status'], string> = {
+  AVAILABLE: 'Disponível',
+  PARTIAL: 'Parcial',
+  TO_BUY: 'Comprar',
+};
+
+function situationVariant(status: MaterialAvailabilityItem['status']) {
+  if (status === 'TO_BUY') return 'destructive' as const;
+  if (status === 'AVAILABLE') return 'default' as const;
   return 'secondary' as const;
+}
+
+function quantityOrReview(quantity: number | null, unit: string) {
+  return quantity == null ? 'A validar' : formatOperationalQuantity(quantity, unit);
+}
+
+function precisionNote(item: MaterialAvailabilityItem) {
+  if (item.availability_precision === 'UNSUPPORTED') {
+    return 'A área em estoque não confirma o encaixe da peça sob medida.';
+  }
+  if (item.availability_precision === 'ESTIMATED') {
+    return 'Disponibilidade estimada por comprimento.';
+  }
+  return null;
 }
 
 export function OSPurchasesList({ ordemServicoId }: OSPurchasesListProps) {
   const { data: availability, isLoading } = useQuery({
     queryKey: ['os-material-availability', ordemServicoId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_os_material_availability', {
+      const { data, error } = await supabase.rpc('get_os_dynamic_material_availability', {
         _ordem_servico_id: ordemServicoId,
       });
       if (error) throw error;
@@ -67,14 +96,9 @@ export function OSPurchasesList({ ordemServicoId }: OSPurchasesListProps) {
     );
   }
 
-  const situations = availability.items.map((item) => getOsMaterialSituation({
-    status: item.status,
-    reserved: item.reserved_for_os,
-    missing: item.missing,
-  }));
-  const attended = situations.filter((situation) => situation === 'Atendido' || situation === 'Consumido').length;
-  const partial = situations.filter((situation) => situation === 'Parcial' || situation === 'Recebimento parcial').length;
-  const toBuy = availability.items.filter((item) => Number(item.missing) > 0).length;
+  const available = availability.items.filter((item) => item.status === 'AVAILABLE').length;
+  const partial = availability.items.filter((item) => item.status === 'PARTIAL').length;
+  const toBuy = availability.items.filter((item) => item.status === 'TO_BUY').length;
 
   return (
     <div className="space-y-4">
@@ -96,7 +120,7 @@ export function OSPurchasesList({ ordemServicoId }: OSPurchasesListProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ['Materiais', availability.items.length],
-              ['Atendidos', attended],
+              ['Disponíveis', available],
               ['Parciais', partial],
               ['A comprar', toBuy],
             ].map(([label, value]) => (
@@ -120,27 +144,42 @@ export function OSPurchasesList({ ordemServicoId }: OSPurchasesListProps) {
                 <TableRow>
                   <TableHead>Material</TableHead>
                   <TableHead className="text-right">Necessário</TableHead>
-                  <TableHead className="text-right">Reservado</TableHead>
-                  <TableHead className="text-right">Falta</TableHead>
+                  <TableHead className="text-right">Disponível</TableHead>
+                  <TableHead className="text-right">Faltante</TableHead>
                   <TableHead>Situação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {availability.items.map((item, index) => {
-                  const situation = situations[index];
+                {availability.items.map((item) => {
+                  const note = precisionNote(item);
                   return (
-                    <TableRow key={item.requirement_id ?? item.company_item_id ?? `${item.item_name}-${index}`}>
-                      <TableCell className="font-medium">{item.item_name}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatOperationalQuantity(item.required, item.canonical_unit)}
+                    <TableRow key={item.requirement_id}>
+                      <TableCell>
+                        <div className="font-medium">{item.material_name}</div>
+                        {item.variant_name ? <div className="text-xs text-muted-foreground">{item.variant_name}</div> : null}
+                        {note ? <div className="max-w-xs text-xs text-muted-foreground">{note}</div> : null}
+                        {item.reserved_for_this_os > 0 || item.purchase_coverage_open > 0 ? (
+                          <div className="text-xs text-muted-foreground">
+                            {item.reserved_for_this_os > 0
+                              ? `Reservado para esta OS: ${formatOperationalQuantity(item.reserved_for_this_os, item.canonical_unit)}`
+                              : null}
+                            {item.reserved_for_this_os > 0 && item.purchase_coverage_open > 0 ? ' · ' : null}
+                            {item.purchase_coverage_open > 0
+                              ? `Em compra: ${formatOperationalQuantity(item.purchase_coverage_open, item.canonical_unit)}`
+                              : null}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatOperationalQuantity(item.reserved_for_os, item.canonical_unit)}
+                        {formatOperationalQuantity(item.required_quantity, item.canonical_unit)}
                       </TableCell>
-                      <TableCell className={`text-right font-mono ${Number(item.missing) > 0 ? 'font-semibold text-destructive' : 'text-green-600'}`}>
-                        {formatOperationalQuantity(item.missing, item.canonical_unit)}
+                      <TableCell className="text-right font-mono">
+                        {quantityOrReview(item.available_for_os, item.canonical_unit)}
                       </TableCell>
-                      <TableCell><Badge variant={situationVariant(situation)}>{situation}</Badge></TableCell>
+                      <TableCell className={`text-right font-mono ${item.missing_quantity != null && item.missing_quantity > 0 ? 'font-semibold text-destructive' : 'text-green-600'}`}>
+                        {quantityOrReview(item.missing_quantity, item.canonical_unit)}
+                      </TableCell>
+                      <TableCell><Badge variant={situationVariant(item.status)}>{situationLabels[item.status]}</Badge></TableCell>
                     </TableRow>
                   );
                 })}
@@ -149,28 +188,43 @@ export function OSPurchasesList({ ordemServicoId }: OSPurchasesListProps) {
           </div>
 
           <div className="grid gap-3 md:hidden">
-            {availability.items.map((item, index) => {
-              const situation = situations[index];
+            {availability.items.map((item) => {
+              const note = precisionNote(item);
               return (
-                <div key={item.requirement_id ?? item.company_item_id ?? `${item.item_name}-mobile-${index}`} className="rounded-lg border p-3">
+                <div key={item.requirement_id} className="rounded-lg border p-3">
                   <div className="mb-3 flex items-start justify-between gap-2">
-                    <span className="font-medium">{item.item_name}</span>
-                    <Badge variant={situationVariant(situation)}>{situation}</Badge>
+                    <div>
+                      <div className="font-medium">{item.material_name}</div>
+                      {item.variant_name ? <div className="text-xs text-muted-foreground">{item.variant_name}</div> : null}
+                    </div>
+                    <Badge variant={situationVariant(item.status)}>{situationLabels[item.status]}</Badge>
                   </div>
                   <dl className="grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <dt className="text-xs text-muted-foreground">Necessário</dt>
-                      <dd>{formatOperationalQuantity(item.required, item.canonical_unit)}</dd>
+                      <dd>{formatOperationalQuantity(item.required_quantity, item.canonical_unit)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted-foreground">Reservado</dt>
-                      <dd>{formatOperationalQuantity(item.reserved_for_os, item.canonical_unit)}</dd>
+                      <dt className="text-xs text-muted-foreground">Disponível</dt>
+                      <dd>{quantityOrReview(item.available_for_os, item.canonical_unit)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted-foreground">Falta</dt>
-                      <dd>{formatOperationalQuantity(item.missing, item.canonical_unit)}</dd>
+                      <dt className="text-xs text-muted-foreground">Faltante</dt>
+                      <dd>{quantityOrReview(item.missing_quantity, item.canonical_unit)}</dd>
                     </div>
                   </dl>
+                  {note ? <p className="mt-3 text-xs text-muted-foreground">{note}</p> : null}
+                  {item.reserved_for_this_os > 0 || item.purchase_coverage_open > 0 ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {item.reserved_for_this_os > 0
+                        ? `Reservado para esta OS: ${formatOperationalQuantity(item.reserved_for_this_os, item.canonical_unit)}`
+                        : null}
+                      {item.reserved_for_this_os > 0 && item.purchase_coverage_open > 0 ? ' · ' : null}
+                      {item.purchase_coverage_open > 0
+                        ? `Em compra: ${formatOperationalQuantity(item.purchase_coverage_open, item.canonical_unit)}`
+                        : null}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

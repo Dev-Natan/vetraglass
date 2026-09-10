@@ -10675,6 +10675,10 @@ export type Database = {
         Args: { _ordem_servico_id: string }
         Returns: Json
       }
+      get_os_dynamic_material_availability: {
+        Args: { _ordem_servico_id: string }
+        Returns: Json
+      }
       get_pending_advances_summary: {
         Args: { _company_id: string }
         Returns: Json
